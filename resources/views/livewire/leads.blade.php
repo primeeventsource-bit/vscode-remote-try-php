@@ -275,7 +275,7 @@
                     <h3 class="text-base font-bold">Import CSV</h3>
                     <button wire:click="$set('showImportModal', false)" class="text-crm-t3 hover:text-crm-t1 text-lg">&times;</button>
                 </div>
-                <p class="text-xs text-crm-t3 mb-3">Drop a CSV file here or click to choose one. Expected columns: Resort, Owner Name, Phone 1, Phone 2, City, State, Zip, Resort Location</p>
+                <p class="text-xs text-crm-t3 mb-3">Drop a CSV file here or click to choose one. Maximum import size is 10,000 leads per file. Expected columns: Resort, Owner Name, Phone 1, Phone 2, City, State, Zip, Resort Location</p>
 
                 <div
                     x-data="{
@@ -302,11 +302,23 @@
                             this.importing = true;
                             this.importedRows = 0;
                             const lines = this.csvRaw.split(/\r\n|\r|\n/).filter(l => l.trim() !== '');
+                            const firstCols = (lines[0] ?? '').split(',').map(c => c.trim().toLowerCase());
+                            const hasHeader = (firstCols[0] ?? '').includes('resort') || (firstCols[1] ?? '').includes('owner');
+                            const totalRows = Math.max(0, lines.length - (hasHeader ? 1 : 0));
+                            const canImport = await $wire.beginCsvImport(totalRows);
+                            if (canImport === false) {
+                                this.importing = false;
+                                return;
+                            }
                             const chunkSize = 250;
                             for (let i = 0; i < lines.length; i += chunkSize) {
                                 const chunk = lines.slice(i, i + chunkSize);
-                                await $wire.importCsvChunk(chunk, i === 0);
+                                const ok = await $wire.importCsvChunk(chunk, i === 0);
                                 this.importedRows += chunk.length;
+                                if (ok === false) {
+                                    this.importing = false;
+                                    return;
+                                }
                             }
                             await $wire.clearImportState();
                             this.importing = false;

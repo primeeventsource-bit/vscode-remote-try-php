@@ -12,6 +12,8 @@ use Livewire\Component;
 #[Title('Leads')]
 class Leads extends Component
 {
+    private const MAX_IMPORT_ROWS = 10000;
+
     public string $search = '';
     public string $filter = 'all';
     public string $resortFilter = 'all';
@@ -21,6 +23,7 @@ class Leads extends Component
     public bool $showAddModal = false;
     public bool $showImportModal = false;
     public string $csvText = '';
+    public int $importRowsProcessed = 0;
     public array $selectedLeads = [];
     public string $bulkFronter = '';
     public array $newLead = ['resort' => '', 'owner_name' => '', 'phone1' => '', 'phone2' => '', 'city' => '', 'st' => '', 'zip' => '', 'resort_location' => ''];
@@ -70,15 +73,34 @@ class Leads extends Component
             return;
         }
 
+        $lineCount = $this->countImportableRows($this->csvText);
+        if ($lineCount > self::MAX_IMPORT_ROWS) {
+            $this->addError('csvText', 'CSV exceeds the 10,000 lead limit. Split the file and import 10,000 or fewer rows at a time.');
+            return;
+        }
+
         $this->processCsvContent($this->csvText);
 
         $this->csvText = '';
         $this->showImportModal = false;
     }
 
-    public function importCsvChunk(array $lines, bool $firstChunk = false): void
+    public function beginCsvImport(int $totalRows = 0): bool
     {
-        if (empty($lines)) return;
+        $this->importRowsProcessed = 0;
+        $this->resetErrorBag('csvText');
+
+        if ($totalRows > self::MAX_IMPORT_ROWS) {
+            $this->addError('csvText', 'CSV exceeds the 10,000 lead limit. Split the file and import 10,000 or fewer rows at a time.');
+            return false;
+        }
+
+        return true;
+    }
+
+    public function importCsvChunk(array $lines, bool $firstChunk = false): bool
+    {
+        if (empty($lines)) return true;
 
         $startIndex = 0;
         if ($firstChunk) {
@@ -91,6 +113,11 @@ class Leads extends Component
         }
 
         for ($i = $startIndex; $i < count($lines); $i++) {
+            if ($this->importRowsProcessed >= self::MAX_IMPORT_ROWS) {
+                $this->addError('csvText', 'CSV exceeds the 10,000 lead limit. Split the file and import 10,000 or fewer rows at a time.');
+                return false;
+            }
+
             $line = trim((string) $lines[$i]);
             if ($line === '') continue;
 
@@ -108,12 +135,17 @@ class Leads extends Component
                 'resort_location' => $v[7] ?? '',
                 'source' => 'csv',
             ]);
+
+            $this->importRowsProcessed++;
         }
+
+        return true;
     }
 
     public function clearImportState(): void
     {
         $this->csvText = '';
+        $this->importRowsProcessed = 0;
         $this->resetErrorBag('csvText');
         $this->showImportModal = false;
     }
@@ -191,6 +223,31 @@ class Leads extends Component
                 'source' => 'csv',
             ]);
         }
+    }
+
+    private function countImportableRows(string $csv): int
+    {
+        $lines = preg_split('/\r\n|\r|\n/', trim($csv));
+        if (!$lines) return 0;
+
+        $startIndex = 0;
+        $firstRow = array_map('trim', str_getcsv($lines[0]));
+        $h0 = strtolower($firstRow[0] ?? '');
+        $h1 = strtolower($firstRow[1] ?? '');
+        if (str_contains($h0, 'resort') || str_contains($h1, 'owner')) {
+            $startIndex = 1;
+        }
+
+        $count = 0;
+        for ($i = $startIndex; $i < count($lines); $i++) {
+            $line = trim((string) $lines[$i]);
+            if ($line === '') continue;
+            $v = array_map('trim', str_getcsv($line));
+            if (count($v) < 2) continue;
+            $count++;
+        }
+
+        return $count;
     }
 
     private function baseLeadsQuery()
