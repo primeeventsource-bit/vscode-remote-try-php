@@ -1,4 +1,51 @@
-<div class="p-5" x-data="{ showCallback: false }">
+<div
+    class="p-5"
+    x-data="{
+        showCallback: false,
+        selected: @entangle('selectedLeads').live,
+        visibleLeadIds: @js($leads->pluck('id')->map(fn($id) => (int) $id)->values()),
+        lastSelectedIndex: null,
+        normalizedSelected() {
+            return (this.selected || []).map(v => Number(v));
+        },
+        isSelected(id) {
+            return this.normalizedSelected().includes(Number(id));
+        },
+        selectAllVisibleLocal() {
+            this.selected = [...this.visibleLeadIds];
+            this.lastSelectedIndex = null;
+        },
+        clearSelectionLocal() {
+            this.selected = [];
+            this.lastSelectedIndex = null;
+        },
+        toggleLead(id, event) {
+            const leadId = Number(id);
+            const ids = this.visibleLeadIds.map(v => Number(v));
+            const currentIndex = ids.indexOf(leadId);
+            const selectedSet = new Set(this.normalizedSelected());
+
+            if (event.shiftKey && this.lastSelectedIndex !== null && currentIndex !== -1) {
+                const start = Math.min(this.lastSelectedIndex, currentIndex);
+                const end = Math.max(this.lastSelectedIndex, currentIndex);
+                for (let i = start; i <= end; i++) {
+                    selectedSet.add(ids[i]);
+                }
+                this.selected = Array.from(selectedSet);
+                return;
+            }
+
+            if (selectedSet.has(leadId)) {
+                selectedSet.delete(leadId);
+            } else {
+                selectedSet.add(leadId);
+            }
+
+            this.selected = Array.from(selectedSet);
+            this.lastSelectedIndex = currentIndex;
+        }
+    }"
+>
     <div class="flex items-center justify-between mb-5">
         <div>
             <h2 class="text-xl font-bold">Leads</h2>
@@ -30,8 +77,8 @@
     </div>
 
     <div class="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-crm-border bg-crm-card p-2">
-        <button wire:click="selectAllVisibleLeads" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white border border-crm-border hover:bg-crm-hover transition">Select All Visible</button>
-        <button wire:click="clearSelectedLeads" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white border border-crm-border hover:bg-crm-hover transition">Clear Selection</button>
+        <button @click="selectAllVisibleLocal()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white border border-crm-border hover:bg-crm-hover transition">Select All Visible</button>
+        <button @click="clearSelectionLocal()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white border border-crm-border hover:bg-crm-hover transition">Clear Selection</button>
         <span class="text-xs text-crm-t3">{{ count($selectedLeads) }} selected</span>
         <select wire:model="bulkFronter" class="px-3 py-1.5 text-xs bg-white border border-crm-border rounded-lg focus:outline-none">
             <option value="">Assign selected to fronter...</option>
@@ -52,7 +99,12 @@
                 <thead>
                     <tr class="border-b border-crm-border bg-crm-surface">
                         <th class="text-left px-3 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold w-10">
-                            <input type="checkbox" wire:click="selectAllVisibleLeads" class="h-3.5 w-3.5 rounded border-crm-border">
+                            <input
+                                type="checkbox"
+                                :checked="visibleLeadIds.length > 0 && visibleLeadIds.every(id => normalizedSelected().includes(Number(id)))"
+                                @click.stop="if ($event.target.checked) { selectAllVisibleLocal(); } else { clearSelectionLocal(); }"
+                                class="h-3.5 w-3.5 rounded border-crm-border"
+                            >
                         </th>
                         <th class="text-left px-4 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Owner Name</th>
                         <th class="text-left px-4 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Resort</th>
@@ -68,7 +120,12 @@
                     @forelse($leads as $lead)
                         <tr wire:click="selectLead({{ $lead->id }})" class="border-b border-crm-border cursor-pointer transition {{ $selectedLead === $lead->id || in_array($lead->id, $selectedLeads) ? 'bg-blue-50 border-l-2 border-l-blue-500' : 'hover:bg-crm-hover' }}">
                             <td class="px-3 py-2.5" wire:click.stop>
-                                <input type="checkbox" wire:model.live="selectedLeads" value="{{ $lead->id }}" class="h-3.5 w-3.5 rounded border-crm-border">
+                                <input
+                                    type="checkbox"
+                                    :checked="isSelected({{ $lead->id }})"
+                                    @click.stop="toggleLead({{ $lead->id }}, $event)"
+                                    class="h-3.5 w-3.5 rounded border-crm-border"
+                                >
                             </td>
                             <td class="px-4 py-2.5 font-semibold">{{ $lead->owner_name }}</td>
                             <td class="px-4 py-2.5 text-crm-t2">{{ $lead->resort }}</td>
