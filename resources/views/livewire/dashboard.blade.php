@@ -126,9 +126,9 @@
                 $dCB         = $isCloser ? $myChargebacks: $chargebacks;
                 $dCancelled  = $isCloser ? $dSource->where('status','cancelled') : $cancelled;
                 $dTotal      = $dCharged->count() + $dPending->count() + $dCB->count() + $dCancelled->count();
-                $donutR      = 45;
-                $donutCx     = 60;
-                $donutCy     = 60;
+                $donutR      = 22;
+                $donutCx     = 30;
+                $donutCy     = 30;
                 $donutCirc   = 2 * M_PI * $donutR;
                 $donutSegs   = [
                     ['count' => $dCharged->count(),   'color' => '#10b981', 'label' => 'Charged'],
@@ -138,8 +138,8 @@
                 ];
                 $donutCum = 0;
             @endphp
-            <div class="flex items-center gap-4">
-                <svg viewBox="0 0 120 120" class="w-28 h-28 flex-shrink-0">
+            <div class="flex items-center gap-3">
+                <svg viewBox="0 0 60 60" class="w-20 h-20 flex-shrink-0">
                     @if($dTotal > 0)
                         @foreach($donutSegs as $seg)
                             @if($seg['count'] > 0)
@@ -152,7 +152,7 @@
                                 <circle cx="{{ $donutCx }}" cy="{{ $donutCy }}" r="{{ $donutR }}"
                                         fill="none"
                                         stroke="{{ $seg['color'] }}"
-                                        stroke-width="22"
+                                        stroke-width="11"
                                         stroke-dasharray="{{ round($dash, 2) }} {{ round($gap, 2) }}"
                                         stroke-dashoffset="{{ round(-$offset, 2) }}"
                                         transform="rotate(-90 {{ $donutCx }} {{ $donutCy }})"/>
@@ -160,15 +160,15 @@
                         @endforeach
                     @else
                         <circle cx="{{ $donutCx }}" cy="{{ $donutCy }}" r="{{ $donutR }}"
-                                fill="none" stroke="#e5e7eb" stroke-width="22"/>
+                                fill="none" stroke="#e5e7eb" stroke-width="11"/>
                     @endif
-                    <text x="{{ $donutCx }}" y="{{ $donutCy - 5 }}" text-anchor="middle" font-size="16" font-weight="bold" fill="#111">{{ $dTotal }}</text>
-                    <text x="{{ $donutCx }}" y="{{ $donutCy + 10 }}" text-anchor="middle" font-size="8" fill="#9ca3af">Deals</text>
+                    <text x="{{ $donutCx }}" y="{{ $donutCy - 2 }}" text-anchor="middle" font-size="11" font-weight="bold" fill="#111">{{ $dTotal }}</text>
+                    <text x="{{ $donutCx }}" y="{{ $donutCy + 6 }}" text-anchor="middle" font-size="6" fill="#9ca3af">Deals</text>
                 </svg>
-                <div class="space-y-2 flex-1 min-w-0">
+                <div class="space-y-1.5 flex-1 min-w-0">
                     @foreach($donutSegs as $seg)
-                        <div class="flex items-center gap-2">
-                            <span class="w-2.5 h-2.5 rounded-sm flex-shrink-0" style="background:{{ $seg['color'] }}"></span>
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-sm flex-shrink-0" style="background:{{ $seg['color'] }}"></span>
                             <span class="text-xs text-crm-t2 flex-1">{{ $seg['label'] }}</span>
                             <span class="text-xs font-semibold font-mono">{{ $seg['count'] }}</span>
                         </div>

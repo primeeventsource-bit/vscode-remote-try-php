@@ -184,19 +184,6 @@
         @endif
     </div>
 
-    {{-- Add New Chat Button (visible when not showing form and no chat selected) --}}
-    @if(!$selectedChat && !$showNewChatForm)
-    <div class="flex flex-shrink-0 border-t border-crm-border bg-crm-surface p-2">
-        <button wire:click="toggleNewChatForm" class="w-full rounded bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700">
-            + New Chat
-        </button>
-    </div>
-    @elseif($showNewChatForm)
-    <div class="flex flex-shrink-0 border-t border-crm-border bg-crm-surface p-2">
-        <span class="text-xs text-crm-t3">Creating new chat...</span>
-    </div>
-    @endif
-
     {{-- Auto-scroll messages on update --}}
     @if($selectedChat)
     <script>
