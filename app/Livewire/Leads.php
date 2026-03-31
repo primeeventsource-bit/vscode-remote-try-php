@@ -21,6 +21,8 @@ class Leads extends Component
     public bool $showAddModal = false;
     public bool $showImportModal = false;
     public string $csvText = '';
+    public array $selectedLeads = [];
+    public string $bulkFronter = '';
     public array $newLead = ['resort' => '', 'owner_name' => '', 'phone1' => '', 'phone2' => '', 'city' => '', 'st' => '', 'zip' => '', 'resort_location' => ''];
 
     public function selectLead($id) { $this->selectedLead = $this->selectedLead === $id ? null : $id; }
@@ -74,6 +76,90 @@ class Leads extends Component
         $this->showImportModal = false;
     }
 
+    public function importCsvChunk(array $lines, bool $firstChunk = false): void
+    {
+        if (empty($lines)) return;
+
+        $startIndex = 0;
+        if ($firstChunk) {
+            $firstRow = array_map('trim', str_getcsv((string) ($lines[0] ?? '')));
+            $h0 = strtolower($firstRow[0] ?? '');
+            $h1 = strtolower($firstRow[1] ?? '');
+            if (str_contains($h0, 'resort') || str_contains($h1, 'owner')) {
+                $startIndex = 1;
+            }
+        }
+
+        for ($i = $startIndex; $i < count($lines); $i++) {
+            $line = trim((string) $lines[$i]);
+            if ($line === '') continue;
+
+            $v = array_map('trim', str_getcsv($line));
+            if (count($v) < 2) continue;
+
+            Lead::create([
+                'resort' => $v[0] ?? '',
+                'owner_name' => $v[1] ?? '',
+                'phone1' => $v[2] ?? '',
+                'phone2' => $v[3] ?? '',
+                'city' => $v[4] ?? '',
+                'st' => $v[5] ?? '',
+                'zip' => $v[6] ?? '',
+                'resort_location' => $v[7] ?? '',
+                'source' => 'csv',
+            ]);
+        }
+    }
+
+    public function clearImportState(): void
+    {
+        $this->csvText = '';
+        $this->resetErrorBag('csvText');
+        $this->showImportModal = false;
+    }
+
+    public function selectAllVisibleLeads(): void
+    {
+        $this->selectedLeads = $this->baseLeadsQuery()->pluck('id')->map(fn($id) => (int) $id)->toArray();
+    }
+
+    public function clearSelectedLeads(): void
+    {
+        $this->selectedLeads = [];
+    }
+
+    public function assignSelectedToFronter(): void
+    {
+        if (count($this->selectedLeads) === 0) {
+            $this->addError('bulkFronter', 'Select at least one lead.');
+            return;
+        }
+
+        if (!$this->bulkFronter) {
+            $this->addError('bulkFronter', 'Select a fronter agent first.');
+            return;
+        }
+
+        $fronterId = (int) $this->bulkFronter;
+        $fronter = User::where('id', $fronterId)->where('role', 'fronter')->first();
+        if (!$fronter) {
+            $this->addError('bulkFronter', 'Selected user is not a fronter agent.');
+            return;
+        }
+
+        Lead::whereIn('id', $this->selectedLeads)->get()->each(function (Lead $lead) use ($fronterId) {
+            $data = ['assigned_to' => $fronterId];
+            if (!$lead->original_fronter) {
+                $data['original_fronter'] = $fronterId;
+            }
+            $lead->update($data);
+        });
+
+        $this->selectedLeads = [];
+        $this->bulkFronter = '';
+        $this->resetErrorBag('bulkFronter');
+    }
+
     private function processCsvContent(string $csv): void
     {
         $lines = preg_split('/\r\n|\r|\n/', trim($csv));
@@ -107,24 +193,49 @@ class Leads extends Component
         }
     }
 
-    public function render()
+    private function baseLeadsQuery()
     {
         $user = auth()->user();
         $isAdmin = $user->hasPerm('view_all_leads');
         $query = Lead::query()->orderBy('id', 'desc');
-        if (!$isAdmin) $query->where('assigned_to', $user->id);
+
+        if (!$isAdmin) {
+            $query->where('assigned_to', $user->id);
+        }
+
         if ($this->search) {
             $s = $this->search;
-            $query->where(fn($q) => $q->where('owner_name', 'like', "%$s%")->orWhere('resort', 'like', "%$s%")->orWhere('phone1', 'like', "%$s%"));
+            $query->where(fn($q) => $q
+                ->where('owner_name', 'like', "%$s%")
+                ->orWhere('resort', 'like', "%$s%")
+                ->orWhere('phone1', 'like', "%$s%"));
         }
-        if ($this->resortFilter !== 'all') $query->where('resort', $this->resortFilter);
-        if ($this->filter === 'undisposed') $query->whereNull('disposition');
-        if ($this->filter === 'transferred') $query->where('disposition', 'like', 'Transferred%');
-        $leads = $query->get();
+
+        if ($this->resortFilter !== 'all') {
+            $query->where('resort', $this->resortFilter);
+        }
+
+        if ($this->filter === 'undisposed') {
+            $query->whereNull('disposition');
+        }
+
+        if ($this->filter === 'transferred') {
+            $query->where('disposition', 'like', 'Transferred%');
+        }
+
+        return $query;
+    }
+
+    public function render()
+    {
+        $user = auth()->user();
+        $isAdmin = $user->hasPerm('view_all_leads');
+        $leads = $this->baseLeadsQuery()->get();
         $resorts = Lead::distinct()->pluck('resort')->filter()->sort();
         $closers = User::where('role', 'closer')->get();
+        $fronters = User::where('role', 'fronter')->orderBy('name')->get();
         $users = User::all();
         $active = $this->selectedLead ? Lead::find($this->selectedLead) : null;
-        return view('livewire.leads', compact('leads', 'resorts', 'closers', 'users', 'active', 'isAdmin'));
+        return view('livewire.leads', compact('leads', 'resorts', 'closers', 'fronters', 'users', 'active', 'isAdmin'));
     }
 }

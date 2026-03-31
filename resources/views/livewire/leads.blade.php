@@ -29,12 +29,31 @@
         </div>
     </div>
 
+    <div class="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-crm-border bg-crm-card p-2">
+        <button wire:click="selectAllVisibleLeads" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white border border-crm-border hover:bg-crm-hover transition">Select All Visible</button>
+        <button wire:click="clearSelectedLeads" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white border border-crm-border hover:bg-crm-hover transition">Clear Selection</button>
+        <span class="text-xs text-crm-t3">{{ count($selectedLeads) }} selected</span>
+        <select wire:model="bulkFronter" class="px-3 py-1.5 text-xs bg-white border border-crm-border rounded-lg focus:outline-none">
+            <option value="">Assign selected to fronter...</option>
+            @foreach($fronters as $f)
+                <option value="{{ $f->id }}">{{ $f->name }}</option>
+            @endforeach
+        </select>
+        <button wire:click="assignSelectedToFronter" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">Assign Selected</button>
+        @error('bulkFronter')
+            <span class="text-xs font-semibold text-red-600">{{ $message }}</span>
+        @enderror
+    </div>
+
     {{-- Leads Table --}}
     <div class="bg-crm-card border border-crm-border rounded-lg overflow-hidden mb-4">
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead>
                     <tr class="border-b border-crm-border bg-crm-surface">
+                        <th class="text-left px-3 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold w-10">
+                            <input type="checkbox" wire:click="selectAllVisibleLeads" class="h-3.5 w-3.5 rounded border-crm-border">
+                        </th>
                         <th class="text-left px-4 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Owner Name</th>
                         <th class="text-left px-4 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Resort</th>
                         <th class="text-left px-4 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Phone 1</th>
@@ -47,7 +66,10 @@
                 </thead>
                 <tbody>
                     @forelse($leads as $lead)
-                        <tr wire:click="selectLead({{ $lead->id }})" class="border-b border-crm-border cursor-pointer transition {{ $selectedLead === $lead->id ? 'bg-blue-50 border-l-2 border-l-blue-500' : 'hover:bg-crm-hover' }}">
+                        <tr wire:click="selectLead({{ $lead->id }})" class="border-b border-crm-border cursor-pointer transition {{ $selectedLead === $lead->id || in_array($lead->id, $selectedLeads) ? 'bg-blue-50 border-l-2 border-l-blue-500' : 'hover:bg-crm-hover' }}">
+                            <td class="px-3 py-2.5" wire:click.stop>
+                                <input type="checkbox" wire:model.live="selectedLeads" value="{{ $lead->id }}" class="h-3.5 w-3.5 rounded border-crm-border">
+                            </td>
                             <td class="px-4 py-2.5 font-semibold">{{ $lead->owner_name }}</td>
                             <td class="px-4 py-2.5 text-crm-t2">{{ $lead->resort }}</td>
                             <td class="px-4 py-2.5">
@@ -91,7 +113,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="8" class="px-4 py-8 text-center text-crm-t3 text-sm">No leads found</td></tr>
+                        <tr><td colspan="9" class="px-4 py-8 text-center text-crm-t3 text-sm">No leads found</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -259,14 +281,37 @@
                     x-data="{
                         dragging: false,
                         fileName: '',
+                        csvRaw: '',
+                        importing: false,
+                        importedRows: 0,
                         readFile(file) {
                             if (!file) return;
                             this.fileName = file.name;
                             const reader = new FileReader();
                             reader.onload = (e) => {
-                                $wire.set('csvText', e.target?.result ?? '');
+                                this.csvRaw = e.target?.result ?? '';
+                                $wire.set('csvText', this.csvRaw);
                             };
                             reader.readAsText(file);
+                        },
+                        async importFileInChunks() {
+                            if (!this.csvRaw) {
+                                await $wire.importCsv();
+                                return;
+                            }
+                            this.importing = true;
+                            this.importedRows = 0;
+                            const lines = this.csvRaw.split(/\r\n|\r|\n/).filter(l => l.trim() !== '');
+                            const chunkSize = 250;
+                            for (let i = 0; i < lines.length; i += chunkSize) {
+                                const chunk = lines.slice(i, i + chunkSize);
+                                await $wire.importCsvChunk(chunk, i === 0);
+                                this.importedRows += chunk.length;
+                            }
+                            await $wire.clearImportState();
+                            this.importing = false;
+                            this.csvRaw = '';
+                            this.fileName = '';
                         }
                     }"
                     @dragover.prevent="dragging = true"
@@ -284,6 +329,9 @@
                         <template x-if="fileName">
                             <div class="mt-3 rounded bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-700" x-text="`Loaded: ${fileName}`"></div>
                         </template>
+                        <template x-if="importing">
+                            <div class="mt-2 text-xs font-semibold text-blue-700" x-text="`Importing... ${importedRows} rows processed`"></div>
+                        </template>
                     </label>
                     <input id="leads-csv-file" type="file" accept=".csv,text/csv,.txt" @change="readFile($event.target.files[0])" class="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0">
                     @error('csvText')
@@ -297,7 +345,7 @@
                 </details>
                 <div class="flex justify-end gap-2 mt-4">
                     <button wire:click="$set('showImportModal', false)" class="px-4 py-2 text-sm font-semibold text-crm-t2 bg-crm-card border border-crm-border rounded-lg hover:bg-crm-hover transition">Cancel</button>
-                    <button wire:click="importCsv" class="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">Import</button>
+                    <button @click="importFileInChunks()" :disabled="importing" class="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60 transition">Import</button>
                 </div>
             </div>
         </div>
