@@ -77,11 +77,11 @@ class Deals extends Component
         $users = User::all()->keyBy('id');
         $active = $this->selectedDeal ? Deal::find($this->selectedDeal) : null;
         $dealStatuses = [
-            ['id' => 'pending_admin', 'label' => 'Pending Admin', 'color' => '#f59e0b'],
-            ['id' => 'in_verification', 'label' => 'In Verification', 'color' => '#3b82f6'],
-            ['id' => 'charged', 'label' => 'Charged', 'color' => '#10b981'],
-            ['id' => 'chargeback', 'label' => 'Chargeback', 'color' => '#ef4444'],
-            ['id' => 'cancelled', 'label' => 'Cancelled', 'color' => '#6b7280'],
+            ['value' => 'pending_admin', 'label' => 'Pending Admin', 'color' => '#f59e0b'],
+            ['value' => 'in_verification', 'label' => 'In Verification', 'color' => '#3b82f6'],
+            ['value' => 'charged', 'label' => 'Charged', 'color' => '#10b981'],
+            ['value' => 'chargeback', 'label' => 'Chargeback', 'color' => '#ef4444'],
+            ['value' => 'cancelled', 'label' => 'Cancelled', 'color' => '#6b7280'],
         ];
         return view('livewire.deals', compact('deals', 'users', 'active', 'dealStatuses', 'isAdmin'));
     }
