@@ -135,10 +135,15 @@
 
     {{-- Main Content --}}
     <main class="pt-12">
+        @if (session('error'))
+            <div class="mx-4 mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                {{ session('error') }}
+            </div>
+        @endif
+
         {{ $slot }}
     </main>
 
     @livewireScripts
-    <script src="//unpkg.com/alpinejs" defer></script>
 </body>
 </html>
