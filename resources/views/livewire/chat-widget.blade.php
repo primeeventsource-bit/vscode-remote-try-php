@@ -62,7 +62,7 @@
         </div>
 
         {{-- ─── Chat List (no chat selected) ─── --}}
-        @if(!$selectedChat)
+        @if(!$selectedChat && !$showNewChatForm)
             <div class="flex-1 overflow-y-auto">
                 @forelse($chats as $chat)
                     @php
@@ -94,8 +94,58 @@
                 @endforelse
             </div>
 
-        {{-- ─── Message Thread (chat selected) ─── --}}
+        {{-- ─── Create New Chat Form ─── --}}
+        @elseif($showNewChatForm)
+            <div class="flex-1 overflow-y-auto p-4">
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-xs text-crm-t3 uppercase font-semibold">Chat Type</label>
+                        <select wire:model="newChatType" class="w-full mt-1 rounded border border-crm-border bg-white px-2 py-1.5 text-sm focus:border-blue-400 focus:outline-none">
+                            <option value="dm">Direct Message</option>
+                            <option value="group">Group</option>
+                        </select>
+                    </div>
+
+                    @if($newChatType === 'group')
+                    <div>
+                        <label class="text-xs text-crm-t3 uppercase font-semibold">Group Name</label>
+                        <input wire:model="newChatName" type="text" placeholder="E.g., Sales Team" 
+                               class="w-full mt-1 rounded border border-crm-border bg-white px-2 py-1.5 text-sm focus:border-blue-400 focus:outline-none">
+                    </div>
+                    @endif
+
+                    <div>
+                        <label class="text-xs text-crm-t3 uppercase font-semibold">Select {{ $newChatType === 'dm' ? 'Person' : 'Members' }}</label>
+                        <div class="mt-1 max-h-36 overflow-y-auto border border-crm-border rounded bg-white">
+                            @foreach($users as $u)
+                                @if($u->id !== auth()->id())
+                                    <label class="flex items-center gap-2 border-b border-crm-border px-3 py-2 last:border-0 cursor-pointer hover:bg-crm-hover text-sm">
+                                        <input type="checkbox" wire:model="newChatMembers" value="{{ $u->id }}" 
+                                               @if($newChatType === 'dm' && count($newChatMembers) > 0) @endif
+                                               class="h-4 w-4 rounded border-crm-border">
+                                        <div class="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-[8px] font-bold text-white"
+                                             style="background:{{ $u->color ?? '#6b7280' }}">{{ $u->avatar ?? substr($u->name, 0, 2) }}</div>
+                                        <span>{{ $u->name }}</span>
+                                    </label>
+                                @endif
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <button wire:click="toggleNewChatForm" class="flex-1 rounded bg-crm-card border border-crm-border px-2 py-1.5 text-xs font-semibold text-crm-t2 transition hover:bg-crm-hover">
+                            Cancel
+                        </button>
+                        <button wire:click="createNewChat" class="flex-1 rounded bg-blue-600 px-2 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-700">
+                            Create
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        {{-- ─── Chat List (no chat selected, no form) ─── --}}
         @else
+            {{-- ─── Message Thread (chat selected) ─── --}}
             <div class="flex-1 overflow-y-auto space-y-2 p-3" id="cwt-messages">
                 @forelse($messages as $msg)
                     @php
@@ -133,6 +183,19 @@
             </div>
         @endif
     </div>
+
+    {{-- Add New Chat Button (visible when not showing form and no chat selected) --}}
+    @if(!$selectedChat && !$showNewChatForm)
+    <div class="flex flex-shrink-0 border-t border-crm-border bg-crm-surface p-2">
+        <button wire:click="toggleNewChatForm" class="w-full rounded bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700">
+            + New Chat
+        </button>
+    </div>
+    @elseif($showNewChatForm)
+    <div class="flex flex-shrink-0 border-t border-crm-border bg-crm-surface p-2">
+        <span class="text-xs text-crm-t3">Creating new chat...</span>
+    </div>
+    @endif
 
     {{-- Auto-scroll messages on update --}}
     @if($selectedChat)

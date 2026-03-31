@@ -11,6 +11,10 @@ class ChatWidget extends Component
 {
     public ?int $selectedChat = null;
     public string $messageInput = '';
+    public bool $showNewChatForm = false;
+    public string $newChatType = 'dm';
+    public string $newChatName = '';
+    public array $newChatMembers = [];
 
     public function selectChat(int $id): void
     {
@@ -21,6 +25,40 @@ class ChatWidget extends Component
     public function clearChat(): void
     {
         $this->selectedChat = null;
+        $this->messageInput = '';
+    }
+
+    public function toggleNewChatForm(): void
+    {
+        $this->showNewChatForm = !$this->showNewChatForm;
+        if ($this->showNewChatForm) {
+            $this->newChatType = 'dm';
+            $this->newChatName = '';
+            $this->newChatMembers = [];
+        }
+    }
+
+    public function createNewChat(): void
+    {
+        $name = trim($this->newChatName);
+        if (!$name || empty($this->newChatMembers)) {
+            return;
+        }
+
+        $members = [$this->newChatMembers, auth()->id()];
+        $members = array_unique(array_filter($members));
+
+        // Create the chat
+        $chat = Chat::create([
+            'name'    => $name,
+            'type'    => $this->newChatType,
+            'members' => $members,
+        ]);
+
+        $this->selectedChat = $chat->id;
+        $this->showNewChatForm = false;
+        $this->newChatName = '';
+        $this->newChatMembers = [];
         $this->messageInput = '';
     }
 
