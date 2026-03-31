@@ -154,8 +154,8 @@
                                 class="h-3.5 w-3.5 rounded border-crm-border"
                             >
                         </th>
-                        <th class="text-left px-4 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Owner Name</th>
                         <th class="text-left px-4 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Resort</th>
+                        <th class="text-left px-4 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Owner Name</th>
                         <th class="text-left px-4 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Phone 1</th>
                         <th class="text-left px-4 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Phone 2</th>
                         <th class="text-left px-4 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Location</th>
@@ -175,8 +175,8 @@
                                     class="h-3.5 w-3.5 rounded border-crm-border"
                                 >
                             </td>
-                            <td class="px-4 py-2.5 font-semibold">{{ $lead->owner_name }}</td>
                             <td class="px-4 py-2.5 text-crm-t2">{{ $lead->resort }}</td>
+                            <td class="px-4 py-2.5 font-semibold">{{ $lead->owner_name }}</td>
                             <td class="px-4 py-2.5">
                                 @if($lead->phone1)
                                     <a href="sip:{{ $lead->phone1 }}" class="text-blue-600 font-semibold font-mono" wire:click.stop>{{ $lead->phone1 }}</a>
