@@ -608,7 +608,7 @@ export default function CRM() {
       const hasMention = unread.some(m => m.text && currentUser?.name && m.text.includes("@" + currentUser.name));
       return (
         <div onClick={() => { setChatOpen(true); setChatMinimized(false); }} style={{ position: "fixed", bottom: 24, right: 24, width: 56, height: 56, borderRadius: "50%", background: "#111", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, cursor: "pointer", boxShadow: "0 4px 20px rgba(0,0,0,.3)", zIndex: 9999, transition: "transform .2s" }} onMouseEnter={e => e.currentTarget.style.transform = "scale(1.1)"} onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}>
-          ðŸ’¬
+          {"\u{1F4AC}"}
           {hasMention && <div style={{ position: "absolute", top: -2, right: -2, width: 18, height: 18, borderRadius: "50%", background: "#2563eb", border: "2px solid #111", animation: "pulse 1.5s infinite" }} />}
           {hasNewMessages && !hasMention && <div style={{ position: "absolute", top: -2, right: -2, width: 14, height: 14, borderRadius: "50%", background: "#ef4444", border: "2px solid #111" }} />}
         </div>
@@ -623,14 +623,14 @@ export default function CRM() {
         {/* Chat header â€” drag handle */}
         <div onMouseDown={onDragStart} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: chatMinimized ? "10px 16px" : "12px 16px", background: "#111", color: "#fff", cursor: chatMinimized ? "pointer" : "grab", flexShrink: 0, userSelect: "none" }} onClick={() => chatMinimized && setChatMinimized(false)}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 16 }}>ðŸ’¬</span>
+            <span style={{ fontSize: 16 }}>{"\u{1F4AC}"}</span>
             <span style={{ fontSize: 13, fontWeight: 600 }}>Messages</span>
             {chatMinimized && <span style={{ fontSize: 11, color: "rgba(255,255,255,.6)" }}>(click to expand)</span>}
             {!chatMinimized && <span style={{ fontSize: 9, color: "rgba(255,255,255,.35)" }}>drag to move</span>}
           </div>
           <div style={{ display: "flex", gap: 6 }}>
-            <div onClick={e => { e.stopPropagation(); setChatMinimized(!chatMinimized); }} style={{ width: 24, height: 24, borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14, color: "rgba(255,255,255,.7)" }} title={chatMinimized ? "Expand" : "Minimize"}>{chatMinimized ? "â–¡" : "â€“"}</div>
-            <div onClick={e => { e.stopPropagation(); setChatOpen(false); setChatPos({ x: null, y: null }); }} style={{ width: 24, height: 24, borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14, color: "rgba(255,255,255,.7)" }} title="Close">âœ•</div>
+            <div onClick={e => { e.stopPropagation(); setChatMinimized(!chatMinimized); }} style={{ width: 24, height: 24, borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14, color: "rgba(255,255,255,.7)" }} title={chatMinimized ? "Expand" : "Minimize"}>{chatMinimized ? "\u25A1" : "\u2212"}</div>
+            <div onClick={e => { e.stopPropagation(); setChatOpen(false); setChatPos({ x: null, y: null }); }} style={{ width: 24, height: 24, borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14, color: "rgba(255,255,255,.7)" }} title="Close">{"\u2715"}</div>
           </div>
         </div>
         {/* Chat body */}
@@ -2074,7 +2074,7 @@ function PayrollView({ deals, users, currentUser, crmName }) {
         </div>
         <div style={{ textAlign: "right", marginRight: 8 }}><div style={{ fontSize: 28, fontWeight: 800, fontFamily: "'JetBrains Mono',monospace", color: finalPay >= 0 ? "var(--green)" : "var(--red)" }}>{fmt$(finalPay)}</div><div style={{ fontSize: 10, color: "var(--t3)" }}>FINAL PAY</div></div>
         <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-end" }}>
-          {isMasterAdmin && <button className="btn btn-sm" onClick={() => printPaysheet(p)}>ðŸ–¨ PDF/Print</button>}
+          {isMasterAdmin && <button className="btn btn-sm" onClick={() => printPaysheet(p)}>{"\u{1F5A8}"} PDF/Print</button>}
           {showSend && !sentSheets[p.id] && <button className="btn btn-sm btn-g" onClick={() => sendPaysheet(p.id, finalPay)}>Send</button>}
           {sentSheets[p.id] && <span className="tag" style={{ background: "var(--green-s)", color: "var(--green)" }}>SENT</span>}
         </div>
@@ -2183,7 +2183,7 @@ function PayrollView({ deals, users, currentUser, crmName }) {
           <div><div style={{ fontSize: 13, fontWeight: 600, color: "var(--t1)" }}>Week of {weekLabel}</div><div style={{ fontSize: 11, color: "var(--t3)" }}>Paysheets sent every Friday morning</div></div>
           <div style={{ display: "flex", gap: 6 }}>
             {tab !== "sent" && tab !== "history" && <button className="btn btn-sm btn-p" onClick={() => { sendAll(tab==="closers"?allClosers:tab==="fronters"?allFronters:allAdmins); }}>Send All</button>}
-            <button className="btn btn-sm" onClick={exportCSV}>ðŸ“¥ Export CSV</button>
+            <button className="btn btn-sm" onClick={exportCSV}>{"\u{1F4E5}"} Export CSV</button>
           </div>
         </div>
         {/* Payroll Rate Settings */}
