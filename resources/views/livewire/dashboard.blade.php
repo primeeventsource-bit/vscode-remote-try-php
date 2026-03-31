@@ -58,10 +58,10 @@
     {{-- ══════════════════════════════════════════════
          CHARTS ROW 1 — Monthly Revenue + Deal Status Donut
     ══════════════════════════════════════════════ --}}
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6">
 
-        {{-- Monthly Revenue Bar Chart (takes 2/3 width) --}}
-        <div class="md:col-span-2 bg-crm-card border border-crm-border rounded-lg p-4">
+        {{-- Monthly Revenue Bar Chart (takes 3/5 width) --}}
+        <div class="lg:col-span-3 bg-crm-card border border-crm-border rounded-lg p-4">
             <div class="text-sm font-semibold mb-1">{{ $isCloser ? 'My Monthly Revenue' : 'Monthly Charged Revenue' }}</div>
             <div class="text-[10px] text-crm-t3 mb-4">Last 6 months · charged deals only</div>
             @php
@@ -115,8 +115,8 @@
             </svg>
         </div>
 
-        {{-- Deal Status Donut Chart (takes 1/3) --}}
-        <div class="bg-crm-card border border-crm-border rounded-lg p-4">
+        {{-- Deal Status Donut Chart (takes 2/5) --}}
+        <div class="lg:col-span-2 bg-crm-card border border-crm-border rounded-lg p-4">
             <div class="text-sm font-semibold mb-1">{{ $isCloser ? 'My Deal Status' : 'Deal Status' }}</div>
             <div class="text-[10px] text-crm-t3 mb-3">All time breakdown</div>
             @php
@@ -182,10 +182,10 @@
          CHARTS ROW 2 — Chargeback Trend + (Admin only)
     ══════════════════════════════════════════════ --}}
     @if(!$isCloser)
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6">
 
-        {{-- Chargeback Trend Bar Chart (takes 2/3 width) --}}
-        <div class="md:col-span-2 bg-crm-card border border-crm-border rounded-lg p-4">
+        {{-- Chargeback Trend Bar Chart (takes 3/5 width) --}}
+        <div class="lg:col-span-3 bg-crm-card border border-crm-border rounded-lg p-4">
             <div class="text-sm font-semibold mb-1">Chargeback Trend</div>
             <div class="text-[10px] text-crm-t3 mb-4">Last 6 months · monthly breakdown</div>
             @php
@@ -239,8 +239,8 @@
             </svg>
         </div>
 
-        {{-- Chargeback Stats Card (takes 1/3) --}}
-        <div class="bg-crm-card border border-crm-border rounded-lg p-4">
+        {{-- Chargeback Stats Card (takes 2/5) --}}
+        <div class="lg:col-span-2 bg-crm-card border border-crm-border rounded-lg p-4">
             <div class="text-sm font-semibold mb-1">Chargeback Stats</div>
             <div class="text-[10px] text-crm-t3 mb-4">All time summary</div>
             <div class="space-y-3">
@@ -273,10 +273,10 @@
          CHARTS ROW 3 — Top Closers + Revenue + Recent
     ══════════════════════════════════════════════ --}}
     @if(!$isCloser)
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6">
 
-        {{-- Top Closers — horizontal progress bars --}}
-        <div class="bg-crm-card border border-crm-border rounded-lg p-4">
+        {{-- Top Closers — horizontal progress bars (takes 2/5) --}}
+        <div class="lg:col-span-2 bg-crm-card border border-crm-border rounded-lg p-4">
             <div class="text-sm font-semibold mb-1">Top Closers</div>
             <div class="text-[10px] text-crm-t3 mb-4">Ranked by charged revenue (all-time)</div>
             @php $maxCloserRev = (float)($closers->max('rev') ?: 1); @endphp
@@ -304,8 +304,8 @@
             @endforelse
         </div>
 
-        {{-- Revenue Split + Recent Deals --}}
-        <div class="space-y-4">
+        {{-- Revenue Split + Recent Deals (takes 3/5) --}}
+        <div class="lg:col-span-3 space-y-4">
             {{-- Revenue split card --}}
             <div class="bg-crm-card border border-crm-border rounded-lg p-4">
                 <div class="text-sm font-semibold mb-3">Revenue Split</div>

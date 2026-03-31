@@ -17,6 +17,10 @@ class ChatPage extends Component
 
     public function selectChat($id) { $this->selectedChat = $id; }
 
+    public function newChat() {
+        return redirect()->route('dashboard')->with('info', 'Chat creation feature coming soon');
+    }
+
     public function sendMessage()
     {
         if (!$this->messageInput || !$this->selectedChat) return;
