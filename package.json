@@ -1,0 +1,11 @@
+{
+  "name": "prime-crm-frontend",
+  "private": true,
+  "scripts": {
+    "build:css": "tailwindcss -i ./resources/css/app.css -o ./public/build/app.css --minify",
+    "watch:css": "tailwindcss -i ./resources/css/app.css -o ./public/build/app.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
+  }
+}
