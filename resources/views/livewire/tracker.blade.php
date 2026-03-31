@@ -21,7 +21,7 @@
                         <th class="text-left px-3 py-2 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold min-w-[120px]">Agent</th>
                         @foreach($days as $day)
                             <th class="text-center px-2 py-2 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold min-w-[90px]">
-                                {{ $day['label'] ?? $day }}
+                                {{ is_object($day) ? $day->format('D n/j') : ($day['label'] ?? $day) }}
                             </th>
                         @endforeach
                         <th class="text-center px-2 py-2 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold bg-blue-50/50 min-w-[80px]">Week Total</th>
@@ -53,8 +53,8 @@
                                         $cell = $userData[$dayKey] ?? null;
                                     @endphp
                                     <td class="px-2 py-2 text-center">
-                                        @if($cell && ($cell['revenue'] ?? 0) > 0)
-                                            <div class="text-xs font-bold font-mono text-emerald-500">${{ number_format($cell['revenue']) }}</div>
+                                        @if($cell && ($cell['rev'] ?? 0) > 0)
+                                            <div class="text-xs font-bold font-mono text-emerald-500">${{ number_format($cell['rev']) }}</div>
                                             <div class="text-[9px] text-crm-t3">{{ $cell['count'] ?? 0 }} deal{{ ($cell['count'] ?? 0) !== 1 ? 's' : '' }}</div>
                                             @if(isset($cell['initials']) && count($cell['initials']))
                                                 <div class="text-[8px] text-crm-t3 font-mono">{{ implode(', ', $cell['initials']) }}</div>
@@ -65,11 +65,11 @@
                                     </td>
                                 @endforeach
                                 <td class="px-2 py-2 text-center bg-blue-50/30">
-                                    <div class="text-xs font-bold font-mono {{ $weekTotal['revenue'] > 0 ? 'text-blue-600' : 'text-crm-t3' }}">${{ number_format($weekTotal['revenue']) }}</div>
+                                    <div class="text-xs font-bold font-mono {{ $weekTotal['rev'] > 0 ? 'text-blue-600' : 'text-crm-t3' }}">${{ number_format($weekTotal['rev']) }}</div>
                                     <div class="text-[9px] text-crm-t3">{{ $weekTotal['count'] }} deals</div>
                                 </td>
                                 <td class="px-2 py-2 text-center bg-gray-50/30">
-                                    <div class="text-xs font-mono text-crm-t2">${{ number_format($prevTotal['revenue']) }}</div>
+                                    <div class="text-xs font-mono text-crm-t2">${{ number_format($prevTotal['rev']) }}</div>
                                     <div class="text-[9px] text-crm-t3">{{ $prevTotal['count'] }}</div>
                                 </td>
                             </tr>
@@ -100,8 +100,8 @@
                                         $cell = $userData[$dayKey] ?? null;
                                     @endphp
                                     <td class="px-2 py-2 text-center">
-                                        @if($cell && ($cell['revenue'] ?? 0) > 0)
-                                            <div class="text-xs font-bold font-mono text-emerald-500">${{ number_format($cell['revenue']) }}</div>
+                                        @if($cell && ($cell['rev'] ?? 0) > 0)
+                                            <div class="text-xs font-bold font-mono text-emerald-500">${{ number_format($cell['rev']) }}</div>
                                             <div class="text-[9px] text-crm-t3">{{ $cell['count'] ?? 0 }} deal{{ ($cell['count'] ?? 0) !== 1 ? 's' : '' }}</div>
                                             @if(isset($cell['initials']) && count($cell['initials']))
                                                 <div class="text-[8px] text-crm-t3 font-mono">{{ implode(', ', $cell['initials']) }}</div>
@@ -112,11 +112,11 @@
                                     </td>
                                 @endforeach
                                 <td class="px-2 py-2 text-center bg-blue-50/30">
-                                    <div class="text-xs font-bold font-mono {{ $weekTotal['revenue'] > 0 ? 'text-blue-600' : 'text-crm-t3' }}">${{ number_format($weekTotal['revenue']) }}</div>
+                                    <div class="text-xs font-bold font-mono {{ $weekTotal['rev'] > 0 ? 'text-blue-600' : 'text-crm-t3' }}">${{ number_format($weekTotal['rev']) }}</div>
                                     <div class="text-[9px] text-crm-t3">{{ $weekTotal['count'] }} deals</div>
                                 </td>
                                 <td class="px-2 py-2 text-center bg-gray-50/30">
-                                    <div class="text-xs font-mono text-crm-t2">${{ number_format($prevTotal['revenue']) }}</div>
+                                    <div class="text-xs font-mono text-crm-t2">${{ number_format($prevTotal['rev']) }}</div>
                                     <div class="text-[9px] text-crm-t3">{{ $prevTotal['count'] }}</div>
                                 </td>
                             </tr>
@@ -130,12 +130,12 @@
                         @foreach($days as $idx => $day)
                             @php
                                 $dayKey = is_array($day) ? ($day['key'] ?? $idx) : $idx;
-                                $dt = $dayTotals[$dayKey] ?? ['revenue' => 0, 'count' => 0];
-                                $grandRevenue += $dt['revenue'];
+                                $dt = $dayTotals[$dayKey] ?? ['rev' => 0, 'count' => 0];
+                                $grandRevenue += $dt['rev'];
                                 $grandCount += $dt['count'];
                             @endphp
                             <td class="px-2 py-2.5 text-center">
-                                <div class="text-xs font-bold font-mono text-crm-t1">${{ number_format($dt['revenue']) }}</div>
+                                <div class="text-xs font-bold font-mono text-crm-t1">${{ number_format($dt['rev']) }}</div>
                                 <div class="text-[9px] text-crm-t3">{{ $dt['count'] }} deals</div>
                             </td>
                         @endforeach

@@ -13,8 +13,8 @@ class Users extends Component
 {
     public bool $showAddModal = false;
     public ?int $editingUser = null;
-    public array $newUser = ['name' => '', 'email' => '', 'username' => '', 'password' => '', 'role' => 'fronter'];
-    public array $editForm = ['username' => '', 'password' => ''];
+    public array $newUser = ['name' => '', 'email' => '', 'username' => '', 'password' => '', 'role' => 'fronter', 'avatar' => '', 'color' => '#3b82f6'];
+    public array $editData = ['name' => '', 'email' => '', 'username' => '', 'password' => '', 'avatar' => '', 'color' => '#3b82f6'];
 
     public function saveUser()
     {
@@ -33,24 +33,57 @@ class Users extends Component
         User::create([
             'name' => $this->newUser['name'], 'email' => $this->newUser['email'],
             'username' => $this->newUser['username'], 'password' => Hash::make($this->newUser['password']),
-            'role' => $this->newUser['role'], 'avatar' => substr($avatar, 0, 2),
-            'color' => $colors[array_rand($colors)], 'status' => 'online',
+            'role' => $this->newUser['role'], 'avatar' => $this->newUser['avatar'] ?: substr($avatar, 0, 2),
+            'color' => $this->newUser['color'] ?: $colors[array_rand($colors)], 'status' => 'online',
             'permissions' => json_encode($roleDefaults[$this->newUser['role']] ?? $roleDefaults['fronter']),
         ]);
-        $this->newUser = ['name' => '', 'email' => '', 'username' => '', 'password' => '', 'role' => 'fronter'];
+        $this->newUser = ['name' => '', 'email' => '', 'username' => '', 'password' => '', 'role' => 'fronter', 'avatar' => '', 'color' => '#3b82f6'];
         $this->showAddModal = false;
     }
 
-    public function startEdit($id) { $u = User::find($id); $this->editingUser = $id; $this->editForm = ['username' => $u->username, 'password' => '']; }
+    public function startEdit($id)
+    {
+        $u = User::find($id);
+        if (! $u) {
+            return;
+        }
+
+        $this->editingUser = $id;
+        $this->editData = [
+            'name' => $u->name,
+            'email' => $u->email,
+            'username' => $u->username,
+            'password' => '',
+            'avatar' => $u->avatar,
+            'color' => $u->color ?: '#3b82f6',
+        ];
+    }
     public function cancelEdit() { $this->editingUser = null; }
 
     public function saveEdit()
     {
-        $data = ['username' => $this->editForm['username']];
-        if ($this->editForm['password'] && strlen($this->editForm['password']) >= 8) $data['password'] = Hash::make($this->editForm['password']);
+        if (! $this->editingUser) {
+            return;
+        }
+
+        $data = [
+            'name' => $this->editData['name'],
+            'email' => $this->editData['email'],
+            'username' => $this->editData['username'],
+            'avatar' => $this->editData['avatar'],
+            'color' => $this->editData['color'],
+        ];
+        if ($this->editData['password'] && strlen($this->editData['password']) >= 8) {
+            $data['password'] = Hash::make($this->editData['password']);
+        }
         User::where('id', $this->editingUser)->update($data);
         $this->editingUser = null;
     }
+
+    public function editUser($id) { $this->startEdit($id); }
+    public function updateUser() { $this->saveEdit(); }
+    public function changeRole($id, $role) { $this->updateRole($id, $role); }
+    public function removeUser($id) { $this->deleteUser($id); }
 
     public function updateRole($id, $role)
     {
@@ -67,6 +100,13 @@ class Users extends Component
 
     public function render()
     {
-        return view('livewire.users', ['users' => User::orderBy('name')->get(), 'currentUser' => auth()->user()]);
+        $currentUser = auth()->user();
+
+        return view('livewire.users', [
+            'users' => User::orderBy('name')->get(),
+            'currentUser' => $currentUser,
+            'isAdmin' => $currentUser?->hasPerm('edit_users') ?? false,
+            'isMaster' => $currentUser?->hasRole('master_admin') ?? false,
+        ]);
     }
 }

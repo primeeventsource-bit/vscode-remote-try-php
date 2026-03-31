@@ -47,7 +47,7 @@
                                 $from = $users->firstWhere('id', $transfer->from_user ?? $transfer->original_fronter ?? null);
                                 $to = $users->firstWhere('id', $transfer->to_user ?? $transfer->transferred_to ?? $transfer->assigned_to ?? null);
                             @endphp
-                            <tr wire:click="selectTransfer({{ $transfer->id }})" class="border-b border-crm-border cursor-pointer transition {{ (isset($selectedTransfer) && $selectedTransfer && $selectedTransfer->id === $transfer->id) ? 'bg-blue-50' : 'hover:bg-crm-hover' }}">
+                            <tr wire:click="selectTransfer('{{ $transfer->ref_type }}', {{ $transfer->id }})" class="border-b border-crm-border cursor-pointer transition {{ (isset($selectedTransfer) && $selectedTransfer && $selectedTransfer->id === $transfer->id && $selectedTransfer->ref_type === $transfer->ref_type) ? 'bg-blue-50' : 'hover:bg-crm-hover' }}">
                                 <td class="px-4 py-2.5">
                                     <span class="text-[8px] font-semibold px-1.5 py-0.5 rounded {{ $typeColor }}">{{ $typeLabel }}</span>
                                 </td>
@@ -94,7 +94,7 @@
             <div class="w-80 flex-shrink-0 bg-crm-card border border-crm-border rounded-lg p-4 max-h-[70vh] overflow-y-auto">
                 <div class="flex items-center justify-between mb-3">
                     <h4 class="text-sm font-bold">Transfer Detail</h4>
-                    <button wire:click="$set('selectedTransfer', null)" class="text-crm-t3 hover:text-crm-t1">&times;</button>
+                    <button wire:click="$set('selectedId', null); $set('selectedType', null)" class="text-crm-t3 hover:text-crm-t1">&times;</button>
                 </div>
 
                 <div class="space-y-2">

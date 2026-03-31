@@ -74,15 +74,15 @@
 
     {{-- Right Panel: Messages --}}
     <div class="flex-1 flex flex-col bg-crm-bg">
-        @if(isset($selectedChat) && $selectedChat)
+        @if(isset($activeChat) && $activeChat)
             {{-- Chat Header --}}
             <div class="px-4 py-3 border-b border-crm-border bg-crm-surface flex items-center gap-3">
-                @if($selectedChat->type === 'channel')
+                @if($activeChat->type === 'channel')
                     <span class="text-crm-t3">#</span>
                 @endif
-                <h4 class="text-sm font-bold">{{ $selectedChat->name ?? 'Chat' }}</h4>
+                <h4 class="text-sm font-bold">{{ $activeChat->name ?? 'Chat' }}</h4>
                 <span class="text-[10px] text-crm-t3">
-                    @php $memberIds = is_array($selectedChat->members) ? $selectedChat->members : json_decode($selectedChat->members ?? '[]', true); @endphp
+                    @php $memberIds = is_array($activeChat->members) ? $activeChat->members : json_decode($activeChat->members ?? '[]', true); @endphp
                     {{ count($memberIds) }} member{{ count($memberIds) !== 1 ? 's' : '' }}
                 </span>
             </div>
@@ -92,8 +92,8 @@
                 @if(isset($messages))
                     @foreach($messages as $msg)
                         @php
-                            $msgUser = isset($users) ? $users->firstWhere('id', $msg->user_id) : null;
-                            $isMine = $msg->user_id === auth()->id();
+                            $msgUser = isset($users) ? $users->firstWhere('id', $msg->sender_id) : null;
+                            $isMine = $msg->sender_id === auth()->id();
                         @endphp
                         <div class="flex items-start gap-3 {{ $isMine ? 'flex-row-reverse' : '' }}">
                             <div class="w-8 h-8 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0" style="background: {{ $msgUser->color ?? '#6b7280' }}">{{ $msgUser->avatar ?? substr($msgUser->name ?? '?', 0, 2) }}</div>

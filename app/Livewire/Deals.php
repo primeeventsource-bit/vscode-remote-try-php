@@ -14,7 +14,9 @@ class Deals extends Component
     public string $statusFilter = 'all';
     public ?int $selectedDeal = null;
     public bool $showModal = false;
+    public bool $showNewDeal = false;
     public array $dealForm = [];
+    public array $newDeal = [];
 
     public function mount() { $this->resetForm(); }
 
@@ -26,6 +28,7 @@ class Deals extends Component
             'bed_bath' => '', 'usage' => '', 'asking_sale_price' => '', 'name_on_card' => '', 'card_type' => '', 'bank' => '',
             'card_number' => '', 'exp_date' => '', 'cv2' => '', 'billing_address' => '', 'notes' => '', 'login_info' => '',
             'verification_num' => '', 'assigned_admin' => '', 'status' => 'pending_admin', 'charged' => 'no', 'charged_back' => 'no'];
+        $this->newDeal = $this->dealForm;
     }
 
     public function selectDeal($id) { $this->selectedDeal = $this->selectedDeal === $id ? null : $id; }
@@ -35,8 +38,9 @@ class Deals extends Component
         if (!empty($this->dealForm['id'])) {
             Deal::where('id', $this->dealForm['id'])->update(collect($this->dealForm)->except('id')->toArray());
         } else {
-            Deal::create($this->dealForm);
+            Deal::create($this->newDeal ?: $this->dealForm);
         }
+        $this->showNewDeal = false;
         $this->showModal = false;
         $this->resetForm();
     }
@@ -60,7 +64,15 @@ class Deals extends Component
         if (!$isAdmin) $query->whereNotIn('status', ['charged', 'chargeback']);
         if ($user->role === 'closer') $query->where('closer', $user->id);
         if ($user->role === 'fronter') $query->where('fronter', $user->id);
-        if ($this->statusFilter !== 'all') $query->where('status', $this->statusFilter);
+        if ($this->statusFilter !== 'all') {
+            $statusMap = [
+                'pending' => 'pending_admin',
+                'chargeback' => 'chargeback',
+                'charged' => 'charged',
+                'cancelled' => 'cancelled',
+            ];
+            $query->where('status', $statusMap[$this->statusFilter] ?? $this->statusFilter);
+        }
         $deals = $query->get();
         $users = User::all()->keyBy('id');
         $active = $this->selectedDeal ? Deal::find($this->selectedDeal) : null;
