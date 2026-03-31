@@ -132,12 +132,7 @@
         {{ $slot }}
     </main>
 
-    <a href="{{ route('chat') }}"
-       class="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-600/30 transition hover:scale-105 hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-200"
-       title="Open Chat">
-        <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-20"></span>
-        <span class="relative text-2xl leading-none">💬</span>
-    </a>
+    @livewire('chat-widget')
 
     @livewireScripts
 </body>

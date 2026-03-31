@@ -1,0 +1,146 @@
+<div
+    x-data="{
+        open: false,
+        px: Math.max(20, window.innerWidth - 400),
+        py: Math.max(60, window.innerHeight - 540),
+        dragging: false,
+        ox: 0,
+        oy: 0,
+        startDrag(e) {
+            if (e.button !== undefined && e.button !== 0) return;
+            this.dragging = true;
+            this.ox = e.clientX - this.px;
+            this.oy = e.clientY - this.py;
+        },
+        doDrag(e) {
+            if (!this.dragging) return;
+            this.px = Math.max(0, Math.min(e.clientX - this.ox, window.innerWidth - 385));
+            this.py = Math.max(44, Math.min(e.clientY - this.oy, window.innerHeight - 510));
+        },
+        stopDrag() { this.dragging = false; }
+    }"
+    @mousemove.window="doDrag($event)"
+    @mouseup.window="stopDrag()"
+    wire:poll.10s
+>
+    {{-- ─── Floating Bubble ─── --}}
+    <button
+        @click="open = !open"
+        class="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-600/30 transition hover:scale-105 hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-200"
+        title="Toggle Chat"
+    >
+        <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-20"></span>
+        <span class="relative text-2xl leading-none" x-text="open ? '✕' : '💬'"></span>
+    </button>
+
+    {{-- ─── Draggable Chat Popup ─── --}}
+    <div
+        x-show="open"
+        x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="opacity-0 scale-95"
+        x-transition:enter-end="opacity-100 scale-100"
+        x-transition:leave="transition ease-in duration-150"
+        x-transition:leave-start="opacity-100 scale-100"
+        x-transition:leave-end="opacity-0 scale-95"
+        :style="`position:fixed;left:${px}px;top:${py}px;width:380px;height:500px;z-index:9999;`"
+        class="flex flex-col overflow-hidden rounded-xl border border-crm-border bg-white shadow-2xl select-none"
+        style="display:none;"
+    >
+        {{-- Drag Handle / Header --}}
+        <div
+            class="flex flex-shrink-0 cursor-grab items-center gap-2 border-b border-crm-border bg-crm-surface px-4 py-3 active:cursor-grabbing"
+            @mousedown="startDrag($event)"
+        >
+            @if($selectedChat && $activeChat)
+                <button wire:click="clearChat" class="mr-1 flex h-6 w-6 items-center justify-center rounded text-crm-t3 hover:bg-crm-hover hover:text-crm-t1 transition text-sm">←</button>
+                <span class="flex-1 text-sm font-bold truncate">{{ $activeChat->name ?? 'Chat' }}</span>
+            @else
+                <span class="text-base">💬</span>
+                <h4 class="flex-1 text-sm font-bold">Chat</h4>
+            @endif
+            <button @click="open = false" class="flex h-6 w-6 items-center justify-center rounded text-lg text-crm-t3 hover:bg-crm-hover hover:text-crm-t1 transition leading-none">&times;</button>
+        </div>
+
+        {{-- ─── Chat List (no chat selected) ─── --}}
+        @if(!$selectedChat)
+            <div class="flex-1 overflow-y-auto">
+                @forelse($chats as $chat)
+                    @php
+                        $members = is_array($chat->members) ? $chat->members : json_decode($chat->members ?? '[]', true);
+                        $otherId = collect($members)->first(fn($m) => (int)$m !== auth()->id());
+                        $other   = $users->get($otherId);
+                        $bg      = $other->color ?? '#3b82f6';
+                        $initials = $chat->type === 'channel' ? '#' : ($other->avatar ?? substr($other->name ?? 'G', 0, 2));
+                        $displayName = $chat->type === 'dm' ? ($other->name ?? $chat->name ?? 'DM') : $chat->name;
+                    @endphp
+                    <button wire:click="selectChat({{ $chat->id }})"
+                        class="flex w-full items-center gap-3 border-b border-crm-border px-4 py-3 text-left transition hover:bg-crm-hover">
+                        <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                             style="background:{{ $bg }}">{{ $initials }}</div>
+                        <div class="min-w-0 flex-1">
+                            <div class="truncate text-sm font-semibold">{{ $displayName }}</div>
+                            <div class="text-[10px] text-crm-t3">{{ $chat->updated_at?->diffForHumans() ?? '' }}</div>
+                        </div>
+                        @if($chat->type === 'channel')
+                            <span class="text-[10px] font-mono text-crm-t3">#</span>
+                        @elseif($chat->type === 'group')
+                            <span class="text-[10px] text-crm-t3">G</span>
+                        @endif
+                    </button>
+                @empty
+                    <div class="flex flex-1 items-center justify-center p-8 text-center">
+                        <p class="text-sm text-crm-t3">No conversations yet.</p>
+                    </div>
+                @endforelse
+            </div>
+
+        {{-- ─── Message Thread (chat selected) ─── --}}
+        @else
+            <div class="flex-1 overflow-y-auto space-y-2 p-3" id="cwt-messages">
+                @forelse($messages as $msg)
+                    @php
+                        $msgUser = $users->get($msg->sender_id);
+                        $isMine  = $msg->sender_id === auth()->id();
+                        $bubble  = $isMine ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-crm-card border border-crm-border text-crm-t1 rounded-bl-sm';
+                    @endphp
+                    <div class="flex items-end gap-2 {{ $isMine ? 'flex-row-reverse' : '' }}">
+                        <div class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[8px] font-bold text-white"
+                             style="background:{{ $msgUser->color ?? '#6b7280' }}">
+                            {{ $msgUser->avatar ?? substr($msgUser->name ?? '?', 0, 2) }}
+                        </div>
+                        <div class="max-w-[72%] rounded-lg px-3 py-2 text-sm {{ $bubble }}">
+                            {{ $msg->body ?? $msg->content ?? $msg->text ?? '' }}
+                        </div>
+                    </div>
+                @empty
+                    <p class="py-6 text-center text-xs text-crm-t3">No messages yet. Say hello! 👋</p>
+                @endforelse
+            </div>
+
+            {{-- Message Input --}}
+            <div class="flex flex-shrink-0 gap-2 border-t border-crm-border bg-crm-surface px-3 py-2">
+                <input
+                    wire:model="messageInput"
+                    wire:keydown.enter="sendMessage"
+                    type="text"
+                    placeholder="Type a message…"
+                    class="flex-1 rounded-lg border border-crm-border bg-white px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
+                >
+                <button wire:click="sendMessage"
+                    class="flex-shrink-0 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-700">
+                    ↑
+                </button>
+            </div>
+        @endif
+    </div>
+
+    {{-- Auto-scroll messages on update --}}
+    @if($selectedChat)
+    <script>
+        (function() {
+            var el = document.getElementById('cwt-messages');
+            if (el) el.scrollTop = el.scrollHeight;
+        })();
+    </script>
+    @endif
+</div>
