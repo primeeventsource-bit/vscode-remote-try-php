@@ -1,7 +1,8 @@
 <?php
-
 namespace App\Livewire;
 
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -10,8 +11,62 @@ use Livewire\Component;
 #[Title('Users')]
 class Users extends Component
 {
+    public bool $showAddModal = false;
+    public ?int $editingUser = null;
+    public array $newUser = ['name' => '', 'email' => '', 'username' => '', 'password' => '', 'role' => 'fronter'];
+    public array $editForm = ['username' => '', 'password' => ''];
+
+    public function saveUser()
+    {
+        $this->validate([
+            'newUser.name' => 'required', 'newUser.username' => 'required|unique:users,username',
+            'newUser.password' => 'required|min:8', 'newUser.email' => 'required',
+        ]);
+        $roleDefaults = [
+            'master_admin' => ['view_dashboard','view_stats','view_leads','view_all_leads','assign_leads','view_pipeline','view_deals','create_deals','view_verification','toggle_charged','toggle_chargeback','view_payroll','view_users','edit_users','delete_users','view_chat','master_override','import_csv','add_leads','disposition_leads','upload_files','view_login_info','create_chats'],
+            'admin' => ['view_dashboard','view_stats','view_leads','view_all_leads','assign_leads','view_pipeline','view_deals','create_deals','view_verification','toggle_charged','toggle_chargeback','view_payroll','view_users','edit_users','delete_users','view_chat','import_csv','add_leads','disposition_leads','upload_files','view_login_info','create_chats'],
+            'fronter' => ['view_leads','view_pipeline','view_chat','disposition_leads','create_chats','view_payroll'],
+            'closer' => ['view_dashboard','view_leads','view_pipeline','view_deals','view_verification','view_chat','disposition_leads','create_deals','create_chats','view_login_info','view_payroll'],
+        ];
+        $avatar = strtoupper(collect(explode(' ', $this->newUser['name']))->map(fn($w) => substr($w, 0, 1))->join(''));
+        $colors = ['#3b82f6','#10b981','#ec4899','#f59e0b','#8b5cf6','#14b8a6','#ef4444','#6366f1'];
+        User::create([
+            'name' => $this->newUser['name'], 'email' => $this->newUser['email'],
+            'username' => $this->newUser['username'], 'password' => Hash::make($this->newUser['password']),
+            'role' => $this->newUser['role'], 'avatar' => substr($avatar, 0, 2),
+            'color' => $colors[array_rand($colors)], 'status' => 'online',
+            'permissions' => json_encode($roleDefaults[$this->newUser['role']] ?? $roleDefaults['fronter']),
+        ]);
+        $this->newUser = ['name' => '', 'email' => '', 'username' => '', 'password' => '', 'role' => 'fronter'];
+        $this->showAddModal = false;
+    }
+
+    public function startEdit($id) { $u = User::find($id); $this->editingUser = $id; $this->editForm = ['username' => $u->username, 'password' => '']; }
+    public function cancelEdit() { $this->editingUser = null; }
+
+    public function saveEdit()
+    {
+        $data = ['username' => $this->editForm['username']];
+        if ($this->editForm['password'] && strlen($this->editForm['password']) >= 8) $data['password'] = Hash::make($this->editForm['password']);
+        User::where('id', $this->editingUser)->update($data);
+        $this->editingUser = null;
+    }
+
+    public function updateRole($id, $role)
+    {
+        $roleDefaults = ['master_admin' => ['view_dashboard','view_stats','view_leads','view_all_leads','assign_leads','view_pipeline','view_deals','create_deals','view_verification','toggle_charged','toggle_chargeback','view_payroll','view_users','edit_users','delete_users','view_chat','master_override','import_csv','add_leads','disposition_leads','upload_files','view_login_info','create_chats'], 'fronter' => ['view_leads','view_pipeline','view_chat','disposition_leads','create_chats','view_payroll'], 'closer' => ['view_dashboard','view_leads','view_pipeline','view_deals','view_verification','view_chat','disposition_leads','create_deals','create_chats','view_login_info','view_payroll']];
+        $roleDefaults['admin'] = array_filter($roleDefaults['master_admin'], fn($p) => $p !== 'master_override');
+        User::where('id', $id)->update(['role' => $role, 'permissions' => json_encode($roleDefaults[$role] ?? $roleDefaults['fronter'])]);
+    }
+
+    public function deleteUser($id)
+    {
+        if ($id == auth()->id()) return;
+        User::where('id', $id)->delete();
+    }
+
     public function render()
     {
-        return view('livewire.users');
+        return view('livewire.users', ['users' => User::orderBy('name')->get(), 'currentUser' => auth()->user()]);
     }
 }
