@@ -17,6 +17,7 @@ class Leads extends Component
     public string $search = '';
     public string $filter = 'all';
     public string $resortFilter = 'all';
+    public string $fronterFilter = 'all';
     public ?int $selectedLead = null;
     public string $transferCloser = '';
     public string $callbackDateTime = '';
@@ -192,6 +193,19 @@ class Leads extends Component
         $this->resetErrorBag('bulkFronter');
     }
 
+    public function unassignSelectedLeads(): void
+    {
+        if (count($this->selectedLeads) === 0) {
+            $this->addError('bulkFronter', 'Select at least one lead.');
+            return;
+        }
+
+        Lead::whereIn('id', $this->selectedLeads)->update(['assigned_to' => null]);
+
+        $this->selectedLeads = [];
+        $this->resetErrorBag('bulkFronter');
+    }
+
     private function processCsvContent(string $csv): void
     {
         $lines = preg_split('/\r\n|\r|\n/', trim($csv));
@@ -272,6 +286,12 @@ class Leads extends Component
             $query->where('resort', $this->resortFilter);
         }
 
+        if ($this->fronterFilter === 'unassigned') {
+            $query->whereNull('assigned_to');
+        } elseif ($this->fronterFilter !== 'all') {
+            $query->where('assigned_to', (int) $this->fronterFilter);
+        }
+
         if ($this->filter === 'undisposed') {
             $query->whereNull('disposition');
         }
@@ -293,6 +313,24 @@ class Leads extends Component
         $fronters = User::where('role', 'fronter')->orderBy('name')->get();
         $users = User::all();
         $active = $this->selectedLead ? Lead::find($this->selectedLead) : null;
-        return view('livewire.leads', compact('leads', 'resorts', 'closers', 'fronters', 'users', 'active', 'isAdmin'));
+
+        $fronterStats = [];
+        if ($isAdmin) {
+            $leadRows = Lead::query()->select(['assigned_to', 'disposition'])->get();
+            foreach ($fronters as $f) {
+                $rows = $leadRows->where('assigned_to', $f->id);
+                $fronterStats[] = [
+                    'id' => $f->id,
+                    'name' => $f->name,
+                    'total' => $rows->count(),
+                    'undisposed' => $rows->whereNull('disposition')->count(),
+                    'transferred' => $rows->filter(fn($r) => str_contains((string) ($r->disposition ?? ''), 'Transferred'))->count(),
+                    'callback' => $rows->filter(fn($r) => str_contains((string) ($r->disposition ?? ''), 'Callback'))->count(),
+                    'right_number' => $rows->filter(fn($r) => str_contains((string) ($r->disposition ?? ''), 'Right Number'))->count(),
+                ];
+            }
+        }
+
+        return view('livewire.leads', compact('leads', 'resorts', 'closers', 'fronters', 'users', 'active', 'isAdmin', 'fronterStats'));
     }
 }

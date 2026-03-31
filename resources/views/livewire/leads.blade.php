@@ -66,6 +66,13 @@
                 <option value="{{ $r }}">{{ $r }}</option>
             @endforeach
         </select>
+        <select wire:model.live="fronterFilter" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
+            <option value="all">All Fronter Lists</option>
+            <option value="unassigned">Unassigned Leads</option>
+            @foreach($fronters as $f)
+                <option value="{{ $f->id }}">{{ $f->name }}</option>
+            @endforeach
+        </select>
         <div class="flex items-center gap-1 bg-crm-card border border-crm-border rounded-lg p-0.5">
             @foreach(['all' => 'All', 'undisposed' => 'Undisposed', 'transferred' => 'Transferred'] as $key => $label)
                 <button wire:click="$set('filter', '{{ $key }}')"
@@ -87,10 +94,51 @@
             @endforeach
         </select>
         <button wire:click="assignSelectedToFronter" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">Assign Selected</button>
+        <button wire:click="unassignSelectedLeads" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-500 text-white hover:bg-amber-600 transition">Take Selected Off Rep</button>
         @error('bulkFronter')
             <span class="text-xs font-semibold text-red-600">{{ $message }}</span>
         @enderror
     </div>
+
+    @if($isAdmin)
+    <div class="bg-crm-card border border-crm-border rounded-lg overflow-hidden mb-4">
+        <div class="px-4 py-2.5 border-b border-crm-border bg-crm-surface">
+            <h3 class="text-sm font-semibold">Fronter Lead Lists · Disposition / Status</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-xs">
+                <thead>
+                    <tr class="border-b border-crm-border bg-white">
+                        <th class="text-left px-4 py-2 font-semibold text-crm-t3 uppercase tracking-wider">Rep</th>
+                        <th class="text-left px-4 py-2 font-semibold text-crm-t3 uppercase tracking-wider">Total</th>
+                        <th class="text-left px-4 py-2 font-semibold text-crm-t3 uppercase tracking-wider">Undisposed</th>
+                        <th class="text-left px-4 py-2 font-semibold text-crm-t3 uppercase tracking-wider">Transferred</th>
+                        <th class="text-left px-4 py-2 font-semibold text-crm-t3 uppercase tracking-wider">Callback</th>
+                        <th class="text-left px-4 py-2 font-semibold text-crm-t3 uppercase tracking-wider">Right Number</th>
+                        <th class="text-left px-4 py-2 font-semibold text-crm-t3 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($fronterStats as $s)
+                        <tr class="border-b border-crm-border">
+                            <td class="px-4 py-2.5 font-semibold">{{ $s['name'] }}</td>
+                            <td class="px-4 py-2.5">{{ $s['total'] }}</td>
+                            <td class="px-4 py-2.5">{{ $s['undisposed'] }}</td>
+                            <td class="px-4 py-2.5">{{ $s['transferred'] }}</td>
+                            <td class="px-4 py-2.5">{{ $s['callback'] }}</td>
+                            <td class="px-4 py-2.5">{{ $s['right_number'] }}</td>
+                            <td class="px-4 py-2.5">
+                                <button wire:click="$set('fronterFilter', '{{ $s['id'] }}')" class="px-2 py-1 rounded border border-crm-border bg-white hover:bg-crm-hover transition">View List</button>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="7" class="px-4 py-4 text-crm-t3">No fronter reps found.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @endif
 
     {{-- Leads Table --}}
     <div class="bg-crm-card border border-crm-border rounded-lg overflow-hidden mb-4">
