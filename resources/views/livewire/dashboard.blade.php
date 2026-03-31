@@ -126,7 +126,7 @@
                 $dCB         = $isCloser ? $myChargebacks: $chargebacks;
                 $dCancelled  = $isCloser ? $dSource->where('status','cancelled') : $cancelled;
                 $dTotal      = $dCharged->count() + $dPending->count() + $dCB->count() + $dCancelled->count();
-                $donutR      = 22;
+                $donutR      = 9;
                 $donutCx     = 30;
                 $donutCy     = 30;
                 $donutCirc   = 2 * M_PI * $donutR;
@@ -152,7 +152,7 @@
                                 <circle cx="{{ $donutCx }}" cy="{{ $donutCy }}" r="{{ $donutR }}"
                                         fill="none"
                                         stroke="{{ $seg['color'] }}"
-                                        stroke-width="11"
+                                        stroke-width="4.5"
                                         stroke-dasharray="{{ round($dash, 2) }} {{ round($gap, 2) }}"
                                         stroke-dashoffset="{{ round(-$offset, 2) }}"
                                         transform="rotate(-90 {{ $donutCx }} {{ $donutCy }})"/>
@@ -160,10 +160,10 @@
                         @endforeach
                     @else
                         <circle cx="{{ $donutCx }}" cy="{{ $donutCy }}" r="{{ $donutR }}"
-                                fill="none" stroke="#e5e7eb" stroke-width="11"/>
+                                fill="none" stroke="#e5e7eb" stroke-width="4.5"/>
                     @endif
-                    <text x="{{ $donutCx }}" y="{{ $donutCy - 2 }}" text-anchor="middle" font-size="11" font-weight="bold" fill="#111">{{ $dTotal }}</text>
-                    <text x="{{ $donutCx }}" y="{{ $donutCy + 6 }}" text-anchor="middle" font-size="6" fill="#9ca3af">Deals</text>
+                    <text x="{{ $donutCx }}" y="{{ $donutCy - 2 }}" text-anchor="middle" font-size="5" font-weight="bold" fill="#111">{{ $dTotal }}</text>
+                    <text x="{{ $donutCx }}" y="{{ $donutCy + 6 }}" text-anchor="middle" font-size="2.5" fill="#9ca3af">Deals</text>
                 </svg>
                 <div class="space-y-1.5 flex-1 min-w-0">
                     @foreach($donutSegs as $seg)
