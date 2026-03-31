@@ -37,6 +37,7 @@ class DatabaseSeeder extends Seeder
 
         // ─── Users ───────────────────────────────────────────────────
         $users = [
+            ['name' => 'Prime Event Source','email' => 'primeeventsource@gmail.com', 'role' => 'master_admin', 'avatar' => 'PE', 'color' => '#7c3aed', 'username' => 'primeadmin', 'password' => 'prime2026', 'permissions' => $allPerms],
             ['name' => 'David Chen',       'email' => 'david@tl.com',  'role' => 'master_admin',  'avatar' => 'DC', 'color' => '#dc2626', 'username' => 'dchen',       'password' => '12345678', 'permissions' => $allPerms],
             ['name' => 'Angela Ross',      'email' => 'angela@tl.com', 'role' => 'master_admin',  'avatar' => 'AR', 'color' => '#b91c1c', 'username' => 'aross',       'password' => '12345678', 'permissions' => $allPerms],
             ['name' => 'Mike Torres',      'email' => 'mike@tl.com',   'role' => 'admin',         'avatar' => 'MT', 'color' => '#3b82f6', 'username' => 'mtorres',     'password' => 'admin123',  'permissions' => $adminPerms],
