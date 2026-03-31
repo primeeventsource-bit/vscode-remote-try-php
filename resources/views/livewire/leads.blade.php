@@ -256,10 +256,22 @@
                 <p class="text-xs text-crm-t3 mb-3">Drop a CSV file here or click to choose one. Expected columns: Resort, Owner Name, Phone 1, Phone 2, City, State, Zip, Resort Location</p>
 
                 <div
-                    x-data="{ dragging: false }"
+                    x-data="{
+                        dragging: false,
+                        fileName: '',
+                        readFile(file) {
+                            if (!file) return;
+                            this.fileName = file.name;
+                            const reader = new FileReader();
+                            reader.onload = (e) => {
+                                $wire.set('csvText', e.target?.result ?? '');
+                            };
+                            reader.readAsText(file);
+                        }
+                    }"
                     @dragover.prevent="dragging = true"
                     @dragleave.prevent="dragging = false"
-                    @drop.prevent="dragging = false"
+                    @drop.prevent="dragging = false; readFile($event.dataTransfer.files[0])"
                     class="relative mb-3"
                 >
                     <label
@@ -269,16 +281,11 @@
                     >
                         <div class="text-sm font-semibold text-crm-t2">Drag & drop CSV here</div>
                         <div class="mt-1 text-xs text-crm-t3">or click to browse files</div>
-                        @if($csvFile)
-                            <div class="mt-3 rounded bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-700">
-                                Selected: {{ $csvFile->getClientOriginalName() }}
-                            </div>
-                        @endif
+                        <template x-if="fileName">
+                            <div class="mt-3 rounded bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-700" x-text="`Loaded: ${fileName}`"></div>
+                        </template>
                     </label>
-                    <input id="leads-csv-file" type="file" accept=".csv,text/csv,.txt" wire:model="csvFile" class="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0">
-                    @error('csvFile')
-                        <p class="mt-2 text-xs font-semibold text-red-600">{{ $message }}</p>
-                    @enderror
+                    <input id="leads-csv-file" type="file" accept=".csv,text/csv,.txt" @change="readFile($event.target.files[0])" class="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0">
                     @error('csvText')
                         <p class="mt-2 text-xs font-semibold text-red-600">{{ $message }}</p>
                     @enderror

@@ -7,14 +7,11 @@ use App\Models\User;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
-use Livewire\WithFileUploads;
 
 #[Layout('components.layouts.app')]
 #[Title('Leads')]
 class Leads extends Component
 {
-    use WithFileUploads;
-
     public string $search = '';
     public string $filter = 'all';
     public string $resortFilter = 'all';
@@ -24,7 +21,6 @@ class Leads extends Component
     public bool $showAddModal = false;
     public bool $showImportModal = false;
     public string $csvText = '';
-    public $csvFile = null;
     public array $newLead = ['resort' => '', 'owner_name' => '', 'phone1' => '', 'phone2' => '', 'city' => '', 'st' => '', 'zip' => '', 'resort_location' => ''];
 
     public function selectLead($id) { $this->selectedLead = $this->selectedLead === $id ? null : $id; }
@@ -67,24 +63,14 @@ class Leads extends Component
 
     public function importCsv()
     {
-        if (!$this->csvFile && trim($this->csvText) === '') {
+        if (trim($this->csvText) === '') {
             $this->addError('csvText', 'Upload a CSV file or paste CSV data before importing.');
             return;
         }
 
-        if ($this->csvFile) {
-            $this->validate([
-                'csvFile' => 'file|mimes:csv,txt|max:10240',
-            ]);
-
-            $csv = file_get_contents($this->csvFile->getRealPath());
-            $this->processCsvContent($csv ?: '');
-        } else {
-            $this->processCsvContent($this->csvText);
-        }
+        $this->processCsvContent($this->csvText);
 
         $this->csvText = '';
-        $this->csvFile = null;
         $this->showImportModal = false;
     }
 
