@@ -50,6 +50,51 @@
             </div>
         </div>
 
+        {{-- Per-User Payroll Inputs --}}
+        <div class="mb-4 bg-crm-card border border-crm-border rounded-lg p-4">
+            <div class="text-sm font-semibold mb-1">User Payroll Inputs</div>
+            <div class="text-[10px] text-crm-t3 mb-3">Master admin can set commission %, SNR %, and hourly rate per user.</div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-xs">
+                    <thead>
+                        <tr class="border-b border-crm-border">
+                            <th class="text-left px-2 py-2 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">User</th>
+                            <th class="text-left px-2 py-2 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Role</th>
+                            <th class="text-left px-2 py-2 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Commission %</th>
+                            <th class="text-left px-2 py-2 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">SNR %</th>
+                            <th class="text-left px-2 py-2 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Hourly Rate</th>
+                            <th class="text-left px-2 py-2 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($editableUsers as $eu)
+                            <tr class="border-b border-crm-border">
+                                <td class="px-2 py-2 font-semibold">{{ $eu->name }}</td>
+                                <td class="px-2 py-2 text-crm-t2 capitalize">{{ str_replace('_', ' ', $eu->role) }}</td>
+                                <td class="px-2 py-2">
+                                    <input wire:model.defer="userPayrollInputs.{{ $eu->id }}.comm_pct" type="number" step="0.01" class="w-24 px-2 py-1 border border-crm-border rounded bg-white font-mono">
+                                    @error("userPayrollInputs.$eu->id.comm_pct")<div class="text-[10px] text-red-600 mt-1">{{ $message }}</div>@enderror
+                                </td>
+                                <td class="px-2 py-2">
+                                    <input wire:model.defer="userPayrollInputs.{{ $eu->id }}.snr_pct" type="number" step="0.01" class="w-24 px-2 py-1 border border-crm-border rounded bg-white font-mono">
+                                    @error("userPayrollInputs.$eu->id.snr_pct")<div class="text-[10px] text-red-600 mt-1">{{ $message }}</div>@enderror
+                                </td>
+                                <td class="px-2 py-2">
+                                    <input wire:model.defer="userPayrollInputs.{{ $eu->id }}.hourly_rate" type="number" step="0.01" class="w-24 px-2 py-1 border border-crm-border rounded bg-white font-mono">
+                                    @error("userPayrollInputs.$eu->id.hourly_rate")<div class="text-[10px] text-red-600 mt-1">{{ $message }}</div>@enderror
+                                </td>
+                                <td class="px-2 py-2">
+                                    <button wire:click="saveUserPayrollInfo({{ $eu->id }})" class="px-3 py-1 text-[10px] font-semibold bg-blue-600 text-white rounded hover:bg-blue-700 transition">Save</button>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="6" class="px-2 py-4 text-crm-t3">No users available for payroll input.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         {{-- Sent History Tab --}}
         @if($tab === 'history')
             <div class="bg-crm-card border border-crm-border rounded-lg p-4">
