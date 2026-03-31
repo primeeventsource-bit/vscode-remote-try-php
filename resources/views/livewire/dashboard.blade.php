@@ -139,7 +139,7 @@
                 $donutCum = 0;
             @endphp
             <div class="flex items-center gap-3">
-                <svg viewBox="0 0 60 60" class="w-20 h-20 flex-shrink-0">
+                <svg viewBox="0 0 60 60" class="w-16 h-16 flex-shrink-0">
                     @if($dTotal > 0)
                         @foreach($donutSegs as $seg)
                             @if($seg['count'] > 0)
