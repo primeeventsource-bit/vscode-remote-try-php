@@ -167,8 +167,8 @@
                 @endforelse
             </div>
 
-            {{-- Message Input --}}
-            <div class="flex flex-shrink-0 gap-2 border-t border-crm-border bg-crm-surface px-3 py-2">
+            {{-- Message Input (REMOVED) --}}
+            {{-- <div class="flex flex-shrink-0 gap-2 border-t border-crm-border bg-crm-surface px-3 py-2">
                 <input
                     wire:model="messageInput"
                     wire:keydown.enter="sendMessage"
@@ -180,7 +180,7 @@
                     class="flex-shrink-0 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-700">
                     ↑
                 </button>
-            </div>
+            </div> --}}
         @endif
     </div>
 
