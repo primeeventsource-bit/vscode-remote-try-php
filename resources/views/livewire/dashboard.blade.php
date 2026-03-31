@@ -73,7 +73,7 @@
                 $svgW   = $padL + count($monthlyData) * ($barW + $gap) - $gap + $padR;
                 $maxH   = 70;
             @endphp
-            <svg viewBox="0 0 {{ $svgW }} 110" class="w-full h-auto" preserveAspectRatio="xMidYMid meet" style="max-height: 120px;">
+            <svg viewBox="0 0 {{ $svgW }} 110" class="w-full h-auto" preserveAspectRatio="xMidYMid meet" style="max-height: 180px;">
                 {{-- Y-axis guideline --}}
                 @for ($gl = 0; $gl <= 4; $gl++)
                     @php $gy = $maxH - ($gl / 4) * $maxH; @endphp
@@ -133,19 +133,19 @@
                     ['count' => $dCancelled->count(), 'color' => '#9ca3af', 'label' => 'Cancelled'],
                 ];
             @endphp
-            <div class="space-y-2.5">
+            <div class="space-y-3.5">
                 @foreach($dealStatusSegs as $seg)
                     @php $pct = $dTotal > 0 ? ($seg['count'] / $dTotal) * 100 : 0; @endphp
                     <div>
-                        <div class="flex items-center justify-between mb-1">
+                        <div class="flex items-center justify-between mb-1.5">
                             <div class="flex items-center gap-1.5">
-                                <span class="w-2 h-2 rounded-sm flex-shrink-0" style="background:{{ $seg['color'] }}"></span>
+                                <span class="w-2.5 h-2.5 rounded-sm flex-shrink-0" style="background:{{ $seg['color'] }}"></span>
                                 <span class="text-xs text-crm-t2">{{ $seg['label'] }}</span>
                             </div>
                             <span class="text-xs font-semibold font-mono">{{ $seg['count'] }}</span>
                         </div>
-                        <div class="h-2 w-full overflow-hidden rounded-full bg-gray-100">
-                            <div class="h-2 rounded-full transition-all" 
+                        <div class="h-3 w-full overflow-hidden rounded-full bg-gray-100">
+                            <div class="h-3 rounded-full transition-all" 
                                  style="width: {{ $pct }}%; background: {{ $seg['color'] }};"></div>
                         </div>
                     </div>
@@ -176,7 +176,7 @@
                 $cbSvgH   = $cbPadT + $cbPlotH + $cbPadB;
                 $points   = [];
             @endphp
-            <svg viewBox="0 0 {{ $cbSvgW }} {{ $cbSvgH }}" class="w-full h-auto" preserveAspectRatio="xMidYMid meet" style="max-height: 140px;">
+            <svg viewBox="0 0 {{ $cbSvgW }} {{ $cbSvgH }}" class="w-full h-auto" preserveAspectRatio="xMidYMid meet" style="max-height: 180px;">
                 {{-- Grid lines --}}
                 @for ($gl = 0; $gl <= 4; $gl++)
                     @php $gcy = $cbPadT + ($gl / 4) * $cbPlotH; @endphp
