@@ -32,6 +32,17 @@ class User extends Authenticatable
         'permissions' => 'array',
     ];
 
+    public function hasPerm(string $perm): bool
+    {
+        $perms = is_array($this->permissions) ? $this->permissions : json_decode($this->permissions ?? '[]', true);
+        return in_array('master_override', $perms) || in_array($perm, $perms);
+    }
+
+    public function hasRole(string ...$roles): bool
+    {
+        return in_array($this->role, $roles);
+    }
+
     public function leads()
     {
         return $this->hasMany(Lead::class, 'assigned_to');
