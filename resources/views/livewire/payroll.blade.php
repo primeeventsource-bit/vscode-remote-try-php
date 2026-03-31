@@ -52,7 +52,10 @@
 
         {{-- Per-User Payroll Inputs --}}
         <div class="mb-4 bg-crm-card border border-crm-border rounded-lg p-4">
-            <div class="text-sm font-semibold mb-1">User Payroll Inputs</div>
+            <div class="flex items-center justify-between gap-2 mb-1">
+                <div class="text-sm font-semibold">User Payroll Inputs</div>
+                <button wire:click="saveAllUserPayrollInfo" class="px-3 py-1 text-[10px] font-semibold bg-blue-600 text-white rounded hover:bg-blue-700 transition">Save All</button>
+            </div>
             <div class="text-[10px] text-crm-t3 mb-3">Master admin can set commission %, SNR %, and hourly rate per user.</div>
             <div class="overflow-x-auto">
                 <table class="w-full text-xs">

@@ -58,6 +58,13 @@ class Payroll extends Component
         $this->resetErrorBag("userPayrollInputs.$userId");
     }
 
+    public function saveAllUserPayrollInfo(): void
+    {
+        foreach (array_keys($this->userPayrollInputs) as $userId) {
+            $this->saveUserPayrollInfo((int) $userId);
+        }
+    }
+
     private function normalizeNullableNumber(mixed $value): ?float
     {
         if ($value === '' || $value === null) {
