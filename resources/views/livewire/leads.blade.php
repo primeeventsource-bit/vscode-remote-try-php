@@ -253,8 +253,41 @@
                     <h3 class="text-base font-bold">Import CSV</h3>
                     <button wire:click="$set('showImportModal', false)" class="text-crm-t3 hover:text-crm-t1 text-lg">&times;</button>
                 </div>
-                <p class="text-xs text-crm-t3 mb-3">Paste CSV data below. Expected columns: Resort, Owner Name, Phone 1, Phone 2, City, State, Zip, Resort Location</p>
-                <textarea wire:model="csvText" rows="10" class="w-full px-3 py-2 text-sm font-mono bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400" placeholder="Resort,Owner Name,Phone1,Phone2,City,St,Zip,Resort Location"></textarea>
+                <p class="text-xs text-crm-t3 mb-3">Drop a CSV file here or click to choose one. Expected columns: Resort, Owner Name, Phone 1, Phone 2, City, State, Zip, Resort Location</p>
+
+                <div
+                    x-data="{ dragging: false }"
+                    @dragover.prevent="dragging = true"
+                    @dragleave.prevent="dragging = false"
+                    @drop.prevent="dragging = false"
+                    class="relative mb-3"
+                >
+                    <label
+                        for="leads-csv-file"
+                        class="flex min-h-[120px] w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed px-4 py-6 text-center transition"
+                        :class="dragging ? 'border-blue-500 bg-blue-50' : 'border-crm-border bg-crm-surface hover:border-blue-400'"
+                    >
+                        <div class="text-sm font-semibold text-crm-t2">Drag & drop CSV here</div>
+                        <div class="mt-1 text-xs text-crm-t3">or click to browse files</div>
+                        @if($csvFile)
+                            <div class="mt-3 rounded bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-700">
+                                Selected: {{ $csvFile->getClientOriginalName() }}
+                            </div>
+                        @endif
+                    </label>
+                    <input id="leads-csv-file" type="file" accept=".csv,text/csv,.txt" wire:model="csvFile" class="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0">
+                    @error('csvFile')
+                        <p class="mt-2 text-xs font-semibold text-red-600">{{ $message }}</p>
+                    @enderror
+                    @error('csvText')
+                        <p class="mt-2 text-xs font-semibold text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <details class="mb-2">
+                    <summary class="cursor-pointer text-xs font-semibold text-crm-t2">Or paste CSV manually</summary>
+                    <textarea wire:model="csvText" rows="8" class="mt-2 w-full px-3 py-2 text-sm font-mono bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400" placeholder="Resort,Owner Name,Phone1,Phone2,City,St,Zip,Resort Location"></textarea>
+                </details>
                 <div class="flex justify-end gap-2 mt-4">
                     <button wire:click="$set('showImportModal', false)" class="px-4 py-2 text-sm font-semibold text-crm-t2 bg-crm-card border border-crm-border rounded-lg hover:bg-crm-hover transition">Cancel</button>
                     <button wire:click="importCsv" class="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">Import</button>

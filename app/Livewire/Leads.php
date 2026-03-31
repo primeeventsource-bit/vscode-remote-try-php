@@ -7,11 +7,14 @@ use App\Models\User;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 #[Layout('components.layouts.app')]
 #[Title('Leads')]
 class Leads extends Component
 {
+    use WithFileUploads;
+
     public string $search = '';
     public string $filter = 'all';
     public string $resortFilter = 'all';
@@ -21,6 +24,7 @@ class Leads extends Component
     public bool $showAddModal = false;
     public bool $showImportModal = false;
     public string $csvText = '';
+    public $csvFile = null;
     public array $newLead = ['resort' => '', 'owner_name' => '', 'phone1' => '', 'phone2' => '', 'city' => '', 'st' => '', 'zip' => '', 'resort_location' => ''];
 
     public function selectLead($id) { $this->selectedLead = $this->selectedLead === $id ? null : $id; }
@@ -63,14 +67,58 @@ class Leads extends Component
 
     public function importCsv()
     {
-        $lines = explode("\n", trim($this->csvText));
-        for ($i = 1; $i < count($lines); $i++) {
+        if (!$this->csvFile && trim($this->csvText) === '') {
+            $this->addError('csvText', 'Upload a CSV file or paste CSV data before importing.');
+            return;
+        }
+
+        if ($this->csvFile) {
+            $this->validate([
+                'csvFile' => 'file|mimes:csv,txt|max:10240',
+            ]);
+
+            $csv = file_get_contents($this->csvFile->getRealPath());
+            $this->processCsvContent($csv ?: '');
+        } else {
+            $this->processCsvContent($this->csvText);
+        }
+
+        $this->csvText = '';
+        $this->csvFile = null;
+        $this->showImportModal = false;
+    }
+
+    private function processCsvContent(string $csv): void
+    {
+        $lines = preg_split('/\r\n|\r|\n/', trim($csv));
+        if (!$lines) return;
+
+        $startIndex = 0;
+        $firstRow = array_map('trim', str_getcsv($lines[0]));
+        $h0 = strtolower($firstRow[0] ?? '');
+        $h1 = strtolower($firstRow[1] ?? '');
+
+        // Skip header only when it appears to be a real header row.
+        if (str_contains($h0, 'resort') || str_contains($h1, 'owner')) {
+            $startIndex = 1;
+        }
+
+        for ($i = $startIndex; $i < count($lines); $i++) {
             $v = array_map('trim', str_getcsv($lines[$i]));
             if (count($v) < 2) continue;
-            Lead::create(['resort' => $v[0] ?? '', 'owner_name' => $v[1] ?? '', 'phone1' => $v[2] ?? '', 'phone2' => $v[3] ?? '', 'city' => $v[4] ?? '', 'st' => $v[5] ?? '', 'zip' => $v[6] ?? '', 'resort_location' => $v[7] ?? '', 'source' => 'csv']);
+
+            Lead::create([
+                'resort' => $v[0] ?? '',
+                'owner_name' => $v[1] ?? '',
+                'phone1' => $v[2] ?? '',
+                'phone2' => $v[3] ?? '',
+                'city' => $v[4] ?? '',
+                'st' => $v[5] ?? '',
+                'zip' => $v[6] ?? '',
+                'resort_location' => $v[7] ?? '',
+                'source' => 'csv',
+            ]);
         }
-        $this->csvText = '';
-        $this->showImportModal = false;
     }
 
     public function render()
