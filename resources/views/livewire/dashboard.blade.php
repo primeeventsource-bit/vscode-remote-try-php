@@ -179,7 +179,98 @@
     </div>
 
     {{-- ══════════════════════════════════════════════
-         CHARTS ROW 2
+         CHARTS ROW 2 — Chargeback Trend + (Admin only)
+    ══════════════════════════════════════════════ --}}
+    @if(!$isCloser)
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+
+        {{-- Chargeback Trend Bar Chart (takes 2/3 width) --}}
+        <div class="md:col-span-2 bg-crm-card border border-crm-border rounded-lg p-4">
+            <div class="text-sm font-semibold mb-1">Chargeback Trend</div>
+            <div class="text-[10px] text-crm-t3 mb-4">Last 6 months · monthly breakdown</div>
+            @php
+                $maxCBRev = (float) ($monthlyChargebackData->max('rev') ?: 1);
+                $cbBarW   = 34;
+                $cbGap    = 10;
+                $cbPadL   = 8;
+                $cbPadR   = 8;
+                $cbSvgW   = $cbPadL + count($monthlyChargebackData) * ($cbBarW + $cbGap) - $cbGap + $cbPadR;
+                $cbMaxH   = 90;
+            @endphp
+            <svg viewBox="0 0 {{ $cbSvgW }} 130" class="w-full" preserveAspectRatio="xMidYMid meet">
+                {{-- Y-axis guideline --}}
+                @for ($gl = 0; $gl <= 4; $gl++)
+                    @php $gcy = $cbMaxH - ($gl / 4) * $cbMaxH; @endphp
+                    <line x1="{{ $cbPadL - 4 }}" y1="{{ $gcy }}" x2="{{ $cbSvgW - $cbPadR }}" y2="{{ $gcy }}" stroke="#fee2e2" stroke-width="0.5"/>
+                    @if($gl > 0)
+                        <text x="{{ $cbPadL - 6 }}" y="{{ $gcy + 2 }}" text-anchor="end" font-size="6" fill="#9ca3af">${{ number_format(($gl / 4) * $maxCBRev / 1000, 0) }}k</text>
+                    @endif
+                @endfor
+
+                @foreach($monthlyChargebackData as $i => $cb)
+                    @php
+                        $cbBarH = max(2, ($cb['rev'] / $maxCBRev) * $cbMaxH);
+                        $cbX    = $cbPadL + $i * ($cbBarW + $cbGap);
+                        $cbY    = $cbMaxH - $cbBarH;
+                        $cbIsCurrentMonth = $i === count($monthlyChargebackData) - 1;
+                    @endphp
+                    {{-- Bar --}}
+                    <rect x="{{ $cbX }}" y="{{ $cbY }}" width="{{ $cbBarW }}" height="{{ $cbBarH }}"
+                          rx="3"
+                          fill="{{ $cbIsCurrentMonth ? '#ef4444' : '#fca5a5' }}"/>
+                    {{-- Value label --}}
+                    @if($cb['rev'] > 0)
+                        <text x="{{ $cbX + $cbBarW / 2 }}" y="{{ max(10, $cbY - 3) }}"
+                              text-anchor="middle" font-size="6.5" fill="{{ $cbIsCurrentMonth ? '#991b1b' : '#7f1d1d' }}" font-weight="{{ $cbIsCurrentMonth ? 'bold' : 'normal' }}">
+                            ${{ $cb['rev'] >= 1000 ? number_format($cb['rev'] / 1000, 1) . 'k' : number_format($cb['rev']) }}
+                        </text>
+                    @endif
+                    {{-- Month label --}}
+                    <text x="{{ $cbX + $cbBarW / 2 }}" y="{{ $cbMaxH + 14 }}"
+                          text-anchor="middle" font-size="8"
+                          fill="{{ $cbIsCurrentMonth ? '#991b1b' : '#9ca3af' }}"
+                          font-weight="{{ $cbIsCurrentMonth ? 'bold' : 'normal' }}">{{ $cb['label'] }}</text>
+                    {{-- Chargeback count --}}
+                    @if($cb['count'] > 0)
+                        <text x="{{ $cbX + $cbBarW / 2 }}" y="{{ $cbMaxH + 24 }}"
+                              text-anchor="middle" font-size="6.5" fill="#9ca3af">{{ $cb['count'] }}cb</text>
+                    @endif
+                @endforeach
+            </svg>
+        </div>
+
+        {{-- Chargeback Stats Card (takes 1/3) --}}
+        <div class="bg-crm-card border border-crm-border rounded-lg p-4">
+            <div class="text-sm font-semibold mb-1">Chargeback Stats</div>
+            <div class="text-[10px] text-crm-t3 mb-4">All time summary</div>
+            <div class="space-y-3">
+                <div>
+                    <div class="text-[10px] text-crm-t3 uppercase tracking-wider mb-1">Total Chargebacks</div>
+                    <div class="text-2xl font-extrabold text-red-600">{{ $chargebacks->count() }}</div>
+                </div>
+                <div>
+                    <div class="text-[10px] text-crm-t3 uppercase tracking-wider mb-1">Chargeback Revenue</div>
+                    <div class="text-xl font-bold text-red-500">${{ number_format($cbRev) }}</div>
+                </div>
+                <div class="pt-2 border-t border-crm-border">
+                    <div class="text-[10px] text-crm-t3 uppercase tracking-wider mb-1">CB Rate</div>
+                    <div class="text-lg font-semibold">
+                        {{ $deals->count() > 0 ? number_format(($chargebacks->count() / $deals->count()) * 100, 1) : 0 }}%
+                    </div>
+                </div>
+                <div class="pt-2 border-t border-crm-border">
+                    <div class="text-[10px] text-crm-t3 uppercase tracking-wider mb-1">Avg CB Amount</div>
+                    <div class="text-lg font-semibold">
+                        {{ $chargebacks->count() > 0 ? '$' . number_format($chargebacks->sum('fee') / $chargebacks->count()) : '$0' }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- ══════════════════════════════════════════════
+         CHARTS ROW 3 — Top Closers + Revenue + Recent
     ══════════════════════════════════════════════ --}}
     @if(!$isCloser)
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">

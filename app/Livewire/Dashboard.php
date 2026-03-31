@@ -52,6 +52,7 @@ class Dashboard extends Component
 
         // Monthly performance – last 6 months
         $monthlyData = collect();
+        $monthlyChargebackData = collect();
         for ($i = 5; $i >= 0; $i--) {
             $month = $now->copy()->subMonths($i);
             $start = $month->copy()->startOfMonth();
@@ -66,10 +67,23 @@ class Dashboard extends Component
                 && $d->charged_back !== 'yes'
             );
 
+            $monthChargebacks = $source->filter(fn($d) =>
+                $d->timestamp
+                && \Carbon\Carbon::parse($d->timestamp)->gte($start)
+                && \Carbon\Carbon::parse($d->timestamp)->lte($end)
+                && $d->charged_back === 'yes'
+            );
+
             $monthlyData->push([
                 'label' => $month->format('M'),
                 'rev'   => (float) $monthCharged->sum('fee'),
                 'count' => $monthCharged->count(),
+            ]);
+
+            $monthlyChargebackData->push([
+                'label' => $month->format('M'),
+                'rev'   => (float) $monthChargebacks->sum('fee'),
+                'count' => $monthChargebacks->count(),
             ]);
         }
 
@@ -84,7 +98,7 @@ class Dashboard extends Component
             'totalLeads', 'assignedLeads', 'deals', 'charged', 'chargebacks',
             'pending', 'cancelled', 'totalRev', 'cbRev', 'pendRev',
             'weekDeals', 'weekCharged', 'weekRev', 'closers', 'recentDeals',
-            'isCloser', 'isAdmin', 'isMaster', 'monthlyData',
+            'isCloser', 'isAdmin', 'isMaster', 'monthlyData', 'monthlyChargebackData',
             'myDeals', 'myCharged', 'myPending', 'myChargebacks',
             'myRevTotal', 'myWeekDeals', 'myWeekCharged', 'myWeekRev'
         ));
