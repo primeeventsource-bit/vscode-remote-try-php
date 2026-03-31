@@ -25,10 +25,14 @@
     "scripts": {
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
+            "@php -r \"array_map(function($d){if(!is_dir($d))mkdir($d,0775,true);}, ['bootstrap/cache','storage/logs','storage/framework/cache','storage/framework/sessions','storage/framework/views']);\"",
             "@php artisan package:discover --ansi"
         ],
         "post-update-cmd": [
             "@php artisan vendor:publish --tag=laravel-assets --ansi --force"
+        ],
+        "post-install-cmd": [
+            "@php -r \"array_map(function($d){if(!is_dir($d))mkdir($d,0775,true);}, ['bootstrap/cache','storage/logs','storage/framework/cache','storage/framework/sessions','storage/framework/views']);\""
         ]
     },
     "extra": {
