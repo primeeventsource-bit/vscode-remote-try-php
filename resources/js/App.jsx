@@ -5,7 +5,7 @@ import * as PayrollAPI from "./payrollApi.js";
 const PRIME_LOGO = `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="transparent"/><path d="M20 90V10h35c20 0 32 12 32 28s-12 28-32 28H38v24H20zm18-40h15c10 0 16-6 16-14s-6-14-16-14H38v28z" fill="#111" stroke="#111" stroke-width="3"/><path d="M26 84V16h29c17 0 26 10 26 22s-9 22-26 22H44v24H26zm18-40h11c7 0 12-4 12-10s-5-10-12-10H44v20z" fill="transparent" stroke="#111" stroke-width="1.5"/></svg>`)}`;
 
 const uid = () => Math.random().toString(36).slice(2, 10);
-const fmt$ = v => v ? "$" + Number(v).toLocaleString() : "â€”";
+const fmt$ = v => v ? "$" + Number(v).toLocaleString() : "\u2014";
 const pct = (a, b) => b === 0 ? "0%" : (a / b * 100).toFixed(1) + "%";
 const nowT = () => { const d = new Date(); return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) + " - " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); };
 const todayStr = () => new Date().toLocaleDateString();
@@ -99,8 +99,8 @@ const LEADS_INIT = [
 
 const CHATS_INIT = [
   { id:"ch1", type:"channel", name:"General", icon:"#", members:["u0","u9","u1","u2","u3","u4","u5","u6","u7","u8"], createdBy:"u0" },
-  { id:"ch2", type:"channel", name:"Sales Floor", icon:"ðŸ’¼", members:["u0","u9","u1","u2","u3","u4","u5","u6","u7","u8"], createdBy:"u0" },
-  { id:"ch3", type:"channel", name:"Closers Only", icon:"ðŸ”’", members:["u0","u9","u1","u2","u5","u6","u8"], createdBy:"u0" },
+  { id:"ch2", type:"channel", name:"Sales Floor", icon:"\u{1F4BC}", members:["u0","u9","u1","u2","u3","u4","u5","u6","u7","u8"], createdBy:"u0" },
+  { id:"ch3", type:"channel", name:"Closers Only", icon:"\u{1F512}", members:["u0","u9","u1","u2","u5","u6","u8"], createdBy:"u0" },
 ];
 
 const MESSAGES_INIT = [
@@ -172,7 +172,7 @@ const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--bg-0:#ffffff;--bg-1:#f7f8fa;--bg-2:#eef0f4;--bg-3:#e2e5ea;--bg-4:#d4d8de;--border:#d1d5db;--border-h:#b0b5be;--t1:#111111;--t2:#4b5563;--t3:#9ca3af;--blue:#3b82f6;--blue-s:rgba(59,130,246,.12);--green:#10b981;--green-s:rgba(16,185,129,.12);--amber:#f59e0b;--amber-s:rgba(245,158,11,.12);--red:#ef4444;--red-s:rgba(239,68,68,.12);--purple:#8b5cf6;--purple-s:rgba(139,92,246,.12);--pink:#ec4899;--pink-s:rgba(236,72,153,.12);--teal:#14b8a6;--teal-s:rgba(20,184,166,.12);--crimson:#dc2626;--crimson-s:rgba(220,38,38,.12);--grad:linear-gradient(135deg,#111111,#333333);--grad-r:linear-gradient(135deg,#dc2626,#ef4444);--r:8px;--r-sm:5px;--r-lg:12px;--tr:.18s cubic-bezier(.4,0,.2,1)}
-body,#root{font-family:'Outfit',sans-serif;background:var(--bg-0);color:var(--t1);height:100vh;overflow:hidden}
+body,#root{font-family:'Outfit','Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji',sans-serif;background:var(--bg-0);color:var(--t1);height:100vh;overflow:hidden}
 .login-screen{display:flex;align-items:center;justify-content:center;height:100vh;background:var(--bg-0)}
 .login-box{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-lg);padding:40px;width:420px;max-height:90vh;overflow-y:auto;text-align:center}
 .login-box::-webkit-scrollbar{width:3px}.login-box::-webkit-scrollbar-thumb{background:var(--border-h);border-radius:3px}
@@ -513,7 +513,7 @@ export default function CRM() {
   ].filter(Boolean);
 
   const myLeads = P("view_all_leads") ? leads : leads.filter(l => l.assignedTo === currentUser.id && l.disposition !== "Transferred to Closer");
-  const NAV_ICONS = { dashboard:"â—«", stats:"ðŸ“Š", leads:"âœï¸", pipeline:"ðŸ“ˆ", deals:"ðŸ“‹", verification:"âœ“", clients:"ðŸ’°", tasks:"â˜‘", tracker:"ðŸ“…", transfers:"â™»ï¸", payroll:"ðŸ’µ", chat:"ðŸ’¬", users:"ðŸ‘¥" };
+  const NAV_ICONS = { dashboard:"\u25C9", stats:"\u{1F4CA}", leads:"\u270F\uFE0F", pipeline:"\u{1F4C8}", deals:"\u{1F4CB}", verification:"\u2713", clients:"\u{1F4B0}", tasks:"\u2611", tracker:"\u{1F4C6}", transfers:"\u267B\uFE0F", payroll:"\u{1F4B5}", chat:"\u{1F4AC}", users:"\u{1F465}" };
 
   const handleDisposition = (leadId, dispo, closerId, callbackDt) => {
     const lead = leads.find(l => l.id === leadId);
@@ -559,7 +559,7 @@ export default function CRM() {
       <div className="rail">
         <div className="rail-logo"><img src={PRIME_LOGO} alt="P" /></div>
         {navItems.map(n => <button key={n} className={`rail-btn ${view === n ? "on" : ""}`} onClick={() => setView(n)} title={n}>{NAV_ICONS[n]}</button>)}
-        {currentUser.role === "master_admin" && <button className={`rail-btn ${view === "settings" ? "on" : ""}`} onClick={() => setView("settings")} title="CRM Settings">âš™ï¸</button>}
+        {currentUser.role === "master_admin" && <button className={`rail-btn ${view === "settings" ? "on" : ""}`} onClick={() => setView("settings")} title="CRM Settings">{"\u2699\uFE0F"}</button>}
         <div className="rail-spacer" />
         <div className="rail-av" style={{ background: currentUser.color }} title="Log out" onClick={logout}>{currentUser.avatar}</div>
       </div>
@@ -569,7 +569,7 @@ export default function CRM() {
           <span className="topbar-role" style={{ background: ROLE_COLORS[currentUser.role] + "22", color: ROLE_COLORS[currentUser.role] }}>{ROLE_LABELS[currentUser.role]}</span>
           {notifications.filter(n => n.to === currentUser.id && !n.read).length > 0 && (
             <button className="btn btn-sm btn-d" onClick={() => { const n = notifications.find(x => x.to === currentUser.id && !x.read); if (n) { setNotifications(p => p.map(x => x.id === n.id ? { ...x, read: true } : x)); if (n.type === "new_deal" && n.dealId) { setSelectedDeal(n.dealId); setView("verification"); } } }}>
-              ðŸ”” {notifications.filter(n => n.to === currentUser.id && !n.read).length} New
+              {"\u{1F514}"} {notifications.filter(n => n.to === currentUser.id && !n.read).length} New
             </button>
           )}
           <span style={{ fontSize: 12, color: "var(--t3)" }}>{currentUser.name}</span>
@@ -3030,18 +3030,18 @@ function ChatViewFull({ chats, messages, users, currentUser, P, selectedChat, on
       <div className="panel-hd"><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><h3>Messages</h3>{P("create_chats")&&<button className="btn btn-sm" onClick={onNewChat}>+</button>}</div></div>
       <div className="plist">
         {chats.filter(c=>c.type==="channel").map(ch=><div key={ch.id} className={`item ${selectedChat===ch.id?"on":""}`} onClick={()=>{onSelectChat(ch.id);setShowGif(false);setShowMentions(false)}}><span style={{width:20,textAlign:"center",fontSize:13}}>{ch.icon}</span><span className="nm" style={{flex:1}}>{ch.name}</span></div>)}
-        {chats.filter(c=>c.type==="dm").length>0&&<><div style={{fontSize:10,color:"var(--t3)",textTransform:"uppercase",letterSpacing:".4px",padding:"8px 10px 4px",fontWeight:600}}>DMs</div>{chats.filter(c=>c.type==="dm").map(ch=><div key={ch.id} className={`item ${selectedChat===ch.id?"on":""}`} onClick={()=>{onSelectChat(ch.id);setShowGif(false);setShowMentions(false)}}><span style={{width:20,textAlign:"center",fontSize:13}}>ðŸ‘¤</span><span className="nm" style={{flex:1}}>{ch.name}</span></div>)}</>}
-        {chats.filter(c=>c.type==="group").length>0&&<><div style={{fontSize:10,color:"var(--t3)",textTransform:"uppercase",letterSpacing:".4px",padding:"8px 10px 4px",fontWeight:600}}>Groups</div>{chats.filter(c=>c.type==="group").map(ch=><div key={ch.id} className={`item ${selectedChat===ch.id?"on":""}`} onClick={()=>{onSelectChat(ch.id);setShowGif(false);setShowMentions(false)}}><span style={{width:20,textAlign:"center",fontSize:13}}>ðŸ‘¤</span><span className="nm" style={{flex:1}}>{ch.name}</span></div>)}</>}
+        {chats.filter(c=>c.type==="dm").length>0&&<><div style={{fontSize:10,color:"var(--t3)",textTransform:"uppercase",letterSpacing:".4px",padding:"8px 10px 4px",fontWeight:600}}>DMs</div>{chats.filter(c=>c.type==="dm").map(ch=><div key={ch.id} className={`item ${selectedChat===ch.id?"on":""}`} onClick={()=>{onSelectChat(ch.id);setShowGif(false);setShowMentions(false)}}><span style={{width:20,textAlign:"center",fontSize:13}}>{"\u{1F464}"}</span><span className="nm" style={{flex:1}}>{ch.name}</span></div>)}</>}
+        {chats.filter(c=>c.type==="group").length>0&&<><div style={{fontSize:10,color:"var(--t3)",textTransform:"uppercase",letterSpacing:".4px",padding:"8px 10px 4px",fontWeight:600}}>Groups</div>{chats.filter(c=>c.type==="group").map(ch=><div key={ch.id} className={`item ${selectedChat===ch.id?"on":""}`} onClick={()=>{onSelectChat(ch.id);setShowGif(false);setShowMentions(false)}}><span style={{width:20,textAlign:"center",fontSize:13}}>{"\u{1F464}"}</span><span className="nm" style={{flex:1}}>{ch.name}</span></div>)}</>}
       </div>
     </div>
     <div className="chat-area" style={{position:"relative"}}>
       {ac?(<>
-        <div className="chat-hd"><span style={{fontSize:16}}>{ac.icon||"ðŸ‘¤"}</span><div><h3>{ac.name}</h3><div style={{fontSize:11,color:"var(--t3)"}}>{ac.members.length} members</div></div></div>
+        <div className="chat-hd"><span style={{fontSize:16}}>{ac.icon||"\u{1F464}"}</span><div><h3>{ac.name}</h3><div style={{fontSize:11,color:"var(--t3)"}}>{ac.members.length} members</div></div></div>
         <div className="chat-msgs">{cm.map(m=>{const u=users.find(x=>x.id===m.userId); return (
           <div key={m.id} className="msg-row"><div className="msg-av" style={{background:u?.color||"var(--bg-3)"}}>{u?.avatar||"?"}</div><div className="msg-body"><div className="msg-nm">{u?.name||"?"} <span>{m.time}</span></div>
           {(!m.type||m.type==="text")&&<div className="msg-txt">{renderMsg(m.text)}</div>}
           {m.type==="gif"&&<img src={m.text} alt="GIF" className="msg-gif"/>}
-          {m.type==="file"&&<div className="msg-file">ðŸ“Ž {m.meta?.name} <span style={{color:"var(--t3)",fontSize:10}}>({m.meta?.size})</span></div>}
+          {m.type==="file"&&<div className="msg-file">{"\u{1F4CE}"} {m.meta?.name} <span style={{color:"var(--t3)",fontSize:10}}>({m.meta?.size})</span></div>}
         </div></div>);})}<div ref={endRef}/></div>
         {showGif&&<div className="gif-picker">
           <div className="gif-cats">{Object.keys(GIF_LIBRARY).map(cat=> <div key={cat} className={`gif-cat ${gifCat===cat?"on":""}`} onClick={()=>{setGifCat(cat);setGifSearch("")}}>{cat}</div>)}</div>
@@ -3066,13 +3066,13 @@ function ChatViewFull({ chats, messages, users, currentUser, P, selectedChat, on
         <div className="chat-inp">
           <div className="chat-inp-box">
             <button className="chat-tool-btn" onClick={()=>setShowGif(!showGif)} title="GIFs">GIF</button>
-            <button className="chat-tool-btn" onClick={()=>fileRef.current?.click()} title="Attach PDF">ðŸ“Ž</button>
+            <button className="chat-tool-btn" onClick={()=>fileRef.current?.click()} title="Attach PDF">{"\u{1F4CE}"}</button>
             <input type="file" ref={fileRef} onChange={handleFile} accept=".pdf,.doc,.docx,.png,.jpg" style={{display:"none"}} />
             <input ref={inputRef} placeholder={`Message ${ac.name}... (type @ to mention)`} value={input} onChange={handleInputChange} onKeyDown={e=>{if(e.key==="Enter")handleSend();if(e.key==="Escape")setShowMentions(false)}} />
-            <button className="send-btn" onClick={handleSend}>â†‘</button>
+            <button className="send-btn" onClick={handleSend}>{"\u2191"}</button>
           </div>
         </div>
-      </>):<div className="empty"><div className="icon">ðŸ’¬</div><div className="txt">Select a chat</div></div>}
+      </>):<div className="empty"><div className="icon">{"\u{1F4AC}"}</div><div className="txt">Select a chat</div></div>}
     </div>
   </>);
 }
