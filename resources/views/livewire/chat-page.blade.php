@@ -68,13 +68,73 @@
 
         {{-- New Chat Button --}}
         <div class="p-3 border-t border-crm-border">
-            <button wire:click="newChat" class="w-full px-3 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">+ New Chat</button>
+            <button wire:click="toggleNewChatForm" class="w-full px-3 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">+ New Chat</button>
         </div>
     </div>
 
-    {{-- Right Panel: Messages --}}
+    {{-- Right Panel: Messages / New Chat Form --}}
     <div class="flex-1 flex flex-col bg-crm-bg">
-        @if(isset($activeChat) && $activeChat)
+        @if($showNewChatForm)
+            {{-- New Chat Form Header --}}
+            <div class="px-4 py-3 border-b border-crm-border bg-crm-surface flex items-center gap-3">
+                <button wire:click="toggleNewChatForm" class="flex h-7 w-7 items-center justify-center rounded text-crm-t3 hover:bg-crm-hover hover:text-crm-t1 transition text-sm">←</button>
+                <h4 class="text-sm font-bold">New Conversation</h4>
+            </div>
+
+            {{-- New Chat Form --}}
+            <div class="flex-1 overflow-y-auto p-6">
+                <div class="max-w-md mx-auto space-y-4">
+                    @if($newChatError)
+                        <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                            {{ $newChatError }}
+                        </div>
+                    @endif
+
+                    <div>
+                        <label class="block text-xs text-crm-t3 uppercase font-semibold mb-1">Chat Type</label>
+                        <select wire:model="newChatType" class="w-full rounded-lg border border-crm-border bg-white px-3 py-2 text-sm focus:border-blue-400 focus:outline-none">
+                            <option value="dm">Direct Message</option>
+                            <option value="group">Group Chat</option>
+                        </select>
+                    </div>
+
+                    @if($newChatType === 'group')
+                    <div>
+                        <label class="block text-xs text-crm-t3 uppercase font-semibold mb-1">Group Name</label>
+                        <input wire:model="newChatName" type="text" placeholder="E.g., Sales Team"
+                               class="w-full rounded-lg border border-crm-border bg-white px-3 py-2 text-sm focus:border-blue-400 focus:outline-none">
+                    </div>
+                    @endif
+
+                    <div>
+                        <label class="block text-xs text-crm-t3 uppercase font-semibold mb-1">Select {{ $newChatType === 'dm' ? 'Person' : 'Members' }}</label>
+                        <div class="max-h-64 overflow-y-auto border border-crm-border rounded-lg bg-white">
+                            @foreach($users as $u)
+                                @if($u->id !== auth()->id())
+                                    <label class="flex items-center gap-3 border-b border-crm-border px-4 py-3 last:border-0 cursor-pointer hover:bg-crm-hover text-sm">
+                                        <input type="checkbox" wire:model="newChatMembers" value="{{ $u->id }}"
+                                               @if($newChatType === 'dm' && count($newChatMembers) > 0 && !in_array($u->id, $newChatMembers)) disabled @endif
+                                               class="h-4 w-4 rounded border-crm-border">
+                                        <div class="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
+                                             style="background:{{ $u->color ?? '#6b7280' }}">{{ $u->avatar ?? substr($u->name, 0, 2) }}</div>
+                                        <span>{{ $u->name }}</span>
+                                    </label>
+                                @endif
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3 pt-2">
+                        <button wire:click="toggleNewChatForm" class="flex-1 rounded-lg bg-crm-card border border-crm-border px-4 py-2.5 text-sm font-semibold text-crm-t2 transition hover:bg-crm-hover">
+                            Cancel
+                        </button>
+                        <button wire:click="createNewChat" class="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700">
+                            Create Chat
+                        </button>
+                    </div>
+                </div>
+            </div>
+        @elseif(isset($activeChat) && $activeChat)
             {{-- Chat Header --}}
             <div class="px-4 py-3 border-b border-crm-border bg-crm-surface flex items-center gap-3">
                 @if($activeChat->type === 'channel')
@@ -102,9 +162,20 @@
                                     <span class="text-xs font-semibold">{{ $msgUser->name ?? 'Unknown' }}</span>
                                     <span class="text-[10px] text-crm-t3">{{ $msg->created_at?->format('g:i A') ?? '' }}</span>
                                 </div>
-                                <div class="px-3 py-2 rounded-lg text-sm {{ $isMine ? 'bg-blue-600 text-white' : 'bg-crm-card border border-crm-border text-crm-t1' }}">
-                                    {{ $msg->body ?? $msg->content ?? $msg->text ?? '' }}
-                                </div>
+                                @if(($msg->message_type ?? 'text') === 'gif' && $msg->gif_url)
+                                    <div class="overflow-hidden rounded-2xl border {{ $isMine ? 'border-blue-500 bg-blue-600/10' : 'border-crm-border bg-white' }}">
+                                        <a href="{{ $msg->gif_url }}" target="_blank" rel="noreferrer" class="block">
+                                            <img src="{{ $msg->gif_preview_url ?: $msg->gif_url }}" alt="{{ $msg->gif_title ?? 'GIF' }}" class="max-h-72 w-full object-cover">
+                                        </a>
+                                        <div class="px-3 py-2 text-xs {{ $isMine ? 'text-blue-50 bg-blue-600' : 'text-crm-t2 bg-crm-card' }}">
+                                            {{ $msg->gif_title ?: 'GIF' }}
+                                        </div>
+                                    </div>
+                                @else
+                                    <div class="px-3 py-2 rounded-lg text-sm {{ $isMine ? 'bg-blue-600 text-white' : 'bg-crm-card border border-crm-border text-crm-t1' }}">
+                                        {{ $msg->body ?? $msg->content ?? $msg->text ?? '' }}
+                                    </div>
+                                @endif
                             </div>
                         </div>
                     @endforeach
@@ -119,7 +190,15 @@
 
             {{-- Message Input --}}
             <div class="px-4 py-3 border-t border-crm-border bg-crm-surface">
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 relative">
+                    @include('livewire.partials.gif-picker', [
+                        'gifPickerId' => 'chat-page-gif-picker',
+                        'gifPickerPanelClass' => 'left-0 bottom-full mb-2 w-[22rem]',
+                        'gifPickerSettings' => $gifPickerSettings,
+                        'canUseGifPicker' => $canUseGifPicker,
+                        'currentUserId' => $currentUserId,
+                        'sendAction' => 'sendGif',
+                    ])
                     <input wire:model="messageInput" wire:keydown.enter="sendMessage" type="text" placeholder="Type a message..."
                         class="flex-1 px-4 py-2.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                     <button wire:click="sendMessage" class="px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition flex-shrink-0">
