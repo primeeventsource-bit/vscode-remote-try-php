@@ -157,50 +157,97 @@
             <div class="flex flex-1 min-h-0">
             {{-- Messages + Input Column --}}
             <div class="flex-1 flex flex-col min-h-0">
-            {{-- Messages Thread --}}
-            <div class="flex-1 overflow-y-auto p-4 space-y-3" id="message-thread">
-                @if(isset($messages))
-                    @foreach($messages as $msg)
+            {{-- Messages Thread — iMessage/WhatsApp style --}}
+            <div class="flex-1 overflow-y-auto px-4 py-3" id="message-thread">
+                @if(isset($messages) && count($messages) > 0)
+                    @php $prevDate = null; @endphp
+                    @foreach($messages as $idx => $msg)
                         @php
                             $msgUser = isset($users) ? $users->firstWhere('id', $msg->sender_id) : null;
                             $isMine = $msg->sender_id === auth()->id();
+                            $currentDate = $msg->created_at?->format('Y-m-d');
+                            $showDateDivider = $currentDate !== $prevDate;
+                            $prevDate = $currentDate;
+                            $isGroup = $activeChat->type === 'group';
                         @endphp
-                        <div class="flex items-start gap-3 {{ $isMine ? 'flex-row-reverse' : '' }}">
-                            @if($msgUser?->avatar_path)
-                                <img src="{{ asset('storage/' . $msgUser->avatar_path) }}" class="w-8 h-8 rounded-full object-cover flex-shrink-0">
-                            @else
-                                <div class="w-8 h-8 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0" style="background: {{ $msgUser->color ?? '#6b7280' }}">{{ $msgUser->avatar ?? substr($msgUser->name ?? '?', 0, 2) }}</div>
-                            @endif
-                            <div class="max-w-[60%]">
-                                <div class="flex items-center gap-2 mb-0.5 {{ $isMine ? 'flex-row-reverse' : '' }}">
-                                    <span class="text-xs font-semibold">{{ $msgUser->name ?? 'Unknown' }}</span>
-                                    <span class="text-[10px] text-crm-t3">{{ $msg->created_at?->format('g:i A') ?? '' }}</span>
+
+                        {{-- Date Divider --}}
+                        @if($showDateDivider)
+                            <div class="flex items-center justify-center my-4">
+                                <span class="px-4 py-1 rounded-full bg-crm-surface border border-crm-border text-[11px] font-semibold text-crm-t3 shadow-sm">
+                                    {{ $msg->created_at?->isToday() ? 'Today' : ($msg->created_at?->isYesterday() ? 'Yesterday' : $msg->created_at?->format('F j, Y')) }}
+                                </span>
+                            </div>
+                        @endif
+
+                        {{-- Message Bubble --}}
+                        <div class="flex {{ $isMine ? 'justify-end' : 'justify-start' }} mb-1 group">
+                            {{-- Receiver avatar (not for own messages) --}}
+                            @if(!$isMine)
+                                <div class="flex-shrink-0 mr-2 mt-1">
+                                    @if($msgUser?->avatar_path)
+                                        <img src="{{ asset('storage/' . $msgUser->avatar_path) }}" class="w-7 h-7 rounded-full object-cover">
+                                    @else
+                                        <div class="w-7 h-7 rounded-full flex items-center justify-center text-[8px] font-bold text-white" style="background: {{ $msgUser->color ?? '#6b7280' }}">{{ $msgUser->avatar ?? substr($msgUser->name ?? '?', 0, 2) }}</div>
+                                    @endif
                                 </div>
+                            @endif
+
+                            <div class="max-w-[70%]">
+                                {{-- Sender name for group incoming messages --}}
+                                @if(!$isMine && $isGroup)
+                                    <div class="text-[10px] font-semibold text-crm-t3 mb-0.5 ml-1">{{ $msgUser->name ?? 'Unknown' }}</div>
+                                @endif
+
+                                {{-- Bubble --}}
                                 @if(($msg->message_type ?? 'text') === 'gif' && $msg->gif_url)
-                                    <div class="overflow-hidden rounded-2xl border {{ $isMine ? 'border-blue-500 bg-blue-600/10' : 'border-crm-border bg-white' }}">
-                                        <a href="{{ $msg->gif_url }}" target="_blank" rel="noreferrer" class="block">
-                                            <img src="{{ $msg->gif_preview_url ?: $msg->gif_url }}" alt="{{ $msg->gif_title ?? 'GIF' }}" class="max-h-72 w-full object-cover" loading="lazy">
+                                    <div class="overflow-hidden {{ $isMine ? 'rounded-2xl rounded-br-md' : 'rounded-2xl rounded-bl-md' }} shadow-sm">
+                                        <a href="{{ $msg->gif_url }}" target="_blank" rel="noreferrer" class="block bg-black/5">
+                                            <img src="{{ $msg->gif_preview_url ?: $msg->gif_url }}" alt="{{ $msg->gif_title ?? 'GIF' }}" class="max-h-64 w-full object-cover" loading="lazy">
                                         </a>
-                                        <div class="px-3 py-2 text-xs {{ $isMine ? 'text-blue-50 bg-blue-600' : 'text-crm-t2 bg-crm-card' }}">
-                                            {{ $msg->gif_title ?: 'GIF' }}
-                                        </div>
                                     </div>
                                 @else
-                                    <div class="px-3 py-2 rounded-lg text-sm {{ $isMine ? 'bg-blue-600 text-white' : 'bg-crm-card border border-crm-border text-crm-t1' }}">
+                                    <div class="px-3.5 py-2 text-sm leading-relaxed shadow-sm
+                                        {{ $isMine
+                                            ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl rounded-br-md'
+                                            : 'bg-white border border-gray-200 text-gray-900 rounded-2xl rounded-bl-md' }}">
                                         {{ $msg->body ?? $msg->content ?? $msg->text ?? '' }}
                                     </div>
                                 @endif
+
+                                {{-- Timestamp + Status --}}
+                                <div class="flex items-center gap-1.5 mt-0.5 {{ $isMine ? 'justify-end mr-1' : 'ml-1' }}">
+                                    <span class="text-[10px] text-gray-400">{{ $msg->created_at?->format('g:i A') ?? '' }}</span>
+                                    @if($isMine)
+                                        @if($msg->seen_at)
+                                            <span class="text-[10px] text-blue-500 font-medium">Seen</span>
+                                        @elseif($msg->delivered_at)
+                                            <span class="text-[10px] text-gray-400">Delivered</span>
+                                        @else
+                                            <span class="text-[10px] text-gray-400">Sent</span>
+                                        @endif
+                                    @endif
+                                </div>
                             </div>
                         </div>
                     @endforeach
-                @endif
-
-                @if(!isset($messages) || count($messages) === 0)
-                    <div class="flex-1 flex items-center justify-center">
-                        <p class="text-sm text-crm-t3">No messages yet. Start the conversation!</p>
+                @else
+                    <div class="flex-1 flex items-center justify-center h-full">
+                        <div class="text-center">
+                            <div class="text-4xl opacity-20 mb-2">💬</div>
+                            <p class="text-sm text-crm-t3">No messages yet. Start the conversation!</p>
+                        </div>
                     </div>
                 @endif
             </div>
+
+            {{-- Auto-scroll to bottom --}}
+            <script>
+                (function() {
+                    var el = document.getElementById('message-thread');
+                    if (el) el.scrollTop = el.scrollHeight;
+                })();
+            </script>
 
             {{-- Message Input --}}
             <div class="px-4 py-3 border-t border-crm-border bg-crm-surface relative">

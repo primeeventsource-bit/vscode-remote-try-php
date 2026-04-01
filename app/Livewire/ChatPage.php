@@ -99,6 +99,26 @@ class ChatPage extends Component
         $this->selectedChat = $id;
         $this->showNewChatForm = false;
         $this->showInfoPanel = false;
+        $this->markAsSeen();
+    }
+
+    public function markAsSeen(): void
+    {
+        if (!$this->selectedChat) return;
+
+        try {
+            $now = now();
+            Message::where('chat_id', $this->selectedChat)
+                ->where('sender_id', '!=', auth()->id())
+                ->whereNull('seen_at')
+                ->update([
+                    'seen_at' => $now,
+                    'delivered_at' => DB::raw("COALESCE(delivered_at, '{$now}')"),
+                    'status' => 'seen',
+                ]);
+        } catch (\Throwable $e) {
+            // Non-critical — don't break the UI
+        }
     }
 
     public function toggleInfoPanel(): void
@@ -213,6 +233,7 @@ class ChatPage extends Component
                 'message_type' => 'text',
                 'sender_id'    => auth()->id(),
                 'text'         => $text,
+                'status'       => 'sent',
             ]);
             Chat::where('id', $this->selectedChat)->update(['updated_at' => now()]);
             $this->messageInput = '';
@@ -322,6 +343,10 @@ class ChatPage extends Component
             $members = is_array($c->members) ? $c->members : json_decode($c->members ?? '[]', true);
             return in_array($user->id, $members) || in_array((string) $user->id, $members);
         });
+
+        if ($this->selectedChat) {
+            $this->markAsSeen();
+        }
 
         $messages = $this->selectedChat
             ? Message::where('chat_id', $this->selectedChat)->orderBy('id')->limit(200)->get()
