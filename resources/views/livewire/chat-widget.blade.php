@@ -43,12 +43,12 @@
         x-transition:leave-start="opacity-100 scale-100"
         x-transition:leave-end="opacity-0 scale-95"
         :style="`position:fixed;left:${px}px;top:${py}px;width:380px;height:500px;z-index:9999;`"
-        class="flex flex-col overflow-hidden rounded-xl border border-crm-border bg-white shadow-2xl select-none"
-        style="display:none;"
+        class="flex flex-col overflow-hidden rounded-xl border border-crm-border bg-white shadow-2xl"
+        x-cloak
     >
         {{-- Drag Handle / Header --}}
         <div
-            class="flex flex-shrink-0 cursor-grab items-center gap-2 border-b border-crm-border bg-crm-surface px-4 py-3 active:cursor-grabbing"
+            class="flex flex-shrink-0 cursor-grab items-center gap-2 border-b border-crm-border bg-crm-surface px-4 py-3 active:cursor-grabbing select-none"
             @mousedown="startDrag($event)"
         >
             @if($selectedChat && $activeChat)
@@ -68,10 +68,10 @@
                     @php
                         $members = is_array($chat->members) ? $chat->members : json_decode($chat->members ?? '[]', true);
                         $otherId = collect($members)->first(fn($m) => (int)$m !== auth()->id());
-                        $other   = $users->get($otherId);
-                        $bg      = $other->color ?? '#3b82f6';
-                        $initials = $chat->type === 'channel' ? '#' : ($other->avatar ?? substr($other->name ?? 'G', 0, 2));
-                        $displayName = $chat->type === 'dm' ? ($other->name ?? $chat->name ?? 'DM') : $chat->name;
+                        $other   = $otherId ? $users->get($otherId) : null;
+                        $bg      = $other?->color ?? '#3b82f6';
+                        $initials = $chat->type === 'channel' ? '#' : ($other?->avatar ?? substr($other?->name ?? 'G', 0, 2));
+                        $displayName = $chat->type === 'dm' ? ($other?->name ?? $chat->name ?? 'DM') : $chat->name;
                     @endphp
                     <button wire:click="selectChat({{ $chat->id }})"
                         class="flex w-full items-center gap-3 border-b border-crm-border px-4 py-3 text-left transition hover:bg-crm-hover">
@@ -157,7 +157,8 @@
         {{-- ─── Chat List (no chat selected, no form) ─── --}}
         @else
             {{-- ─── Message Thread (chat selected) ─── --}}
-            <div class="flex-1 overflow-y-auto space-y-2 p-3" id="cwt-messages">
+            <div class="flex-1 overflow-y-auto space-y-2 p-3" id="cwt-messages"
+                 x-data x-init="$nextTick(() => $el.scrollTop = $el.scrollHeight)">
                 @forelse($messages as $msg)
                     @php
                         $msgUser = $users->get($msg->sender_id);
@@ -166,8 +167,8 @@
                     @endphp
                     <div class="flex items-end gap-2 {{ $isMine ? 'flex-row-reverse' : '' }}">
                         <div class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[8px] font-bold text-white"
-                             style="background:{{ $msgUser->color ?? '#6b7280' }}">
-                            {{ $msgUser->avatar ?? substr($msgUser->name ?? '?', 0, 2) }}
+                             style="background:{{ $msgUser?->color ?? '#6b7280' }}">
+                            {{ $msgUser?->avatar ?? substr($msgUser?->name ?? '?', 0, 2) }}
                         </div>
                         @if(($msg->message_type ?? 'text') === 'gif' && $msg->gif_url)
                             <div class="max-w-[72%] overflow-hidden rounded-xl border {{ $isMine ? 'border-blue-500 bg-blue-600/10' : 'border-crm-border bg-white' }}">
@@ -211,13 +212,4 @@
         @endif
     </div>
 
-    {{-- Auto-scroll messages on update --}}
-    @if($selectedChat)
-    <script>
-        (function() {
-            var el = document.getElementById('cwt-messages');
-            if (el) el.scrollTop = el.scrollHeight;
-        })();
-    </script>
-    @endif
 </div>
