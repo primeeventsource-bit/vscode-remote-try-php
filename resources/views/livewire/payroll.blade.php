@@ -14,7 +14,7 @@
     @if($isMaster)
         {{-- Tabs for Master Admin --}}
         <div class="flex flex-wrap items-center gap-1 bg-crm-card border border-crm-border rounded-lg p-0.5 mb-4">
-            @foreach(['closers' => 'Closers', 'fronters' => 'Fronters', 'admins' => 'Admins', 'history' => 'Sent History'] as $key => $label)
+            @foreach(['inputs' => 'Payroll Inputs', 'closers' => 'Closers', 'fronters' => 'Fronters', 'admins' => 'Admins', 'history' => 'Sent History'] as $key => $label)
                 <button wire:click="$set('tab', '{{ $key }}')"
                     class="px-3 py-1.5 text-xs font-semibold rounded-md transition {{ $tab === $key ? 'bg-white text-blue-600 shadow-sm' : 'text-crm-t3 hover:text-crm-t1' }}">
                     {{ $label }}
@@ -22,6 +22,7 @@
             @endforeach
         </div>
 
+        @if($tab === 'inputs')
         {{-- Rates Settings (collapsible) --}}
         <div class="mb-4">
             <button @click="ratesOpen = !ratesOpen" class="flex items-center gap-2 text-xs font-semibold text-crm-t2 hover:text-crm-t1 transition mb-2">
@@ -97,6 +98,7 @@
                 </table>
             </div>
         </div>
+        @endif
 
         {{-- Sent History Tab --}}
         @if($tab === 'history')

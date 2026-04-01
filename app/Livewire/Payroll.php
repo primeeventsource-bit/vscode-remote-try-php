@@ -14,7 +14,7 @@ use Livewire\Component;
 #[Title('Payroll')]
 class Payroll extends Component
 {
-    public string $tab = 'closers';
+    public string $tab = 'inputs';
     public bool $showRates = false;
     public int $weekOffset = 0;
     public array $userPayrollInputs = [];
