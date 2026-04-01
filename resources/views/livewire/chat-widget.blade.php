@@ -19,8 +19,8 @@
         },
         stopDrag() { this.dragging = false; }
     }"
-    @mousemove.window="doDrag($event)"
-    @mouseup.window="stopDrag()"
+    @mousemove.window="if(dragging) doDrag($event)"
+    @mouseup.window="if(dragging) stopDrag()"
     wire:poll.10s
 >
     {{-- ─── Floating Bubble ─── --}}

@@ -4,7 +4,7 @@
     .badge-blink-red { animation: pulse-badge 1.5s ease-in-out infinite; background: #ef4444; }
     .msg-unread { background: rgba(59,130,246,0.06); border-left: 3px solid #3b82f6; }
 </style>
-<div class="flex h-[calc(100vh-3rem)]" wire:poll.5s>
+<div class="flex h-[calc(100vh-3rem)]" wire:poll.10s>
     {{-- Left Panel: Chat List --}}
     <div class="w-72 border-r border-crm-border bg-crm-surface flex flex-col flex-shrink-0">
         {{-- Header --}}
@@ -174,7 +174,9 @@
             {{-- Messages + Input Column --}}
             <div class="flex-1 flex flex-col min-h-0">
             {{-- Messages Thread — iMessage/WhatsApp style --}}
-            <div class="flex-1 overflow-y-auto px-4 py-3" id="message-thread">
+            <div class="flex-1 overflow-y-auto px-4 py-3" id="message-thread"
+                 x-data x-init="$nextTick(() => $el.scrollTop = $el.scrollHeight)"
+                 wire:key="thread-{{ $selectedChat }}-{{ $messages->count() }}">
                 @if(isset($messages) && count($messages) > 0)
                     @php $prevDate = null; @endphp
                     @foreach($messages as $idx => $msg)
@@ -259,14 +261,6 @@
                     </div>
                 @endif
             </div>
-
-            {{-- Auto-scroll to bottom --}}
-            <script>
-                (function() {
-                    var el = document.getElementById('message-thread');
-                    if (el) el.scrollTop = el.scrollHeight;
-                })();
-            </script>
 
             {{-- Message Input --}}
             <div class="px-4 py-3 border-t border-crm-border bg-crm-surface relative">

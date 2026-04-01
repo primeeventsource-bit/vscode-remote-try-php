@@ -154,7 +154,7 @@
         $chatSettingEnabled = $chatRaw === null ? true : (json_decode($chatRaw, true) === true);
     @endphp
 
-    @if($chatSettingEnabled && auth()->user()?->hasPerm('view_chat'))
+    @if($chatSettingEnabled && auth()->user()?->hasPerm('view_chat') && !request()->routeIs('chat'))
         @livewire('chat-widget')
     @endif
 
