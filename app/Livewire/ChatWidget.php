@@ -31,7 +31,15 @@ class ChatWidget extends Component
     private function canUseChat(): bool
     {
         $user = auth()->user();
-        return $this->moduleEnabled('chat.module_enabled') && ($user?->hasPerm('view_chat') ?? false);
+        if (!$user) {
+            return false;
+        }
+
+        if ($user->hasRole('master_admin')) {
+            return $this->moduleEnabled('chat.module_enabled');
+        }
+
+        return $this->moduleEnabled('chat.module_enabled') && $user->hasPerm('view_chat');
     }
 
     public function selectChat(int $id): void
@@ -66,16 +74,28 @@ class ChatWidget extends Component
 
     public function createNewChat(): void
     {
-        if (!$this->canUseChat() || !auth()->user()?->hasPerm('create_chats')) {
+        $user = auth()->user();
+        if (!$this->canUseChat() || (!$user?->hasPerm('create_chats') && !$user?->hasRole('master_admin'))) {
             return;
         }
 
-        $name = trim($this->newChatName);
-        if (!$name || empty($this->newChatMembers)) {
+        $selectedMembers = array_values(array_unique(array_map('intval', $this->newChatMembers)));
+        if (empty($selectedMembers)) {
             return;
         }
 
-        $members = array_merge($this->newChatMembers, [auth()->id()]);
+        if ($this->newChatType === 'dm') {
+            $selectedMembers = [reset($selectedMembers)];
+            $otherUser = User::find($selectedMembers[0]);
+            $name = $otherUser?->name ?? 'Direct Message';
+        } else {
+            $name = trim($this->newChatName);
+            if ($name === '') {
+                return;
+            }
+        }
+
+        $members = array_merge($selectedMembers, [$user->id]);
         $members = array_unique(array_filter($members));
 
         // Create the chat

@@ -121,7 +121,7 @@
                                 @if($u->id !== auth()->id())
                                     <label class="flex items-center gap-2 border-b border-crm-border px-3 py-2 last:border-0 cursor-pointer hover:bg-crm-hover text-sm">
                                         <input type="checkbox" wire:model="newChatMembers" value="{{ $u->id }}" 
-                                               @if($newChatType === 'dm' && count($newChatMembers) > 0) @endif
+                                                 @if($newChatType === 'dm' && count($newChatMembers) > 0 && !in_array($u->id, $newChatMembers)) disabled @endif
                                                class="h-4 w-4 rounded border-crm-border">
                                         <div class="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-[8px] font-bold text-white"
                                              style="background:{{ $u->color ?? '#6b7280' }}">{{ $u->avatar ?? substr($u->name, 0, 2) }}</div>

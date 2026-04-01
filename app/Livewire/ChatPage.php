@@ -27,10 +27,23 @@ class ChatPage extends Component
         return is_bool($decoded) ? $decoded : $default;
     }
 
-    public function mount(): void
+    private function canAccessChat(): bool
     {
         $user = auth()->user();
-        if (!$this->moduleEnabled('chat.module_enabled') || !$user?->hasPerm('view_chat')) {
+        if (!$user) {
+            return false;
+        }
+
+        if ($user->hasRole('master_admin')) {
+            return $this->moduleEnabled('chat.module_enabled');
+        }
+
+        return $this->moduleEnabled('chat.module_enabled') && $user->hasPerm('view_chat');
+    }
+
+    public function mount(): void
+    {
+        if (!$this->canAccessChat()) {
             $this->redirectRoute('dashboard');
             session()->flash('error', 'Chat module is disabled or you do not have access.');
         }
@@ -44,7 +57,7 @@ class ChatPage extends Component
 
     public function sendMessage()
     {
-        if (!auth()->user()?->hasPerm('view_chat')) {
+        if (!$this->canAccessChat()) {
             return;
         }
 
