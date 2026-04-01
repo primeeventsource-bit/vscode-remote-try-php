@@ -226,8 +226,12 @@ class GifController extends Controller
 
     private function gifSetting(string $key, mixed $default): mixed
     {
-        $row = DB::table('crm_settings')->where('key', 'gifs.' . $key)->value('value');
-        return $row === null ? $default : json_decode($row, true);
+        try {
+            $row = DB::table('crm_settings')->where('key', 'gifs.' . $key)->value('value');
+            return $row === null ? $default : json_decode($row, true);
+        } catch (\Throwable $e) {
+            return $default;
+        }
     }
 
     private function cacheKey(string $segment, array $options): string

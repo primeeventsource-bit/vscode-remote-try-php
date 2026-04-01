@@ -56,12 +56,21 @@ class GifProviderService
         return max(1, min(50, (int) ($options['limit'] ?? 24)));
     }
 
+    private function giphyApiKey(): string
+    {
+        $key = (string) config('services.gifs.giphy.api_key');
+        if ($key === '') {
+            $key = (string) env('GIPHY_API_KEY');
+        }
+        if ($key === '') {
+            throw new RuntimeException('Giphy API key is not configured. Set GIPHY_API_KEY in your environment.');
+        }
+        return $key;
+    }
+
     private function giphyTrending(array $options): array
     {
-        $apiKey = (string) config('services.gifs.giphy.api_key');
-        if ($apiKey === '') {
-            throw new RuntimeException('Giphy API key is not configured.');
-        }
+        $apiKey = $this->giphyApiKey();
 
         $offset = (int) ($options['cursor'] ?? 0);
         $limit = $this->limit($options);
@@ -88,10 +97,7 @@ class GifProviderService
 
     private function giphySearch(string $query, array $options): array
     {
-        $apiKey = (string) config('services.gifs.giphy.api_key');
-        if ($apiKey === '') {
-            throw new RuntimeException('Giphy API key is not configured.');
-        }
+        $apiKey = $this->giphyApiKey();
 
         $offset = (int) ($options['cursor'] ?? 0);
         $limit = $this->limit($options);
