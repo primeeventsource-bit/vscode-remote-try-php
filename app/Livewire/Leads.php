@@ -221,11 +221,19 @@ class Leads extends Component
             $startIndex = 1;
         }
 
+        $batch = [];
+        $now = now()->toDateTimeString();
+        $imported = 0;
+        $skipped = 0;
+
         for ($i = $startIndex; $i < count($lines); $i++) {
             $v = array_map('trim', str_getcsv($lines[$i]));
-            if (count($v) < 2) continue;
+            if (count($v) < 2 || ($v[0] === '' && $v[1] === '')) {
+                $skipped++;
+                continue;
+            }
 
-            Lead::create([
+            $batch[] = [
                 'resort' => $v[0] ?? '',
                 'owner_name' => $v[1] ?? '',
                 'phone1' => $v[2] ?? '',
@@ -235,8 +243,25 @@ class Leads extends Component
                 'zip' => $v[6] ?? '',
                 'resort_location' => $v[7] ?? '',
                 'source' => 'csv',
-            ]);
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+
+            // Insert in chunks of 500 to avoid memory/timeout issues
+            if (count($batch) >= 500) {
+                Lead::insert($batch);
+                $imported += count($batch);
+                $batch = [];
+            }
         }
+
+        // Insert remaining rows
+        if (!empty($batch)) {
+            Lead::insert($batch);
+            $imported += count($batch);
+        }
+
+        session()->flash('message', "Import complete: {$imported} leads imported, {$skipped} rows skipped.");
     }
 
     private function countImportableRows(string $csv): int

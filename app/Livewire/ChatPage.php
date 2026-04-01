@@ -107,15 +107,19 @@ class ChatPage extends Component
         if (!$this->selectedChat) return;
 
         try {
-            $now = now();
+            $now = now()->toDateTimeString();
+
+            // First set delivered_at on any messages that haven't been delivered yet
+            Message::where('chat_id', $this->selectedChat)
+                ->where('sender_id', '!=', auth()->id())
+                ->whereNull('delivered_at')
+                ->update(['delivered_at' => $now, 'status' => 'delivered']);
+
+            // Then mark as seen
             Message::where('chat_id', $this->selectedChat)
                 ->where('sender_id', '!=', auth()->id())
                 ->whereNull('seen_at')
-                ->update([
-                    'seen_at' => $now,
-                    'delivered_at' => DB::raw("COALESCE(delivered_at, '{$now}')"),
-                    'status' => 'seen',
-                ]);
+                ->update(['seen_at' => $now, 'status' => 'seen']);
         } catch (\Throwable $e) {
             // Non-critical — don't break the UI
         }
@@ -228,13 +232,21 @@ class ChatPage extends Component
         if ($text === '' || !$this->selectedChat) return;
 
         try {
-            Message::create([
+            $msgData = [
                 'chat_id'      => $this->selectedChat,
                 'message_type' => 'text',
                 'sender_id'    => auth()->id(),
                 'text'         => $text,
-                'status'       => 'sent',
-            ]);
+            ];
+            // Only include status if the column exists (migration may not have run)
+            try {
+                $msgData['status'] = 'sent';
+                Message::create($msgData);
+            } catch (\Throwable $e) {
+                // Retry without status field if column doesn't exist
+                unset($msgData['status']);
+                Message::create($msgData);
+            }
             Chat::where('id', $this->selectedChat)->update(['updated_at' => now()]);
             $this->messageInput = '';
         } catch (\Throwable $e) {
@@ -343,10 +355,6 @@ class ChatPage extends Component
             $members = is_array($c->members) ? $c->members : json_decode($c->members ?? '[]', true);
             return in_array($user->id, $members) || in_array((string) $user->id, $members);
         });
-
-        if ($this->selectedChat) {
-            $this->markAsSeen();
-        }
 
         $messages = $this->selectedChat
             ? Message::where('chat_id', $this->selectedChat)->orderBy('id')->limit(200)->get()

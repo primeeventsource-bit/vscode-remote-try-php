@@ -22,6 +22,17 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
+        // Always return JSON for API routes — never HTML
+        $exceptions->render(function (Throwable $exception, $request) {
+            if (str_starts_with($request->path(), 'api/')) {
+                $status = method_exists($exception, 'getStatusCode') ? $exception->getStatusCode() : 500;
+                return response()->json([
+                    'message' => $exception->getMessage() ?: 'Server error',
+                ], $status);
+            }
+            return null;
+        });
+
         $exceptions->render(function (QueryException $exception, $request) {
             $message = $exception->getMessage();
 
