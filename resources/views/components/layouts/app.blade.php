@@ -24,10 +24,14 @@
                 {{ str_replace('_', ' ', auth()->user()->role) }}
             </span>
             <span class="text-xs text-crm-t3">{{ auth()->user()->name }}</span>
-            <div class="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-semibold text-white"
-                 style="background: {{ auth()->user()->color ?? '#3b82f6' }}">
-                {{ auth()->user()->avatar ?? substr(auth()->user()->name, 0, 2) }}
-            </div>
+            @if(auth()->user()->avatar_path)
+                <img src="{{ asset('storage/' . auth()->user()->avatar_path) }}" class="w-8 h-8 rounded-full object-cover">
+            @else
+                <div class="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-semibold text-white"
+                     style="background: {{ auth()->user()->color ?? '#3b82f6' }}">
+                    {{ auth()->user()->avatar ?? substr(auth()->user()->name, 0, 2) }}
+                </div>
+            @endif
         </div>
     </header>
 

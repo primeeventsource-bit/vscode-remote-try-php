@@ -56,7 +56,11 @@
             @if(isset($chats))
                 @foreach($chats->where('type', 'group') as $chat)
                     <button wire:click="selectChat({{ $chat->id }})" class="w-full text-left px-3 py-2 flex items-center gap-2 transition {{ (isset($activeChat) && $activeChat === $chat->id) ? 'bg-blue-50 text-blue-600' : 'hover:bg-crm-hover text-crm-t2' }}">
-                        <span class="w-6 h-6 rounded-lg bg-crm-card border border-crm-border flex items-center justify-center text-[8px] font-bold text-crm-t3 flex-shrink-0">G</span>
+                        @if($chat->icon_path)
+                            <img src="{{ asset('storage/' . $chat->icon_path) }}" class="w-6 h-6 rounded-lg object-cover flex-shrink-0">
+                        @else
+                            <span class="w-6 h-6 rounded-lg bg-crm-card border border-crm-border flex items-center justify-center text-[8px] font-bold text-crm-t3 flex-shrink-0">G</span>
+                        @endif
                         <span class="text-sm font-medium truncate">{{ $chat->name }}</span>
                         @if(isset($chat->unread) && $chat->unread > 0)
                             <span class="ml-auto w-4 h-4 flex items-center justify-center text-[8px] font-bold text-white bg-blue-600 rounded-full">{{ $chat->unread }}</span>
@@ -150,9 +154,9 @@
                 </button>
             </div>
 
-            <div class="flex flex-1 overflow-hidden">
+            <div class="flex flex-1 min-h-0">
             {{-- Messages + Input Column --}}
-            <div class="flex-1 flex flex-col overflow-hidden">
+            <div class="flex-1 flex flex-col min-h-0">
             {{-- Messages Thread --}}
             <div class="flex-1 overflow-y-auto p-4 space-y-3" id="message-thread">
                 @if(isset($messages))
@@ -162,7 +166,11 @@
                             $isMine = $msg->sender_id === auth()->id();
                         @endphp
                         <div class="flex items-start gap-3 {{ $isMine ? 'flex-row-reverse' : '' }}">
-                            <div class="w-8 h-8 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0" style="background: {{ $msgUser->color ?? '#6b7280' }}">{{ $msgUser->avatar ?? substr($msgUser->name ?? '?', 0, 2) }}</div>
+                            @if($msgUser?->avatar_path)
+                                <img src="{{ asset('storage/' . $msgUser->avatar_path) }}" class="w-8 h-8 rounded-full object-cover flex-shrink-0">
+                            @else
+                                <div class="w-8 h-8 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0" style="background: {{ $msgUser->color ?? '#6b7280' }}">{{ $msgUser->avatar ?? substr($msgUser->name ?? '?', 0, 2) }}</div>
+                            @endif
                             <div class="max-w-[60%]">
                                 <div class="flex items-center gap-2 mb-0.5 {{ $isMine ? 'flex-row-reverse' : '' }}">
                                     <span class="text-xs font-semibold">{{ $msgUser->name ?? 'Unknown' }}</span>
@@ -195,11 +203,11 @@
             </div>
 
             {{-- Message Input --}}
-            <div class="px-4 py-3 border-t border-crm-border bg-crm-surface">
-                <div class="flex items-center gap-2 relative">
+            <div class="px-4 py-3 border-t border-crm-border bg-crm-surface relative">
+                <div class="flex items-center gap-2">
                     @include('livewire.partials.gif-picker', [
                         'gifPickerId' => 'chat-page-gif-picker',
-                        'gifPickerPanelClass' => 'left-0 bottom-full mb-2 w-[22rem]',
+                        'gifPickerPanelClass' => 'left-0 bottom-full mb-3 w-[380px] max-h-[420px] z-[9999] shadow-2xl',
                         'gifPickerSettings' => $gifPickerSettings,
                         'canUseGifPicker' => $canUseGifPicker,
                         'currentUserId' => $currentUserId,
@@ -221,14 +229,40 @@
                     <h4 class="text-sm font-bold">Conversation Info</h4>
                 </div>
 
-                {{-- Chat Details --}}
+                {{-- Chat Details + Group Icon --}}
                 <div class="px-4 py-3 border-b border-crm-border">
                     <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mb-2">Details</div>
-                    <div class="space-y-1.5">
-                        <div class="text-sm font-medium">{{ $activeChat->name ?? 'Chat' }}</div>
-                        <div class="text-xs text-crm-t3 capitalize">{{ $activeChat->type }} chat</div>
-                        <div class="text-xs text-crm-t3">Created {{ $activeChat->created_at?->format('M j, Y') ?? '' }}</div>
-                    </div>
+                    @if($activeChat->type !== 'dm')
+                        <div class="flex items-center gap-3 mb-3">
+                            @if($activeChat->icon_path)
+                                <img src="{{ asset('storage/' . $activeChat->icon_path) }}" class="w-12 h-12 rounded-xl object-cover">
+                            @else
+                                <div class="w-12 h-12 rounded-xl bg-crm-card border border-crm-border flex items-center justify-center text-lg font-bold text-crm-t3">G</div>
+                            @endif
+                            <div class="flex-1 min-w-0">
+                                <div class="text-sm font-medium truncate">{{ $activeChat->name ?? 'Chat' }}</div>
+                                <div class="text-[10px] text-crm-t3 capitalize">{{ $activeChat->type }} chat</div>
+                            </div>
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="flex items-center gap-2 cursor-pointer text-xs text-blue-600 hover:text-blue-700 font-medium">
+                                <input type="file" wire:model="groupIconUpload" accept="image/jpeg,image/png,image/webp" class="hidden">
+                                {{ $activeChat->icon_path ? 'Change icon' : 'Upload icon' }}
+                            </label>
+                            @if($groupIconUpload)
+                                <button wire:click="uploadGroupIcon" class="text-xs font-semibold text-white bg-blue-600 rounded px-2 py-1 hover:bg-blue-700">Save Icon</button>
+                            @endif
+                            @if($activeChat->icon_path)
+                                <button wire:click="removeGroupIcon" class="text-xs text-red-500 hover:text-red-600 font-medium">Remove icon</button>
+                            @endif
+                        </div>
+                    @else
+                        <div class="space-y-1.5">
+                            <div class="text-sm font-medium">{{ $activeChat->name ?? 'Chat' }}</div>
+                            <div class="text-xs text-crm-t3 capitalize">{{ $activeChat->type }} chat</div>
+                        </div>
+                    @endif
+                    <div class="text-xs text-crm-t3 mt-2">Created {{ $activeChat->created_at?->format('M j, Y') ?? '' }}</div>
                 </div>
 
                 {{-- Members --}}
@@ -239,7 +273,11 @@
                             @php $member = $users->get((int) $memberId); @endphp
                             @if($member)
                             <div class="flex items-center gap-2">
-                                <div class="w-7 h-7 rounded-full flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0" style="background: {{ $member->color ?? '#6b7280' }}">{{ $member->avatar ?? substr($member->name, 0, 2) }}</div>
+                                @if($member->avatar_path)
+                                    <img src="{{ asset('storage/' . $member->avatar_path) }}" class="w-7 h-7 rounded-full object-cover flex-shrink-0">
+                                @else
+                                    <div class="w-7 h-7 rounded-full flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0" style="background: {{ $member->color ?? '#6b7280' }}">{{ $member->avatar ?? substr($member->name, 0, 2) }}</div>
+                                @endif
                                 <div class="min-w-0 flex-1">
                                     <div class="text-sm font-medium truncate">{{ $member->name }}</div>
                                     <div class="text-[10px] text-crm-t3 capitalize">{{ str_replace('_', ' ', $member->role ?? '') }}</div>
@@ -250,6 +288,30 @@
                             </div>
                             @endif
                         @endforeach
+                    </div>
+                </div>
+
+                {{-- Your Avatar --}}
+                <div class="px-4 py-3 border-b border-crm-border">
+                    <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mb-2">Your Avatar</div>
+                    <div class="flex items-center gap-3">
+                        @if(auth()->user()->avatar_path)
+                            <img src="{{ asset('storage/' . auth()->user()->avatar_path) }}" class="w-10 h-10 rounded-full object-cover">
+                        @else
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-white" style="background: {{ auth()->user()->color ?? '#3b82f6' }}">{{ auth()->user()->avatar ?? substr(auth()->user()->name, 0, 2) }}</div>
+                        @endif
+                        <div class="flex-1 space-y-1">
+                            <label class="flex items-center gap-1 cursor-pointer text-xs text-blue-600 hover:text-blue-700 font-medium">
+                                <input type="file" wire:model="avatarUpload" accept="image/jpeg,image/png,image/webp" class="hidden">
+                                {{ auth()->user()->avatar_path ? 'Change photo' : 'Upload photo' }}
+                            </label>
+                            @if($avatarUpload)
+                                <button wire:click="uploadAvatar" class="text-xs font-semibold text-white bg-blue-600 rounded px-2 py-1 hover:bg-blue-700">Save</button>
+                            @endif
+                            @if(auth()->user()->avatar_path)
+                                <button wire:click="removeAvatar" class="text-xs text-red-500 hover:text-red-600 font-medium">Remove</button>
+                            @endif
+                        </div>
                     </div>
                 </div>
 

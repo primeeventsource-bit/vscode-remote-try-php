@@ -288,7 +288,7 @@
             x-transition:leave="transition ease-in duration-100"
             x-transition:leave-start="opacity-100 translate-y-0"
             x-transition:leave-end="opacity-0 translate-y-1"
-            class="absolute {{ $gifPickerPanelClass }} z-40 overflow-hidden rounded-2xl border border-crm-border bg-white shadow-2xl"
+            class="absolute {{ $gifPickerPanelClass }} overflow-hidden rounded-2xl border border-crm-border bg-white"
             style="display: none;"
         >
             <div class="border-b border-crm-border bg-crm-surface px-3 py-3">

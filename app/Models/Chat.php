@@ -15,6 +15,7 @@ class Chat extends Model
         'name',
         'type',
         'members',
+        'icon_path',
         'created_by',
         'pinned',
     ];

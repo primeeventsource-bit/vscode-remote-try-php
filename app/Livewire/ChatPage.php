@@ -6,14 +6,18 @@ use App\Models\Message;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 #[Layout('components.layouts.app')]
 #[Title('Chat')]
 class ChatPage extends Component
 {
+    use WithFileUploads;
+
     public ?int $selectedChat = null;
     public string $messageInput = '';
     public bool $showNewChatForm = false;
@@ -22,6 +26,8 @@ class ChatPage extends Component
     public string $newChatName = '';
     public array $newChatMembers = [];
     public string $newChatError = '';
+    public $avatarUpload = null;
+    public $groupIconUpload = null;
 
     private function getSetting(string $key, mixed $default): mixed
     {
@@ -248,6 +254,64 @@ class ChatPage extends Component
             ]);
         } catch (\Throwable $e) {
             Log::error('GIF send failed', ['error' => $e->getMessage()]);
+        }
+    }
+
+    public function uploadAvatar(): void
+    {
+        $this->validate(['avatarUpload' => 'image|max:2048|mimes:jpg,jpeg,png,webp']);
+
+        try {
+            $user = auth()->user();
+            if ($user->avatar_path) {
+                Storage::disk('public')->delete($user->avatar_path);
+            }
+            $path = $this->avatarUpload->store('avatars', 'public');
+            $user->update(['avatar_path' => $path]);
+            $this->avatarUpload = null;
+        } catch (\Throwable $e) {
+            Log::error('Avatar upload failed', ['error' => $e->getMessage()]);
+        }
+    }
+
+    public function removeAvatar(): void
+    {
+        $user = auth()->user();
+        if ($user->avatar_path) {
+            Storage::disk('public')->delete($user->avatar_path);
+            $user->update(['avatar_path' => null]);
+        }
+    }
+
+    public function uploadGroupIcon(): void
+    {
+        if (!$this->selectedChat) return;
+
+        $this->validate(['groupIconUpload' => 'image|max:2048|mimes:jpg,jpeg,png,webp']);
+
+        try {
+            $chat = Chat::find($this->selectedChat);
+            if (!$chat || $chat->type === 'dm') return;
+
+            if ($chat->icon_path) {
+                Storage::disk('public')->delete($chat->icon_path);
+            }
+            $path = $this->groupIconUpload->store('chat-icons', 'public');
+            $chat->update(['icon_path' => $path]);
+            $this->groupIconUpload = null;
+        } catch (\Throwable $e) {
+            Log::error('Group icon upload failed', ['error' => $e->getMessage()]);
+        }
+    }
+
+    public function removeGroupIcon(): void
+    {
+        if (!$this->selectedChat) return;
+
+        $chat = Chat::find($this->selectedChat);
+        if ($chat?->icon_path) {
+            Storage::disk('public')->delete($chat->icon_path);
+            $chat->update(['icon_path' => null]);
         }
     }
 
