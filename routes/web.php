@@ -12,6 +12,7 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::get('/', fn () => redirect('/dashboard'));
     Route::get('/dashboard', \App\Livewire\Dashboard::class)->name('dashboard');
+    Route::get('/chargebacks', \App\Livewire\Chargebacks::class)->name('chargebacks');
     Route::get('/leads', \App\Livewire\Leads::class)->name('leads');
     Route::get('/pipeline', \App\Livewire\Pipeline::class)->name('pipeline');
     Route::get('/deals', \App\Livewire\Deals::class)->name('deals');

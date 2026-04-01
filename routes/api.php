@@ -8,6 +8,7 @@ use App\Http\Controllers\DealController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ChargebackController;
 
 // ─── Public routes ───────────────────────────────────────────
 Route::post('/login', [AuthController::class, 'login']);
@@ -58,4 +59,17 @@ Route::middleware([])->group(function () {
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index']);
+
+    // Chargeback dashboard analytics
+    Route::get('/dashboard/chargebacks/summary', [ChargebackController::class, 'summary']);
+    Route::get('/dashboard/chargebacks/trends', [ChargebackController::class, 'trends']);
+    Route::get('/dashboard/chargebacks/breakdowns', [ChargebackController::class, 'breakdowns']);
+
+    // Chargeback management
+    Route::get('/chargebacks/filter-options', [ChargebackController::class, 'filterOptions']);
+    Route::get('/chargebacks', [ChargebackController::class, 'index']);
+    Route::get('/chargebacks/{id}', [ChargebackController::class, 'show']);
+    Route::post('/chargebacks', [ChargebackController::class, 'store']);
+    Route::patch('/chargebacks/{id}', [ChargebackController::class, 'update']);
+    Route::post('/chargebacks/{id}/events', [ChargebackController::class, 'storeEvent']);
 });
