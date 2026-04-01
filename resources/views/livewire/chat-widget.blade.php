@@ -98,6 +98,12 @@
         @elseif($showNewChatForm)
             <div class="flex-1 overflow-y-auto p-4">
                 <div class="space-y-3">
+                    @if($newChatError)
+                        <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
+                            {{ $newChatError }}
+                        </div>
+                    @endif
+
                     <div>
                         <label class="text-xs text-crm-t3 uppercase font-semibold">Chat Type</label>
                         <select wire:model="newChatType" class="w-full mt-1 rounded border border-crm-border bg-white px-2 py-1.5 text-sm focus:border-blue-400 focus:outline-none">

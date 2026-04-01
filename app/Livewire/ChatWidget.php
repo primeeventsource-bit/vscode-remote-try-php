@@ -16,6 +16,7 @@ class ChatWidget extends Component
     public string $newChatType = 'dm';
     public string $newChatName = '';
     public array $newChatMembers = [];
+    public string $newChatError = '';
 
     private function moduleEnabled(string $key, bool $default = true): bool
     {
@@ -69,6 +70,7 @@ class ChatWidget extends Component
             $this->newChatType = 'dm';
             $this->newChatName = '';
             $this->newChatMembers = [];
+            $this->newChatError = '';
         }
     }
 
@@ -76,21 +78,31 @@ class ChatWidget extends Component
     {
         $user = auth()->user();
         if (!$this->canUseChat() || (!$user?->hasPerm('create_chats') && !$user?->hasRole('master_admin'))) {
+            $this->newChatError = 'You do not have permission to create chats.';
             return;
         }
 
+        $this->newChatError = '';
         $selectedMembers = array_values(array_unique(array_map('intval', $this->newChatMembers)));
         if (empty($selectedMembers)) {
+            $this->newChatError = $this->newChatType === 'dm'
+                ? 'Select one person to start a direct message.'
+                : 'Select at least one member to create a group chat.';
             return;
         }
 
         if ($this->newChatType === 'dm') {
             $selectedMembers = [reset($selectedMembers)];
             $otherUser = User::find($selectedMembers[0]);
+            if (!$otherUser) {
+                $this->newChatError = 'The selected user could not be found.';
+                return;
+            }
             $name = $otherUser?->name ?? 'Direct Message';
         } else {
             $name = trim($this->newChatName);
             if ($name === '') {
+                $this->newChatError = 'Enter a group name before creating the chat.';
                 return;
             }
         }
@@ -110,6 +122,7 @@ class ChatWidget extends Component
         $this->newChatName = '';
         $this->newChatMembers = [];
         $this->messageInput = '';
+        $this->newChatError = '';
     }
 
     public function sendMessage(): void
