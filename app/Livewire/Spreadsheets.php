@@ -129,30 +129,127 @@ class Spreadsheets extends Component
         if ($this->editingId === $id) $this->editingId = null;
     }
 
-    public function importCsv(): void
+    public function importFile(): void
     {
         if (!$this->canEdit()) return;
-        $this->validate(['csvUpload' => 'required|file|max:10240|mimes:csv,txt']);
+        $this->validate(['csvUpload' => 'required|file|max:25600|mimes:csv,txt,xlsx,xls']);
+
         try {
-            $content = file_get_contents($this->csvUpload->getRealPath());
-            $lines = preg_split('/\r\n|\r|\n/', trim($content));
+            $file = $this->csvUpload;
+            $ext = strtolower($file->getClientOriginalExtension());
             $data = [];
-            foreach ($lines as $line) { $data[] = array_map('trim', str_getcsv($line)); }
+
+            if (in_array($ext, ['xlsx', 'xls'])) {
+                $data = $this->parseXlsx($file->getRealPath());
+            } else {
+                $content = file_get_contents($file->getRealPath());
+                $lines = preg_split('/\r\n|\r|\n/', trim($content));
+                foreach ($lines as $line) {
+                    $data[] = array_map('trim', str_getcsv($line));
+                }
+            }
+
+            if (empty($data)) {
+                $data = [['', '', '', '', '']];
+            }
+
             $sheet = CrmSheet::create([
-                'title' => pathinfo($this->csvUpload->getClientOriginalName(), PATHINFO_FILENAME),
+                'title' => pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME),
                 'data' => $data,
                 'owner_id' => auth()->id(),
                 'is_uploaded' => true,
-                'original_filename' => $this->csvUpload->getClientOriginalName(),
-                'mime_type' => 'text/csv',
-                'file_size' => $this->csvUpload->getSize(),
+                'original_filename' => $file->getClientOriginalName(),
+                'mime_type' => $file->getMimeType(),
+                'file_size' => $file->getSize(),
             ]);
-            CrmFileActivityLog::log('sheets', $sheet->id, 'imported', ['rows' => count($data)]);
+
+            CrmFileActivityLog::log('sheets', $sheet->id, 'imported', [
+                'filename' => $sheet->original_filename,
+                'rows' => count($data),
+            ]);
+
             $this->csvUpload = null;
             $this->openSheet($sheet->id);
         } catch (\Throwable $e) {
-            Log::error('CSV import failed', ['error' => $e->getMessage()]);
+            Log::error('Sheet import failed', ['error' => $e->getMessage()]);
+            session()->flash('error', 'Import failed: ' . $e->getMessage());
         }
+    }
+
+    private function parseXlsx(string $path): array
+    {
+        $data = [];
+        $zip = new \ZipArchive();
+
+        if ($zip->open($path) !== true) {
+            throw new \RuntimeException('Cannot open XLSX file.');
+        }
+
+        // Read shared strings
+        $strings = [];
+        $sharedStringsXml = $zip->getFromName('xl/sharedStrings.xml');
+        if ($sharedStringsXml) {
+            $xml = simplexml_load_string($sharedStringsXml);
+            foreach ($xml->si as $si) {
+                $strings[] = (string) ($si->t ?? $si->r->t ?? '');
+            }
+        }
+
+        // Read first worksheet
+        $sheetXml = $zip->getFromName('xl/worksheets/sheet1.xml');
+        if (!$sheetXml) {
+            $zip->close();
+            return $data;
+        }
+
+        $xml = simplexml_load_string($sheetXml);
+        foreach ($xml->sheetData->row as $row) {
+            $rowData = [];
+            $maxCol = 0;
+
+            foreach ($row->c as $cell) {
+                $colRef = preg_replace('/\d+/', '', (string) $cell['r']);
+                $colIndex = $this->colLetterToIndex($colRef);
+                $maxCol = max($maxCol, $colIndex);
+
+                $value = '';
+                if ((string) $cell['t'] === 's' && isset($strings[(int) $cell->v])) {
+                    $value = $strings[(int) $cell->v];
+                } elseif (isset($cell->v)) {
+                    $value = (string) $cell->v;
+                }
+
+                // Fill gaps
+                while (count($rowData) < $colIndex) {
+                    $rowData[] = '';
+                }
+                $rowData[$colIndex] = $value;
+            }
+
+            $data[] = $rowData;
+        }
+
+        $zip->close();
+
+        // Normalize column count
+        $maxCols = max(1, ...array_map('count', $data ?: [[]]));
+        foreach ($data as &$row) {
+            while (count($row) < $maxCols) {
+                $row[] = '';
+            }
+        }
+
+        return $data;
+    }
+
+    private function colLetterToIndex(string $letters): int
+    {
+        $letters = strtoupper($letters);
+        $index = 0;
+        for ($i = 0; $i < strlen($letters); $i++) {
+            $index = $index * 26 + (ord($letters[$i]) - ord('A') + 1);
+        }
+        return $index - 1;
     }
 
     public function openShareModal(int $id): void

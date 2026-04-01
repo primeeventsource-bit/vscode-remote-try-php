@@ -7,8 +7,8 @@
                 <div class="flex gap-1">
                     <button wire:click="createSheet" class="px-2.5 py-1.5 text-xs font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 transition">+ New</button>
                     <label class="px-2.5 py-1.5 text-xs font-semibold text-crm-t2 bg-crm-card border border-crm-border rounded-lg hover:bg-crm-hover transition cursor-pointer">
-                        CSV
-                        <input type="file" wire:model="csvUpload" accept=".csv,.txt" class="hidden">
+                        Upload
+                        <input type="file" wire:model="csvUpload" accept=".csv,.txt,.xlsx,.xls" class="hidden">
                     </label>
                 </div>
             @endif
@@ -18,7 +18,7 @@
             <div class="px-4 py-2 border-b border-crm-border bg-green-50">
                 <div class="flex items-center justify-between">
                     <span class="text-xs text-green-700 truncate">{{ $csvUpload->getClientOriginalName() }}</span>
-                    <button wire:click="importCsv" class="text-xs font-semibold text-white bg-green-600 rounded px-2 py-1">Import</button>
+                    <button wire:click="importFile" class="text-xs font-semibold text-white bg-green-600 rounded px-2 py-1">Import</button>
                 </div>
             </div>
         @endif
