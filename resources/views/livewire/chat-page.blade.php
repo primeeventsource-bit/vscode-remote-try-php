@@ -325,7 +325,38 @@
 
                 {{-- Members --}}
                 <div class="px-4 py-3 border-b border-crm-border">
-                    <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mb-2">Members ({{ count($memberIds) }})</div>
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold">Members ({{ count($memberIds) }})</div>
+                        @if(auth()->user()?->hasRole('master_admin', 'admin') && $activeChat->type !== 'dm')
+                            <button wire:click="toggleManageMembers" class="text-[10px] text-blue-600 hover:text-blue-700 font-semibold">
+                                {{ $showManageMembers ? 'Done' : 'Manage' }}
+                            </button>
+                        @endif
+                    </div>
+
+                    {{-- Add Members Form --}}
+                    @if($showManageMembers && $activeChat->type !== 'dm')
+                        <div class="mb-3 p-2 rounded-lg border border-blue-200 bg-blue-50/50">
+                            <div class="text-[10px] font-semibold text-blue-700 mb-1.5">Add Members</div>
+                            <div class="max-h-28 overflow-y-auto border border-crm-border rounded bg-white">
+                                @foreach($users as $u)
+                                    @if($u->id !== auth()->id() && !in_array($u->id, array_map('intval', $memberIds)))
+                                        <label class="flex items-center gap-2 border-b border-crm-border px-2 py-1.5 last:border-0 cursor-pointer hover:bg-crm-hover text-xs">
+                                            <input type="checkbox" wire:model="addMemberIds" value="{{ $u->id }}" class="h-3 w-3 rounded">
+                                            <span class="truncate">{{ $u->name }}</span>
+                                            <span class="ml-auto text-[9px] text-crm-t3">{{ $u->role }}</span>
+                                        </label>
+                                    @endif
+                                @endforeach
+                            </div>
+                            @if(count($addMemberIds) > 0)
+                                <button wire:click="addGroupMembers" class="mt-1.5 w-full text-[10px] font-semibold text-white bg-blue-600 rounded py-1 hover:bg-blue-700">
+                                    Add {{ count($addMemberIds) }} Member{{ count($addMemberIds) > 1 ? 's' : '' }}
+                                </button>
+                            @endif
+                        </div>
+                    @endif
+
                     <div class="space-y-2">
                         @foreach($memberIds as $memberId)
                             @php $member = $users->get((int) $memberId); @endphp
@@ -334,14 +365,16 @@
                                 @if($member->avatar_path)
                                     <img src="{{ asset('storage/' . $member->avatar_path) }}" class="w-7 h-7 rounded-full object-cover flex-shrink-0">
                                 @else
-                                    <div class="w-7 h-7 rounded-full flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0" style="background: {{ $member->color ?? '#6b7280' }}">{{ $member->avatar ?? substr($member->name, 0, 2) }}</div>
+                                    <div class="w-7 h-7 rounded-full flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0" style="background: {{ $member->color ?? '#6b7280' }}">{{ $member->avatar ?? substr($member->name ?? '?', 0, 2) }}</div>
                                 @endif
                                 <div class="min-w-0 flex-1">
                                     <div class="text-sm font-medium truncate">{{ $member->name }}</div>
                                     <div class="text-[10px] text-crm-t3 capitalize">{{ str_replace('_', ' ', $member->role ?? '') }}</div>
                                 </div>
-                                @if($memberId == auth()->id())
+                                @if((int)$memberId === auth()->id())
                                     <span class="text-[9px] text-crm-t3 font-semibold">you</span>
+                                @elseif($showManageMembers && auth()->user()?->hasRole('master_admin', 'admin') && (int)$memberId !== ($activeChat->created_by ?? 0))
+                                    <button wire:click="removeGroupMember({{ $memberId }})" wire:confirm="Remove {{ $member->name }} from this group?" class="text-[9px] text-red-500 hover:text-red-600 font-semibold">Remove</button>
                                 @endif
                             </div>
                             @endif

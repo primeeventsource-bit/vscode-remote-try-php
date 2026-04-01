@@ -28,6 +28,8 @@ class ChatPage extends Component
     public string $newChatError = '';
     public $avatarUpload = null;
     public $groupIconUpload = null;
+    public bool $showManageMembers = false;
+    public array $addMemberIds = [];
 
     public function mount(): void
     {
@@ -206,6 +208,102 @@ class ChatPage extends Component
         if ($chat?->icon_path) {
             Storage::disk('public')->delete($chat->icon_path);
             $chat->update(['icon_path' => null]);
+        }
+    }
+
+    private function canManageGroup(): bool
+    {
+        $user = auth()->user();
+        return $user && $user->hasRole('master_admin', 'admin');
+    }
+
+    public function toggleManageMembers(): void
+    {
+        if (!$this->canManageGroup()) return;
+        $this->showManageMembers = !$this->showManageMembers;
+        $this->addMemberIds = [];
+    }
+
+    public function addGroupMembers(): void
+    {
+        if (!$this->canManageGroup() || !$this->selectedChat) return;
+
+        $chat = Chat::find($this->selectedChat);
+        if (!$chat || $chat->type === 'dm') return;
+
+        $members = is_array($chat->members) ? $chat->members : json_decode($chat->members ?? '[]', true);
+        $members = array_map('intval', $members);
+        $added = [];
+
+        foreach (array_map('intval', $this->addMemberIds) as $uid) {
+            if ($uid && !in_array($uid, $members)) {
+                $members[] = $uid;
+                $addedUser = User::find($uid);
+                if ($addedUser) $added[] = $addedUser->name;
+            }
+        }
+
+        if (empty($added)) {
+            $this->addMemberIds = [];
+            return;
+        }
+
+        $chat->update(['members' => array_values(array_unique($members))]);
+
+        // System message
+        $actorName = auth()->user()->name ?? 'Admin';
+        foreach ($added as $name) {
+            try {
+                Message::create([
+                    'chat_id' => $chat->id,
+                    'message_type' => 'text',
+                    'sender_id' => auth()->id(),
+                    'text' => "📌 {$name} was added to the group by {$actorName}",
+                ]);
+            } catch (\Throwable $e) {}
+        }
+        $chat->update(['updated_at' => now()]);
+
+        $this->addMemberIds = [];
+        $this->showManageMembers = false;
+    }
+
+    public function removeGroupMember(int $userId): void
+    {
+        if (!$this->canManageGroup() || !$this->selectedChat) return;
+
+        $chat = Chat::find($this->selectedChat);
+        if (!$chat || $chat->type === 'dm') return;
+
+        $members = is_array($chat->members) ? $chat->members : json_decode($chat->members ?? '[]', true);
+        $members = array_map('intval', $members);
+
+        if (!in_array($userId, $members)) return;
+
+        // Don't allow removing chat creator
+        if ($chat->created_by === $userId) return;
+
+        $members = array_values(array_filter($members, fn($m) => $m !== $userId));
+        $chat->update(['members' => $members]);
+
+        $removedUser = User::find($userId);
+        $actorName = auth()->user()->name ?? 'Admin';
+        $removedName = $removedUser->name ?? 'User';
+
+        try {
+            Message::create([
+                'chat_id' => $chat->id,
+                'message_type' => 'text',
+                'sender_id' => auth()->id(),
+                'text' => "📌 {$removedName} was removed from the group by {$actorName}",
+            ]);
+        } catch (\Throwable $e) {}
+
+        $chat->update(['updated_at' => now()]);
+
+        // If removed user was viewing this chat, they'll lose access on next render
+        if ($userId === auth()->id()) {
+            $this->selectedChat = null;
         }
     }
 
