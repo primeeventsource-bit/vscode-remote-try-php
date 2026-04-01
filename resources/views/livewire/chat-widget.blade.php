@@ -191,8 +191,6 @@
 
             <div class="flex flex-shrink-0 gap-2 border-t border-crm-border bg-crm-surface px-3 py-2 relative">
                 @include('livewire.partials.gif-picker', [
-                    'gifPickerId' => 'chat-widget-gif-picker',
-                    'gifPickerPanelClass' => 'right-0 bottom-full mb-3 w-[20rem] max-h-[380px] z-[9999] shadow-2xl',
                     'gifPickerSettings' => $gifPickerSettings,
                     'canUseGifPicker' => $canUseGifPicker,
                     'currentUserId' => $currentUserId,
