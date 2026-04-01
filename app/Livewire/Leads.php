@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Livewire\Concerns\SendsTransferDm;
 use App\Models\Lead;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
@@ -14,7 +15,7 @@ use Livewire\WithFileUploads;
 #[Title('Leads')]
 class Leads extends Component
 {
-    use WithFileUploads;
+    use WithFileUploads, SendsTransferDm;
 
     private const MAX_IMPORT_ROWS = 10000;
 
@@ -51,56 +52,12 @@ class Leads extends Component
         if ($dispo === 'Callback' && $callbackDate) $data['callback_date'] = $callbackDate;
         $lead->update($data);
 
-        // Auto-DM on lead transfer
+        // Auto-DM on lead transfer to closer
         if ($dispo === 'Transferred to Closer' && $closerId) {
-            $this->sendTransferDm($closerId, $lead, 'Closer');
+            $this->sendTransferDm($closerId, 'Lead', $lead->id, $lead->owner_name ?? 'Unknown', 'Closer');
         }
 
         $this->selectedLead = null;
-    }
-
-    private function sendTransferDm(int $recipientId, Lead $lead, string $role): void
-    {
-        try {
-            $senderId = auth()->id();
-            if (!$senderId || $senderId === $recipientId) return;
-
-            // Find or create direct chat between sender and recipient
-            $chat = \App\Models\Chat::where('type', 'dm')->get()->first(function ($c) use ($senderId, $recipientId) {
-                $members = is_array($c->members) ? $c->members : json_decode($c->members ?? '[]', true);
-                $ids = array_map('intval', array_values($members));
-                sort($ids);
-                $target = [$senderId, $recipientId];
-                sort($target);
-                return $ids === $target;
-            });
-
-            if (!$chat) {
-                $recipient = User::find($recipientId);
-                $chat = \App\Models\Chat::create([
-                    'name' => $recipient->name ?? 'Direct Message',
-                    'type' => 'dm',
-                    'members' => array_values([$senderId, $recipientId]),
-                    'created_by' => $senderId,
-                ]);
-            }
-
-            $senderName = auth()->user()->name ?? 'System';
-            $leadName = $lead->owner_name ?? 'Unknown';
-            $text = "📋 Lead Transfer\n{$leadName} (Lead #{$lead->id}) has been assigned to you for {$role}.\nTransferred by: {$senderName}\nOpen Leads page to view details.";
-
-            \App\Models\Message::create([
-                'chat_id' => $chat->id,
-                'sender_id' => $senderId,
-                'message_type' => 'text',
-                'text' => $text,
-                'status' => 'sent',
-            ]);
-
-            $chat->update(['updated_at' => now()]);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Transfer DM failed', ['error' => $e->getMessage()]);
-        }
     }
 
     public function doCallback($id)

@@ -1,6 +1,7 @@
 <?php
 namespace App\Livewire;
 
+use App\Livewire\Concerns\SendsTransferDm;
 use App\Models\Deal;
 use App\Models\User;
 use Livewire\Attributes\Layout;
@@ -11,6 +12,7 @@ use Livewire\Component;
 #[Title('Deals')]
 class Deals extends Component
 {
+    use SendsTransferDm;
     public string $statusFilter = 'all';
     public ?int $selectedDeal = null;
     public bool $showModal = false;
@@ -53,7 +55,24 @@ class Deals extends Component
 
     public function updateStatus($id, $status, $extra = [])
     {
-        Deal::where('id', $id)->update(array_merge(['status' => $status], $extra));
+        $deal = Deal::find($id);
+        if (!$deal) return;
+
+        $oldStatus = $deal->status;
+        $deal->update(array_merge(['status' => $status], $extra));
+
+        // Auto-DM when deal moves to verification
+        if ($status === 'in_verification' && $oldStatus !== 'in_verification') {
+            $adminId = $extra['assigned_admin'] ?? $deal->assigned_admin;
+            if ($adminId) {
+                $this->sendTransferDm((int) $adminId, 'Deal', $deal->id, $deal->owner_name ?? 'Unknown', 'Verification');
+            }
+        }
+
+        // Auto-DM when deal is assigned to a closer
+        if (!empty($extra['closer']) && (int) $extra['closer'] !== (int) ($deal->getOriginal('closer') ?? 0)) {
+            $this->sendTransferDm((int) $extra['closer'], 'Deal', $deal->id, $deal->owner_name ?? 'Unknown', 'Closer');
+        }
     }
 
     public function render()
