@@ -174,9 +174,7 @@
             {{-- Messages + Input Column --}}
             <div class="flex-1 flex flex-col min-h-0">
             {{-- Messages Thread — iMessage/WhatsApp style --}}
-            <div class="flex-1 overflow-y-auto px-4 py-3" id="message-thread"
-                 x-data x-init="$nextTick(() => $el.scrollTop = $el.scrollHeight)"
-                 wire:key="thread-{{ $selectedChat }}-{{ $messages->count() }}">
+            <div class="flex-1 overflow-y-auto px-4 py-3" id="message-thread">
                 @if(isset($messages) && count($messages) > 0)
                     @php $prevDate = null; @endphp
                     @foreach($messages as $idx => $msg)

@@ -63,13 +63,14 @@
             @php
                 $user = auth()->user();
                 $moduleEnabled = function (string $key, bool $default = true): bool {
-                    $raw = \Illuminate\Support\Facades\DB::table('crm_settings')->where('key', $key)->value('value');
-                    if ($raw === null) {
+                    try {
+                        $raw = \Illuminate\Support\Facades\DB::table('crm_settings')->where('key', $key)->value('value');
+                        if ($raw === null) return $default;
+                        $decoded = json_decode($raw, true);
+                        return is_bool($decoded) ? $decoded : $default;
+                    } catch (\Throwable $e) {
                         return $default;
                     }
-
-                    $decoded = json_decode($raw, true);
-                    return is_bool($decoded) ? $decoded : $default;
                 };
 
                 $chatEnabled = $moduleEnabled('chat.module_enabled');
@@ -151,8 +152,15 @@
     </main>
 
     @php
-        $chatRaw = \Illuminate\Support\Facades\DB::table('crm_settings')->where('key', 'chat.module_enabled')->value('value');
-        $chatSettingEnabled = $chatRaw === null ? true : (json_decode($chatRaw, true) === true);
+        $chatSettingEnabled = true;
+        try {
+            $chatRaw = \Illuminate\Support\Facades\DB::table('crm_settings')->where('key', 'chat.module_enabled')->value('value');
+            if ($chatRaw !== null) {
+                $chatSettingEnabled = json_decode($chatRaw, true) === true;
+            }
+        } catch (\Throwable $e) {
+            // crm_settings table may not exist yet
+        }
     @endphp
 
     @if($chatSettingEnabled && auth()->user()?->hasPerm('view_chat') && !request()->routeIs('chat'))
