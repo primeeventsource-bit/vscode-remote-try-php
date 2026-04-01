@@ -180,7 +180,7 @@
                             </div>
                         @else
                             <div class="max-w-[72%] rounded-lg px-3 py-2 text-sm {{ $bubble }}">
-                                {{ $msg->body ?? $msg->content ?? $msg->text ?? '' }}
+                                {{ $msg->text ?? '' }}
                             </div>
                         @endif
                     </div>

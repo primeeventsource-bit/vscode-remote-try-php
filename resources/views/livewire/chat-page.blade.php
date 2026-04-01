@@ -211,7 +211,7 @@
                                         {{ $isMine
                                             ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl rounded-br-md'
                                             : 'bg-white border border-gray-200 text-gray-900 rounded-2xl rounded-bl-md' }}">
-                                        {{ $msg->body ?? $msg->content ?? $msg->text ?? '' }}
+                                        {{ $msg->text ?? '' }}
                                     </div>
                                 @endif
 

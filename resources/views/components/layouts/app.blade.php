@@ -6,7 +6,6 @@
     <title>{{ $title ?? 'Prime CRM' }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <meta http-equiv="Content-Security-Policy" content="img-src 'self' data: https://*.giphy.com https://media.giphy.com https://media0.giphy.com https://media1.giphy.com https://media2.giphy.com https://media3.giphy.com https://media4.giphy.com https://*.tenor.com https://tenor.googleapis.com https://fonts.googleapis.com;">
     <link rel="stylesheet" href="{{ asset('build/app.css') }}">
     @livewireStyles
 </head>
