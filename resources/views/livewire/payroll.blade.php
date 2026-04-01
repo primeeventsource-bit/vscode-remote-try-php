@@ -23,32 +23,9 @@
         </div>
 
         @if($tab === 'inputs')
-        {{-- Rates Settings (collapsible) --}}
-        <div class="mb-4">
-            <button @click="ratesOpen = !ratesOpen" class="flex items-center gap-2 text-xs font-semibold text-crm-t2 hover:text-crm-t1 transition mb-2">
-                <svg class="w-3 h-3 transition-transform" :class="ratesOpen && 'rotate-90'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                Payroll Rate Settings
-            </button>
-            <div x-show="ratesOpen" x-transition class="bg-crm-card border border-crm-border rounded-lg p-4" style="display: none;">
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    @if(isset($rates))
-                        @foreach([
-                            'closer_commission' => 'Closer Commission %',
-                            'fronter_commission' => 'Fronter Commission %',
-                            'admin_hourly' => 'Admin Hourly Rate ($)',
-                            'chargeback_deduction' => 'CB Deduction %',
-                        ] as $field => $label)
-                            <div>
-                                <label class="text-[10px] text-crm-t3 uppercase tracking-wider">{{ $label }}</label>
-                                <input wire:model.lazy="rates.{{ $field }}" type="number" step="0.01" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400 font-mono">
-                            </div>
-                        @endforeach
-                    @endif
-                </div>
-                <div class="flex justify-end mt-3">
-                    <button wire:click="saveRates" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">Save Rates</button>
-                </div>
-            </div>
+        <div class="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-700">
+            Payroll rates and rules were moved to the Settings page under <span class="font-semibold">Commission Rates & Payroll Rules</span>.
+            <a href="{{ route('settings') }}" class="ml-2 font-semibold underline">Open Settings</a>
         </div>
 
         {{-- Per-User Payroll Inputs --}}
