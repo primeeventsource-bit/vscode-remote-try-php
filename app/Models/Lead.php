@@ -41,4 +41,14 @@ class Lead extends Model
     {
         return $this->belongsTo(User::class, 'original_fronter');
     }
+
+    public function transfers()
+    {
+        return $this->hasMany(LeadTransfer::class);
+    }
+
+    public function transferredToUser()
+    {
+        return $this->belongsTo(User::class, 'transferred_to');
+    }
 }

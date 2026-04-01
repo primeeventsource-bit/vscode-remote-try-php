@@ -3,6 +3,8 @@
 namespace App\Livewire\Concerns;
 
 use App\Models\Chat;
+use App\Models\Lead;
+use App\Models\LeadTransfer;
 use App\Models\Message;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
@@ -14,6 +16,23 @@ trait SendsTransferDm
         try {
             $senderId = auth()->id();
             if (!$senderId || $senderId === $recipientId) return;
+
+            // Log transfer to lead_transfers table if it's a Lead
+            if ($itemType === 'Lead') {
+                try {
+                    $lead = Lead::find($itemId);
+                    LeadTransfer::create([
+                        'lead_id' => $itemId,
+                        'from_user_id' => $lead?->assigned_to !== $recipientId ? $lead?->assigned_to : $senderId,
+                        'to_user_id' => $recipientId,
+                        'transferred_by_user_id' => $senderId,
+                        'transfer_type' => strtolower($role),
+                        'disposition_snapshot' => $lead?->disposition,
+                    ]);
+                } catch (\Throwable $e) {
+                    // lead_transfers table might not exist yet
+                }
+            }
 
             // Find or create direct chat
             $chat = Chat::where('type', 'dm')->get()->first(function ($c) use ($senderId, $recipientId) {
