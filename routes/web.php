@@ -26,6 +26,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/users', \App\Livewire\Users::class)->name('users');
     Route::get('/settings', \App\Livewire\Settings::class)->name('settings');
     Route::get('/chat', \App\Livewire\ChatPage::class)->name('chat');
+    Route::get('/documents', \App\Livewire\Documents::class)->name('documents');
+    Route::get('/spreadsheets', \App\Livewire\Spreadsheets::class)->name('spreadsheets');
 
     Route::post('/logout', function () {
         Auth::logout();

@@ -61,6 +61,81 @@ class Settings extends Component
     public string $integrationSipProtocol = 'sip:';
     public string $integrationSipServer = '';
 
+    public array $chatModuleSettings = [
+        'module_enabled' => true,
+        'direct_messages_enabled' => true,
+        'group_chats_enabled' => true,
+        'channels_enabled' => true,
+        'private_channels_enabled' => true,
+        'public_channels_enabled' => true,
+        'thread_replies_enabled' => true,
+        'read_receipts_enabled' => true,
+        'typing_indicators_enabled' => true,
+        'online_status_enabled' => true,
+        'reactions_enabled' => true,
+        'file_attachments_enabled' => true,
+        'image_attachments_enabled' => true,
+        'voice_notes_enabled' => false,
+        'edit_message_enabled' => true,
+        'delete_message_enabled' => true,
+        'pin_messages_enabled' => true,
+        'search_enabled' => true,
+        'mentions_enabled' => true,
+        'notifications_enabled' => true,
+        'desktop_notifications_enabled' => true,
+        'mobile_notifications_enabled' => false,
+        'max_upload_size' => 10,
+        'allowed_file_types' => 'pdf,doc,docx,xls,xlsx,csv,png,jpg,jpeg,webp,txt,zip',
+        'retention_days' => 365,
+        'admin_delete_any_message' => true,
+        'manager_channel_moderation' => true,
+        'default_permission' => 'team',
+    ];
+
+    public array $documentModuleSettings = [
+        'module_enabled' => true,
+        'creation_enabled' => true,
+        'realtime_collaboration_enabled' => true,
+        'autosave_enabled' => true,
+        'autosave_interval_seconds' => 10,
+        'version_history_enabled' => true,
+        'comments_enabled' => true,
+        'suggestions_enabled' => true,
+        'share_permissions_enabled' => true,
+        'folders_enabled' => true,
+        'export_pdf_enabled' => true,
+        'export_docx_enabled' => true,
+        'default_permission' => 'team',
+        'manager_manage_shared_enabled' => true,
+        'admin_view_all_enabled' => true,
+        'max_document_size' => 25,
+        'templates_enabled' => true,
+        'restore_version_enabled' => true,
+        'activity_log_enabled' => true,
+    ];
+
+    public array $spreadsheetModuleSettings = [
+        'module_enabled' => true,
+        'creation_enabled' => true,
+        'realtime_collaboration_enabled' => true,
+        'autosave_enabled' => true,
+        'autosave_interval_seconds' => 10,
+        'csv_import_enabled' => true,
+        'csv_export_enabled' => true,
+        'excel_export_enabled' => true,
+        'formulas_enabled' => true,
+        'sorting_enabled' => true,
+        'filtering_enabled' => true,
+        'cell_formatting_enabled' => true,
+        'multi_tab_enabled' => true,
+        'default_permission' => 'team',
+        'max_rows' => 50000,
+        'max_columns' => 200,
+        'manager_manage_shared_enabled' => true,
+        'admin_view_all_enabled' => true,
+        'activity_log_enabled' => true,
+    ];
+
     public array $processors = [];
     public array $merchantAccounts = [];
 
@@ -124,6 +199,10 @@ class Settings extends Component
         $this->integrationSipProtocol = (string) $this->getSetting('integration.sip_protocol', 'sip:');
         $this->integrationSipServer = (string) $this->getSetting('integration.sip_server', '');
 
+        $this->chatModuleSettings = $this->loadSettingsGroup('chat', $this->chatModuleSettings);
+        $this->documentModuleSettings = $this->loadSettingsGroup('documents', $this->documentModuleSettings);
+        $this->spreadsheetModuleSettings = $this->loadSettingsGroup('spreadsheets', $this->spreadsheetModuleSettings);
+
         $this->loadMerchantIntegrationData();
     }
 
@@ -138,6 +217,23 @@ class Settings extends Component
         DB::table('crm_settings')->updateOrInsert(['key' => $key], ['value' => json_encode($value)]);
     }
 
+    private function loadSettingsGroup(string $prefix, array $defaults): array
+    {
+        $loaded = $defaults;
+        foreach ($defaults as $key => $default) {
+            $loaded[$key] = $this->getSetting($prefix . '.' . $key, $default);
+        }
+
+        return $loaded;
+    }
+
+    private function saveSettingsGroup(string $prefix, array $settings): void
+    {
+        foreach ($settings as $key => $value) {
+            $this->saveSetting($prefix . '.' . $key, $value);
+        }
+    }
+
     public function saveCompanyInfo(): void
     {
         $this->saveSetting('company.name', $this->companyName);
@@ -145,6 +241,7 @@ class Settings extends Component
         $this->saveSetting('company.address', $this->companyAddress);
         $this->saveSetting('company.phone', $this->companyPhone);
         $this->saveSetting('company.email', $this->companyEmail);
+        session()->flash('success', 'Company settings saved.');
     }
 
     public function saveProfile(): void
@@ -172,6 +269,8 @@ class Settings extends Component
             $this->newPassword = '';
             $this->newPasswordConfirm = '';
         }
+
+        session()->flash('success', 'Profile settings saved.');
     }
 
     public function saveNotifications(): void
@@ -180,6 +279,7 @@ class Settings extends Component
         $this->saveSetting('notifications.email_alerts', $this->notifyEmailAlerts);
         $this->saveSetting('notifications.mention_ding', $this->notifyMentionDing);
         $this->saveSetting('notifications.transfer_ding', $this->notifyTransferDing);
+        session()->flash('success', 'Notification settings saved.');
     }
 
     public function savePayrollRules(): void
@@ -197,6 +297,7 @@ class Settings extends Component
                 'updated_by' => (string) auth()->id(),
             ]
         );
+        session()->flash('success', 'Payroll rules saved.');
     }
 
     public function saveLeadSettings(): void
@@ -204,6 +305,7 @@ class Settings extends Component
         $this->saveSetting('lead.auto_assign', $this->leadAutoAssign);
         $this->saveSetting('lead.round_robin', $this->leadRoundRobin);
         $this->saveSetting('lead.csv_mapping', $this->leadCsvMapping);
+        session()->flash('success', 'Lead settings saved.');
     }
 
     public function saveDealSettings(): void
@@ -212,6 +314,7 @@ class Settings extends Component
         $this->saveSetting('deal.require_email', $this->dealRequireEmail);
         $this->saveSetting('deal.require_card', $this->dealRequireCardInfo);
         $this->saveSetting('deal.auto_verification', $this->dealAutoStartVerification);
+        session()->flash('success', 'Deal settings saved.');
     }
 
     public function saveChatSettings(): void
@@ -220,6 +323,45 @@ class Settings extends Component
         $this->saveSetting('chat.gif', $this->chatGifEnabled);
         $this->saveSetting('chat.file_uploads', $this->chatFileUploads);
         $this->saveSetting('chat.max_file_mb', $this->chatMaxFileMb);
+        session()->flash('success', 'Legacy chat settings saved.');
+    }
+
+    public function saveChatModuleSettings(): void
+    {
+        $this->validate([
+            'chatModuleSettings.max_upload_size' => 'required|integer|min:1|max:1024',
+            'chatModuleSettings.allowed_file_types' => 'nullable|string|max:500',
+            'chatModuleSettings.retention_days' => 'required|integer|min:1|max:3650',
+            'chatModuleSettings.default_permission' => 'required|string|max:50',
+        ]);
+
+        $this->saveSettingsGroup('chat', $this->chatModuleSettings);
+        session()->flash('success', 'Chat module settings saved.');
+    }
+
+    public function saveDocumentModuleSettings(): void
+    {
+        $this->validate([
+            'documentModuleSettings.autosave_interval_seconds' => 'required|integer|min:3|max:3600',
+            'documentModuleSettings.max_document_size' => 'required|integer|min:1|max:1024',
+            'documentModuleSettings.default_permission' => 'required|string|max:50',
+        ]);
+
+        $this->saveSettingsGroup('documents', $this->documentModuleSettings);
+        session()->flash('success', 'Document settings saved.');
+    }
+
+    public function saveSpreadsheetModuleSettings(): void
+    {
+        $this->validate([
+            'spreadsheetModuleSettings.autosave_interval_seconds' => 'required|integer|min:3|max:3600',
+            'spreadsheetModuleSettings.max_rows' => 'required|integer|min:100|max:1000000',
+            'spreadsheetModuleSettings.max_columns' => 'required|integer|min:10|max:10000',
+            'spreadsheetModuleSettings.default_permission' => 'required|string|max:50',
+        ]);
+
+        $this->saveSettingsGroup('spreadsheets', $this->spreadsheetModuleSettings);
+        session()->flash('success', 'Spreadsheet settings saved.');
     }
 
     public function saveIntegrations(): void
@@ -228,6 +370,7 @@ class Settings extends Component
         $this->saveSetting('integration.webhook_url', $this->integrationWebhookUrl);
         $this->saveSetting('integration.sip_protocol', $this->integrationSipProtocol);
         $this->saveSetting('integration.sip_server', $this->integrationSipServer);
+        session()->flash('success', 'Integration settings saved.');
 
         $this->loadMerchantIntegrationData();
     }

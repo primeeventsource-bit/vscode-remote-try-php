@@ -57,6 +57,20 @@
         <div class="flex-1 py-2 px-2 space-y-0.5">
             @php
                 $user = auth()->user();
+                $moduleEnabled = function (string $key, bool $default = true): bool {
+                    $raw = \Illuminate\Support\Facades\DB::table('crm_settings')->where('key', $key)->value('value');
+                    if ($raw === null) {
+                        return $default;
+                    }
+
+                    $decoded = json_decode($raw, true);
+                    return is_bool($decoded) ? $decoded : $default;
+                };
+
+                $chatEnabled = $moduleEnabled('chat.module_enabled');
+                $documentsEnabled = $moduleEnabled('documents.module_enabled');
+                $spreadsheetsEnabled = $moduleEnabled('spreadsheets.module_enabled');
+
                 $nav = collect([
                     ['route' => 'dashboard',    'icon' => '◫',  'label' => 'Dashboard',      'perm' => 'view_dashboard'],
                     ['route' => 'chargebacks',  'icon' => '⚠️',  'label' => 'Chargebacks',     'perm' => null],
@@ -70,8 +84,14 @@
                     ['route' => 'tracker',      'icon' => '📅', 'label' => 'Tracker',         'perm' => null],
                     ['route' => 'transfers',    'icon' => '♻️',  'label' => 'Transfers',       'perm' => null],
                     ['route' => 'payroll',      'icon' => '💵', 'label' => 'Payroll',         'perm' => 'view_payroll'],
+                    ['route' => 'documents',    'icon' => '📄', 'label' => 'Documents',       'perm' => 'view_documents', 'enabled' => $documentsEnabled],
+                    ['route' => 'spreadsheets', 'icon' => '🧮', 'label' => 'Spreadsheets',    'perm' => 'view_spreadsheets', 'enabled' => $spreadsheetsEnabled],
                     ['route' => 'users',        'icon' => '👥', 'label' => 'Users',           'perm' => 'view_users'],
-                ])->filter(fn($item) => !$item['perm'] || $user->hasPerm($item['perm']));
+                    ['route' => 'chat',         'icon' => '💬', 'label' => 'Chat',            'perm' => 'view_chat', 'enabled' => $chatEnabled],
+                ])->filter(function ($item) use ($user) {
+                    $enabled = $item['enabled'] ?? true;
+                    return $enabled && (!$item['perm'] || $user->hasPerm($item['perm']));
+                });
             @endphp
 
             @foreach($nav as $item)
@@ -92,14 +112,6 @@
                     Settings
                 </a>
             @endif
-
-            <div class="border-t border-crm-border my-2"></div>
-            <a href="{{ route('chat') }}" @click="drawerOpen = false"
-               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition
-                      {{ request()->routeIs('chat') ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'text-crm-t2 hover:bg-crm-hover' }}">
-                <span class="w-5 text-center text-base">💬</span>
-                Chat
-            </a>
         </div>
 
         {{-- Drawer Footer --}}
@@ -133,7 +145,14 @@
         {{ $slot }}
     </main>
 
-    @livewire('chat-widget')
+    @php
+        $chatRaw = \Illuminate\Support\Facades\DB::table('crm_settings')->where('key', 'chat.module_enabled')->value('value');
+        $chatSettingEnabled = $chatRaw === null ? true : (json_decode($chatRaw, true) === true);
+    @endphp
+
+    @if($chatSettingEnabled && auth()->user()?->hasPerm('view_chat'))
+        @livewire('chat-widget')
+    @endif
 
     @livewireScripts
 </body>

@@ -23,10 +23,10 @@ class Users extends Component
             'newUser.password' => 'required|min:8', 'newUser.email' => 'required',
         ]);
         $roleDefaults = [
-            'master_admin' => ['view_dashboard','view_stats','view_leads','view_all_leads','assign_leads','view_pipeline','view_deals','create_deals','view_verification','toggle_charged','toggle_chargeback','view_payroll','view_users','edit_users','delete_users','view_chat','master_override','import_csv','add_leads','disposition_leads','upload_files','view_login_info','create_chats'],
-            'admin' => ['view_dashboard','view_stats','view_leads','view_all_leads','assign_leads','view_pipeline','view_deals','create_deals','view_verification','toggle_charged','toggle_chargeback','view_payroll','view_users','edit_users','delete_users','view_chat','import_csv','add_leads','disposition_leads','upload_files','view_login_info','create_chats'],
-            'fronter' => ['view_leads','view_pipeline','view_chat','disposition_leads','create_chats','view_payroll'],
-            'closer' => ['view_dashboard','view_leads','view_pipeline','view_deals','view_verification','view_chat','disposition_leads','create_deals','create_chats','view_login_info','view_payroll'],
+            'master_admin' => ['view_dashboard','view_stats','view_leads','view_all_leads','assign_leads','view_pipeline','view_deals','create_deals','view_verification','toggle_charged','toggle_chargeback','view_payroll','view_users','edit_users','delete_users','view_chat','view_documents','view_spreadsheets','master_override','import_csv','add_leads','disposition_leads','upload_files','view_login_info','create_chats'],
+            'admin' => ['view_dashboard','view_stats','view_leads','view_all_leads','assign_leads','view_pipeline','view_deals','create_deals','view_verification','toggle_charged','toggle_chargeback','view_payroll','view_users','edit_users','delete_users','view_chat','view_documents','view_spreadsheets','import_csv','add_leads','disposition_leads','upload_files','view_login_info','create_chats'],
+            'fronter' => ['view_leads','view_pipeline','view_chat','view_documents','view_spreadsheets','disposition_leads','create_chats','view_payroll'],
+            'closer' => ['view_dashboard','view_leads','view_pipeline','view_deals','view_verification','view_chat','view_documents','view_spreadsheets','disposition_leads','create_deals','create_chats','view_login_info','view_payroll'],
         ];
         $avatar = strtoupper(collect(explode(' ', $this->newUser['name']))->map(fn($w) => substr($w, 0, 1))->join(''));
         $colors = ['#3b82f6','#10b981','#ec4899','#f59e0b','#8b5cf6','#14b8a6','#ef4444','#6366f1'];
@@ -87,7 +87,7 @@ class Users extends Component
 
     public function updateRole($id, $role)
     {
-        $roleDefaults = ['master_admin' => ['view_dashboard','view_stats','view_leads','view_all_leads','assign_leads','view_pipeline','view_deals','create_deals','view_verification','toggle_charged','toggle_chargeback','view_payroll','view_users','edit_users','delete_users','view_chat','master_override','import_csv','add_leads','disposition_leads','upload_files','view_login_info','create_chats'], 'fronter' => ['view_leads','view_pipeline','view_chat','disposition_leads','create_chats','view_payroll'], 'closer' => ['view_dashboard','view_leads','view_pipeline','view_deals','view_verification','view_chat','disposition_leads','create_deals','create_chats','view_login_info','view_payroll']];
+        $roleDefaults = ['master_admin' => ['view_dashboard','view_stats','view_leads','view_all_leads','assign_leads','view_pipeline','view_deals','create_deals','view_verification','toggle_charged','toggle_chargeback','view_payroll','view_users','edit_users','delete_users','view_chat','view_documents','view_spreadsheets','master_override','import_csv','add_leads','disposition_leads','upload_files','view_login_info','create_chats'], 'fronter' => ['view_leads','view_pipeline','view_chat','view_documents','view_spreadsheets','disposition_leads','create_chats','view_payroll'], 'closer' => ['view_dashboard','view_leads','view_pipeline','view_deals','view_verification','view_chat','view_documents','view_spreadsheets','disposition_leads','create_deals','create_chats','view_login_info','view_payroll']];
         $roleDefaults['admin'] = array_filter($roleDefaults['master_admin'], fn($p) => $p !== 'master_override');
         User::where('id', $id)->update(['role' => $role, 'permissions' => json_encode($roleDefaults[$role] ?? $roleDefaults['fronter'])]);
     }

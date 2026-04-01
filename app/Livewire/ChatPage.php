@@ -4,6 +4,7 @@ namespace App\Livewire;
 use App\Models\Chat;
 use App\Models\Message;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -15,6 +16,26 @@ class ChatPage extends Component
     public ?int $selectedChat = null;
     public string $messageInput = '';
 
+    private function moduleEnabled(string $key, bool $default = true): bool
+    {
+        $raw = DB::table('crm_settings')->where('key', $key)->value('value');
+        if ($raw === null) {
+            return $default;
+        }
+
+        $decoded = json_decode($raw, true);
+        return is_bool($decoded) ? $decoded : $default;
+    }
+
+    public function mount(): void
+    {
+        $user = auth()->user();
+        if (!$this->moduleEnabled('chat.module_enabled') || !$user?->hasPerm('view_chat')) {
+            $this->redirectRoute('dashboard');
+            session()->flash('error', 'Chat module is disabled or you do not have access.');
+        }
+    }
+
     public function selectChat($id) { $this->selectedChat = $id; }
 
     public function newChat() {
@@ -23,6 +44,10 @@ class ChatPage extends Component
 
     public function sendMessage()
     {
+        if (!auth()->user()?->hasPerm('view_chat')) {
+            return;
+        }
+
         if (!$this->messageInput || !$this->selectedChat) return;
         Message::create([
             'chat_id' => $this->selectedChat,

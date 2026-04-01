@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Models\Chat;
 use App\Models\Message;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 
 class ChatWidget extends Component
@@ -16,8 +17,29 @@ class ChatWidget extends Component
     public string $newChatName = '';
     public array $newChatMembers = [];
 
+    private function moduleEnabled(string $key, bool $default = true): bool
+    {
+        $raw = DB::table('crm_settings')->where('key', $key)->value('value');
+        if ($raw === null) {
+            return $default;
+        }
+
+        $decoded = json_decode($raw, true);
+        return is_bool($decoded) ? $decoded : $default;
+    }
+
+    private function canUseChat(): bool
+    {
+        $user = auth()->user();
+        return $this->moduleEnabled('chat.module_enabled') && ($user?->hasPerm('view_chat') ?? false);
+    }
+
     public function selectChat(int $id): void
     {
+        if (!$this->canUseChat()) {
+            return;
+        }
+
         $this->selectedChat = $id;
         $this->messageInput = '';
     }
@@ -30,6 +52,10 @@ class ChatWidget extends Component
 
     public function toggleNewChatForm(): void
     {
+        if (!$this->canUseChat()) {
+            return;
+        }
+
         $this->showNewChatForm = !$this->showNewChatForm;
         if ($this->showNewChatForm) {
             $this->newChatType = 'dm';
@@ -40,12 +66,16 @@ class ChatWidget extends Component
 
     public function createNewChat(): void
     {
+        if (!$this->canUseChat() || !auth()->user()?->hasPerm('create_chats')) {
+            return;
+        }
+
         $name = trim($this->newChatName);
         if (!$name || empty($this->newChatMembers)) {
             return;
         }
 
-        $members = [$this->newChatMembers, auth()->id()];
+        $members = array_merge($this->newChatMembers, [auth()->id()]);
         $members = array_unique(array_filter($members));
 
         // Create the chat
@@ -64,6 +94,10 @@ class ChatWidget extends Component
 
     public function sendMessage(): void
     {
+        if (!$this->canUseChat()) {
+            return;
+        }
+
         $text = trim($this->messageInput);
         if (!$text || !$this->selectedChat) {
             return;
@@ -81,6 +115,15 @@ class ChatWidget extends Component
 
     public function render()
     {
+        if (!$this->canUseChat()) {
+            return view('livewire.chat-widget', [
+                'chats' => collect(),
+                'messages' => collect(),
+                'activeChat' => null,
+                'users' => collect(),
+            ]);
+        }
+
         $user = auth()->user();
 
         $chats = Chat::orderBy('updated_at', 'desc')->get()->filter(function ($c) use ($user) {

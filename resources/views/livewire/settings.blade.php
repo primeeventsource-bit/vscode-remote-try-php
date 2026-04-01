@@ -4,6 +4,12 @@
         <p class="text-xs text-crm-t3 mt-1">CRM configuration and profile controls</p>
     </div>
 
+    @if (session('success'))
+        <div class="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">
+            {{ session('success') }}
+        </div>
+    @endif
+
     @php $isMaster = auth()->user()?->hasRole('master_admin'); @endphp
 
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
@@ -16,6 +22,8 @@
                 'leads' => 'Lead Settings',
                 'deals' => 'Deal Settings',
                 'chat' => 'Chat Settings',
+                'documents' => 'Document Settings',
+                'spreadsheets' => 'Spreadsheet Settings',
                 'integrations' => 'Integrations',
             ] as $key => $label)
                 <button wire:click="$set('section', '{{ $key }}')"
@@ -103,13 +111,174 @@
 
             @if($section === 'chat')
                 <h3 class="text-sm font-semibold mb-3">Chat Settings</h3>
-                <div class="space-y-2 text-sm">
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatSound"> Notification sounds</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatGifEnabled"> GIF enabled</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatFileUploads"> File uploads enabled</label>
-                    <div><label class="text-[10px] text-crm-t3">Max file size (MB)</label><input wire:model.defer="chatMaxFileMb" type="number" min="1" class="w-28 px-3 py-2 text-sm bg-white border border-crm-border rounded-lg"></div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm mb-3">
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.module_enabled"> Enable Chat Module</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.direct_messages_enabled"> Enable Direct Messages</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.group_chats_enabled"> Enable Group Chats</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.channels_enabled"> Enable Channels</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.private_channels_enabled"> Enable Private Channels</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.public_channels_enabled"> Enable Public Channels</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.thread_replies_enabled"> Enable Threaded Replies</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.read_receipts_enabled"> Enable Read Receipts</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.typing_indicators_enabled"> Enable Typing Indicators</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.online_status_enabled"> Enable Online Status</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.reactions_enabled"> Enable Emoji Reactions</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.file_attachments_enabled"> Enable File Attachments</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.image_attachments_enabled"> Enable Image Attachments</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.voice_notes_enabled"> Enable Voice Notes</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.edit_message_enabled"> Enable Edit Message</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.delete_message_enabled"> Enable Delete Message</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.pin_messages_enabled"> Enable Pin Messages</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.search_enabled"> Enable Message Search</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.mentions_enabled"> Enable Mentions</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.notifications_enabled"> Enable Notifications</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.desktop_notifications_enabled"> Enable Desktop Notifications</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.mobile_notifications_enabled"> Enable Mobile Notifications</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.admin_delete_any_message"> Allow Admin Delete Any Message</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.manager_channel_moderation"> Allow Managers Moderate Channels</label>
                 </div>
-                <div class="mt-3 text-right"><button wire:click="saveChatSettings" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg">Save Chat Settings</button></div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                    <div>
+                        <label class="text-[10px] text-crm-t3">Max File Upload Size (MB)</label>
+                        <input wire:model.defer="chatModuleSettings.max_upload_size" type="number" min="1" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-crm-t3">Message Retention (days)</label>
+                        <input wire:model.defer="chatModuleSettings.retention_days" type="number" min="1" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="text-[10px] text-crm-t3">Allowed File Types (comma-separated)</label>
+                        <input wire:model.defer="chatModuleSettings.allowed_file_types" type="text" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-crm-t3">Default Chat Permission Level</label>
+                        <select wire:model.defer="chatModuleSettings.default_permission" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                            <option value="private">Private</option>
+                            <option value="team">Team</option>
+                            <option value="organization">Organization</option>
+                        </select>
+                    </div>
+                </div>
+                @error('chatModuleSettings.max_upload_size')<div class="text-xs text-red-600 mb-1">{{ $message }}</div>@enderror
+                @error('chatModuleSettings.allowed_file_types')<div class="text-xs text-red-600 mb-1">{{ $message }}</div>@enderror
+                @error('chatModuleSettings.retention_days')<div class="text-xs text-red-600 mb-1">{{ $message }}</div>@enderror
+                @error('chatModuleSettings.default_permission')<div class="text-xs text-red-600 mb-1">{{ $message }}</div>@enderror
+
+                <div class="rounded-lg border border-crm-border bg-white p-3 mb-3">
+                    <div class="text-[11px] font-semibold mb-1">Chat Role Permissions</div>
+                    <div class="text-[11px] text-crm-t3">
+                        view_chat, send_messages, edit_own_messages, delete_own_messages, delete_any_messages, create_channels, manage_channels, upload_chat_files, moderate_chat
+                    </div>
+                </div>
+
+                <div class="mt-3 text-right"><button wire:click="saveChatModuleSettings" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg">Save Chat Settings</button></div>
+            @endif
+
+            @if($section === 'documents')
+                <h3 class="text-sm font-semibold mb-3">Document Settings</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm mb-3">
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="documentModuleSettings.module_enabled"> Enable Document Module</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="documentModuleSettings.creation_enabled"> Enable Document Creation</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="documentModuleSettings.realtime_collaboration_enabled"> Enable Real-Time Collaboration</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="documentModuleSettings.autosave_enabled"> Enable Auto Save</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="documentModuleSettings.version_history_enabled"> Enable Version History</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="documentModuleSettings.comments_enabled"> Enable Comments</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="documentModuleSettings.suggestions_enabled"> Enable Suggestions Mode</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="documentModuleSettings.share_permissions_enabled"> Enable Share Permissions</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="documentModuleSettings.folders_enabled"> Enable Folder Organization</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="documentModuleSettings.export_pdf_enabled"> Enable Export PDF</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="documentModuleSettings.export_docx_enabled"> Enable Export DOCX</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="documentModuleSettings.manager_manage_shared_enabled"> Managers Manage Shared Docs</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="documentModuleSettings.admin_view_all_enabled"> Admin View All Documents</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="documentModuleSettings.templates_enabled"> Enable Templates</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="documentModuleSettings.restore_version_enabled"> Enable Restore Previous Version</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="documentModuleSettings.activity_log_enabled"> Enable Activity Log</label>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                    <div>
+                        <label class="text-[10px] text-crm-t3">Auto Save Interval (seconds)</label>
+                        <input wire:model.defer="documentModuleSettings.autosave_interval_seconds" type="number" min="3" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-crm-t3">Default Document Permission</label>
+                        <select wire:model.defer="documentModuleSettings.default_permission" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                            <option value="private">Private</option>
+                            <option value="team">Team</option>
+                            <option value="organization">Organization</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-crm-t3">Max Document Size (MB)</label>
+                        <input wire:model.defer="documentModuleSettings.max_document_size" type="number" min="1" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                    </div>
+                </div>
+                @error('documentModuleSettings.autosave_interval_seconds')<div class="text-xs text-red-600 mb-1">{{ $message }}</div>@enderror
+                @error('documentModuleSettings.default_permission')<div class="text-xs text-red-600 mb-1">{{ $message }}</div>@enderror
+                @error('documentModuleSettings.max_document_size')<div class="text-xs text-red-600 mb-1">{{ $message }}</div>@enderror
+
+                <div class="rounded-lg border border-crm-border bg-white p-3 mb-3">
+                    <div class="text-[11px] font-semibold mb-1">Document Role Permissions</div>
+                    <div class="text-[11px] text-crm-t3">view_documents, create_documents, edit_documents, comment_documents, share_documents, export_documents, restore_document_versions, manage_all_documents</div>
+                </div>
+
+                <div class="mt-3 text-right"><button wire:click="saveDocumentModuleSettings" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg">Save Document Settings</button></div>
+            @endif
+
+            @if($section === 'spreadsheets')
+                <h3 class="text-sm font-semibold mb-3">Spreadsheet Settings</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm mb-3">
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="spreadsheetModuleSettings.module_enabled"> Enable Spreadsheet Module</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="spreadsheetModuleSettings.creation_enabled"> Enable Spreadsheet Creation</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="spreadsheetModuleSettings.realtime_collaboration_enabled"> Enable Real-Time Collaboration</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="spreadsheetModuleSettings.autosave_enabled"> Enable Auto Save</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="spreadsheetModuleSettings.csv_import_enabled"> Enable CSV Import</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="spreadsheetModuleSettings.csv_export_enabled"> Enable CSV Export</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="spreadsheetModuleSettings.excel_export_enabled"> Enable Excel Export</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="spreadsheetModuleSettings.formulas_enabled"> Enable Formula Support</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="spreadsheetModuleSettings.sorting_enabled"> Enable Sorting</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="spreadsheetModuleSettings.filtering_enabled"> Enable Filtering</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="spreadsheetModuleSettings.cell_formatting_enabled"> Enable Cell Formatting</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="spreadsheetModuleSettings.multi_tab_enabled"> Enable Multiple Sheet Tabs</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="spreadsheetModuleSettings.manager_manage_shared_enabled"> Managers Manage Shared Sheets</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="spreadsheetModuleSettings.admin_view_all_enabled"> Admin View All Sheets</label>
+                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="spreadsheetModuleSettings.activity_log_enabled"> Enable Activity Log</label>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
+                    <div>
+                        <label class="text-[10px] text-crm-t3">Auto Save Interval (seconds)</label>
+                        <input wire:model.defer="spreadsheetModuleSettings.autosave_interval_seconds" type="number" min="3" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-crm-t3">Default Spreadsheet Permission</label>
+                        <select wire:model.defer="spreadsheetModuleSettings.default_permission" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                            <option value="private">Private</option>
+                            <option value="team">Team</option>
+                            <option value="organization">Organization</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-crm-t3">Max Rows</label>
+                        <input wire:model.defer="spreadsheetModuleSettings.max_rows" type="number" min="100" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-crm-t3">Max Columns</label>
+                        <input wire:model.defer="spreadsheetModuleSettings.max_columns" type="number" min="10" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                    </div>
+                </div>
+                @error('spreadsheetModuleSettings.autosave_interval_seconds')<div class="text-xs text-red-600 mb-1">{{ $message }}</div>@enderror
+                @error('spreadsheetModuleSettings.default_permission')<div class="text-xs text-red-600 mb-1">{{ $message }}</div>@enderror
+                @error('spreadsheetModuleSettings.max_rows')<div class="text-xs text-red-600 mb-1">{{ $message }}</div>@enderror
+                @error('spreadsheetModuleSettings.max_columns')<div class="text-xs text-red-600 mb-1">{{ $message }}</div>@enderror
+
+                <div class="rounded-lg border border-crm-border bg-white p-3 mb-3">
+                    <div class="text-[11px] font-semibold mb-1">Spreadsheet Role Permissions</div>
+                    <div class="text-[11px] text-crm-t3">view_spreadsheets, create_spreadsheets, edit_spreadsheets, import_spreadsheets, export_spreadsheets, share_spreadsheets, manage_all_spreadsheets</div>
+                </div>
+
+                <div class="mt-3 text-right"><button wire:click="saveSpreadsheetModuleSettings" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg">Save Spreadsheet Settings</button></div>
             @endif
 
             @if($section === 'integrations')
