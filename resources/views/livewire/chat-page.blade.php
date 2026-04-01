@@ -4,7 +4,7 @@
     .badge-blink-red { animation: pulse-badge 1.5s ease-in-out infinite; background: #ef4444; }
     .msg-unread { background: rgba(59,130,246,0.06); border-left: 3px solid #3b82f6; }
 </style>
-<div class="flex h-[calc(100vh-3rem)]" wire:poll.10s>
+<div class="flex h-[calc(100vh-3rem)]" wire:poll.30s>
     {{-- Left Panel: Chat List --}}
     <div class="w-72 border-r border-crm-border bg-crm-surface flex flex-col flex-shrink-0">
         {{-- Header --}}
@@ -23,8 +23,8 @@
                     <button wire:click="selectChat({{ $chat->id }})" class="w-full text-left px-3 py-2 flex items-center gap-2 transition {{ (isset($activeChat) && $activeChat === $chat->id) ? 'bg-blue-50 text-blue-600' : 'hover:bg-crm-hover text-crm-t2' }}">
                         <span class="text-xs">#</span>
                         <span class="text-sm font-medium truncate">{{ $chat->name }}</span>
-                        @if(isset($chat->unread) && $chat->unread > 0)
-                            <span class="ml-auto w-4 h-4 flex items-center justify-center text-[8px] font-bold text-white bg-blue-600 rounded-full">{{ $chat->unread }}</span>
+                        @if(isset($chat->unread) && ($unreadCounts[$chat->id] ?? 0) > 0)
+                            <span class="ml-auto w-4 h-4 flex items-center justify-center text-[8px] font-bold text-white bg-blue-600 rounded-full">{{ $unreadCounts[$chat->id] ?? 0 }}</span>
                         @endif
                     </button>
                 @endforeach
@@ -41,11 +41,11 @@
                         $otherId = collect($members)->first(fn($m) => $m != auth()->id());
                         $other = isset($users) ? $users->firstWhere('id', $otherId) : null;
                     @endphp
-                    <button wire:click="selectChat({{ $chat->id }})" class="w-full text-left px-3 py-2 flex items-center gap-2 transition {{ ($selectedChat === $chat->id) ? 'bg-blue-50 text-blue-600' : ($chat->unread > 0 ? 'bg-blue-50/50 font-semibold' : 'hover:bg-crm-hover text-crm-t2') }}">
+                    <button wire:click="selectChat({{ $chat->id }})" class="w-full text-left px-3 py-2 flex items-center gap-2 transition {{ ($selectedChat === $chat->id) ? 'bg-blue-50 text-blue-600' : (($unreadCounts[$chat->id] ?? 0) > 0 ? 'bg-blue-50/50 font-semibold' : 'hover:bg-crm-hover text-crm-t2') }}">
                         @if($other)
                             <div class="relative flex-shrink-0">
                                 <div class="w-6 h-6 rounded-full flex items-center justify-center text-[8px] font-bold text-white" style="background: {{ $other->color ?? '#6b7280' }}">{{ $other->avatar ?? substr($other->name ?? '?', 0, 2) }}</div>
-                                @if($chat->unread > 0)
+                                @if(($unreadCounts[$chat->id] ?? 0) > 0)
                                     <span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full badge-blink-blue"></span>
                                 @endif
                             </div>
@@ -53,8 +53,8 @@
                         @else
                             <span class="text-sm font-medium truncate flex-1">{{ $chat->name ?? 'DM' }}</span>
                         @endif
-                        @if($chat->unread > 0)
-                            <span class="ml-auto min-w-[18px] h-[18px] flex items-center justify-center text-[9px] font-bold text-white badge-blink-blue rounded-full px-1">{{ $chat->unread }}</span>
+                        @if(($unreadCounts[$chat->id] ?? 0) > 0)
+                            <span class="ml-auto min-w-[18px] h-[18px] flex items-center justify-center text-[9px] font-bold text-white badge-blink-blue rounded-full px-1">{{ $unreadCounts[$chat->id] ?? 0 }}</span>
                         @endif
                     </button>
                 @endforeach
@@ -66,20 +66,20 @@
             </div>
             @if(isset($chats))
                 @foreach($chats->where('type', 'group') as $chat)
-                    <button wire:click="selectChat({{ $chat->id }})" class="w-full text-left px-3 py-2 flex items-center gap-2 transition {{ ($selectedChat === $chat->id) ? 'bg-blue-50 text-blue-600' : ($chat->unread > 0 ? 'bg-red-50/50 font-semibold' : 'hover:bg-crm-hover text-crm-t2') }}">
+                    <button wire:click="selectChat({{ $chat->id }})" class="w-full text-left px-3 py-2 flex items-center gap-2 transition {{ ($selectedChat === $chat->id) ? 'bg-blue-50 text-blue-600' : (($unreadCounts[$chat->id] ?? 0) > 0 ? 'bg-red-50/50 font-semibold' : 'hover:bg-crm-hover text-crm-t2') }}">
                         <div class="relative flex-shrink-0">
                             @if($chat->icon_path)
                                 <img src="{{ asset('storage/' . $chat->icon_path) }}" class="w-6 h-6 rounded-lg object-cover">
                             @else
                                 <span class="w-6 h-6 rounded-lg bg-crm-card border border-crm-border flex items-center justify-center text-[8px] font-bold text-crm-t3">G</span>
                             @endif
-                            @if($chat->unread > 0)
+                            @if(($unreadCounts[$chat->id] ?? 0) > 0)
                                 <span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full badge-blink-red"></span>
                             @endif
                         </div>
                         <span class="text-sm font-medium truncate flex-1">{{ $chat->name }}</span>
-                        @if($chat->unread > 0)
-                            <span class="ml-auto min-w-[18px] h-[18px] flex items-center justify-center text-[9px] font-bold text-white badge-blink-red rounded-full px-1">{{ $chat->unread }}</span>
+                        @if(($unreadCounts[$chat->id] ?? 0) > 0)
+                            <span class="ml-auto min-w-[18px] h-[18px] flex items-center justify-center text-[9px] font-bold text-white badge-blink-red rounded-full px-1">{{ $unreadCounts[$chat->id] ?? 0 }}</span>
                         @endif
                     </button>
                 @endforeach
@@ -198,7 +198,7 @@
                             </div>
                         @endif
 
-                        @php $isUnread = !$isMine && !$msg->seen_at; @endphp
+                        @php $isUnread = !$isMine && empty($msg->seen_at); @endphp
 
                         {{-- Message Bubble --}}
                         <div class="flex {{ $isMine ? 'justify-end' : 'justify-start' }} mb-1 {{ $isUnread ? 'msg-unread rounded-lg' : '' }}">
@@ -225,7 +225,7 @@
                                         {{-- Timestamp inside GIF bubble --}}
                                         <div class="flex items-center justify-between px-2.5 py-1 {{ $isMine ? 'bg-blue-600 text-blue-100' : 'bg-gray-100 text-gray-400' }}">
                                             <span class="text-[10px]">{{ $msg->gif_title ?: 'GIF' }}</span>
-                                            <span class="text-[10px]">{{ $msg->created_at?->format('g:i A') ?? '' }}@if($isMine) @if($msg->seen_at) ✓✓ @elseif($msg->delivered_at) ✓✓ @else ✓ @endif @endif</span>
+                                            <span class="text-[10px]">{{ $msg->created_at?->format('g:i A') ?? '' }}@if($isMine) @if(!empty($msg->seen_at)) ✓✓ @elseif(!empty($msg->delivered_at)) ✓✓ @else ✓ @endif @endif</span>
                                         </div>
                                     </div>
                                 @else
@@ -238,12 +238,12 @@
                                         <div class="flex items-center gap-1 justify-end mt-0.5 {{ $isMine ? 'text-blue-200' : 'text-gray-400' }}">
                                             <span class="text-[10px]">{{ $msg->created_at?->format('g:i A') ?? '' }}</span>
                                             @if($isMine)
-                                                @if($msg->seen_at)
-                                                    <span class="text-[10px]">✓✓</span>
-                                                @elseif($msg->delivered_at)
-                                                    <span class="text-[10px] opacity-70">✓✓</span>
+                                                @if(!empty($msg->seen_at))
+                                                    <span class="text-[10px]" title="Read">✓✓</span>
+                                                @elseif(!empty($msg->delivered_at))
+                                                    <span class="text-[10px] opacity-70" title="Delivered">✓✓</span>
                                                 @else
-                                                    <span class="text-[10px] opacity-70">✓</span>
+                                                    <span class="text-[10px] opacity-70" title="Sent">✓</span>
                                                 @endif
                                             @endif
                                         </div>
