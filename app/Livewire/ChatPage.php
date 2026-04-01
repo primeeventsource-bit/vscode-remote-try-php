@@ -5,6 +5,7 @@ use App\Models\Chat;
 use App\Models\Message;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -23,8 +24,12 @@ class ChatPage extends Component
 
     private function getSetting(string $key, mixed $default): mixed
     {
-        $raw = DB::table('crm_settings')->where('key', $key)->value('value');
-        return $raw === null ? $default : json_decode($raw, true);
+        try {
+            $raw = DB::table('crm_settings')->where('key', $key)->value('value');
+            return $raw === null ? $default : json_decode($raw, true);
+        } catch (\Throwable $e) {
+            return $default;
+        }
     }
 
     private function moduleEnabled(string $key, bool $default = true): bool
@@ -77,7 +82,7 @@ class ChatPage extends Component
     public function mount(): void
     {
         if (!$this->canAccessChat()) {
-            $this->redirectRoute('crm.home');
+            $this->redirectRoute('dashboard');
             session()->flash('error', 'Chat module is disabled or you do not have access.');
         }
     }
@@ -129,6 +134,15 @@ class ChatPage extends Component
                 return;
             }
             $name = $otherUser->name ?? 'Direct Message';
+
+            // Prevent duplicate DMs with the same person
+            $existing = $this->findExistingDm($user->id, $selectedMembers[0]);
+            if ($existing) {
+                $this->selectedChat = $existing->id;
+                $this->showNewChatForm = false;
+                $this->newChatMembers = [];
+                return;
+            }
         } else {
             $name = trim($this->newChatName);
             if ($name === '') {
@@ -137,20 +151,38 @@ class ChatPage extends Component
             }
         }
 
-        $members = array_unique(array_filter(array_merge($selectedMembers, [$user->id])));
+        $members = array_values(array_unique(array_merge($selectedMembers, [$user->id])));
 
-        $chat = Chat::create([
-            'name'    => $name,
-            'type'    => $this->newChatType,
-            'members' => $members,
-        ]);
+        try {
+            $chat = Chat::create([
+                'name'       => $name,
+                'type'       => $this->newChatType,
+                'members'    => $members,
+                'created_by' => $user->id,
+            ]);
 
-        $this->selectedChat = $chat->id;
-        $this->showNewChatForm = false;
-        $this->newChatName = '';
-        $this->newChatMembers = [];
-        $this->messageInput = '';
-        $this->newChatError = '';
+            $this->selectedChat = $chat->id;
+            $this->showNewChatForm = false;
+            $this->newChatName = '';
+            $this->newChatMembers = [];
+            $this->messageInput = '';
+            $this->newChatError = '';
+        } catch (\Throwable $e) {
+            Log::error('Chat creation failed', ['error' => $e->getMessage(), 'user' => $user->id]);
+            $this->newChatError = 'Failed to create chat. Please try again.';
+        }
+    }
+
+    private function findExistingDm(int $userId, int $otherUserId): ?Chat
+    {
+        return Chat::where('type', 'dm')->get()->first(function ($chat) use ($userId, $otherUserId) {
+            $members = is_array($chat->members) ? $chat->members : json_decode($chat->members ?? '[]', true);
+            $memberIds = array_map('intval', array_values($members));
+            sort($memberIds);
+            $target = [$userId, $otherUserId];
+            sort($target);
+            return $memberIds === $target;
+        });
     }
 
     public function sendMessage()
@@ -162,14 +194,18 @@ class ChatPage extends Component
         $text = trim($this->messageInput);
         if ($text === '' || !$this->selectedChat) return;
 
-        Message::create([
-            'chat_id' => $this->selectedChat,
-            'message_type' => 'text',
-            'sender_id' => auth()->id(),
-            'text' => $text,
-        ]);
-        Chat::where('id', $this->selectedChat)->update(['updated_at' => now()]);
-        $this->messageInput = '';
+        try {
+            Message::create([
+                'chat_id'      => $this->selectedChat,
+                'message_type' => 'text',
+                'sender_id'    => auth()->id(),
+                'text'         => $text,
+            ]);
+            Chat::where('id', $this->selectedChat)->update(['updated_at' => now()]);
+            $this->messageInput = '';
+        } catch (\Throwable $e) {
+            Log::error('Message send failed', ['error' => $e->getMessage()]);
+        }
     }
 
     public function sendGif(array $gif): void
@@ -178,30 +214,34 @@ class ChatPage extends Component
             return;
         }
 
-        Message::create([
-            'chat_id' => $this->selectedChat,
-            'message_type' => 'gif',
-            'sender_id' => auth()->id(),
-            'gif_url' => $gif['url'],
-            'gif_preview_url' => $gif['preview_url'] ?? $gif['url'],
-            'gif_provider' => $gif['provider'] ?? $this->getSetting('gifs.provider', config('services.gifs.provider', 'giphy')),
-            'gif_external_id' => $gif['id'] ?? null,
-            'gif_title' => $gif['title'] ?? 'GIF',
-            'metadata' => [
-                'width' => $gif['width'] ?? null,
-                'height' => $gif['height'] ?? null,
-            ],
-        ]);
+        try {
+            Message::create([
+                'chat_id'        => $this->selectedChat,
+                'message_type'   => 'gif',
+                'sender_id'      => auth()->id(),
+                'gif_url'        => $gif['url'],
+                'gif_preview_url' => $gif['preview_url'] ?? $gif['url'],
+                'gif_provider'   => $gif['provider'] ?? $this->getSetting('gifs.provider', config('services.gifs.provider', 'giphy')),
+                'gif_external_id' => $gif['id'] ?? null,
+                'gif_title'      => $gif['title'] ?? 'GIF',
+                'metadata'       => [
+                    'width' => $gif['width'] ?? null,
+                    'height' => $gif['height'] ?? null,
+                ],
+            ]);
 
-        Chat::where('id', $this->selectedChat)->update(['updated_at' => now()]);
+            Chat::where('id', $this->selectedChat)->update(['updated_at' => now()]);
 
-        app(\App\Services\GifUsageService::class)->recordRecent(auth()->user(), [
-            'id' => $gif['id'] ?? '',
-            'provider' => $gif['provider'] ?? '',
-            'url' => $gif['url'],
-            'preview_url' => $gif['preview_url'] ?? $gif['url'],
-            'title' => $gif['title'] ?? 'GIF',
-        ]);
+            app(\App\Services\GifUsageService::class)->recordRecent(auth()->user(), [
+                'id' => $gif['id'] ?? '',
+                'provider' => $gif['provider'] ?? '',
+                'url' => $gif['url'],
+                'preview_url' => $gif['preview_url'] ?? $gif['url'],
+                'title' => $gif['title'] ?? 'GIF',
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('GIF send failed', ['error' => $e->getMessage()]);
+        }
     }
 
     public function render()

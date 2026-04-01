@@ -16,9 +16,16 @@ class Message extends Model
     protected $fillable = [
         'chat_id',
         'sender_id',
+        'message_type',
         'text',
         'file_url',
         'file_name',
+        'gif_url',
+        'gif_preview_url',
+        'gif_provider',
+        'gif_external_id',
+        'gif_title',
+        'metadata',
         'reactions',
         'is_system',
         'reply_to',
@@ -26,6 +33,7 @@ class Message extends Model
 
     protected $casts = [
         'reactions' => 'array',
+        'metadata' => 'array',
         'is_system' => 'boolean',
     ];
 

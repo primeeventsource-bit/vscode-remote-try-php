@@ -6,6 +6,7 @@ use App\Models\Chat;
 use App\Models\Message;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 
 class ChatWidget extends Component
@@ -18,15 +19,19 @@ class ChatWidget extends Component
     public array $newChatMembers = [];
     public string $newChatError = '';
 
-    private function moduleEnabled(string $key, bool $default = true): bool
+    private function getSetting(string $key, mixed $default): mixed
     {
-        $raw = DB::table('crm_settings')->where('key', $key)->value('value');
-        if ($raw === null) {
+        try {
+            $raw = DB::table('crm_settings')->where('key', $key)->value('value');
+            return $raw === null ? $default : json_decode($raw, true);
+        } catch (\Throwable $e) {
             return $default;
         }
+    }
 
-        $decoded = json_decode($raw, true);
-        return is_bool($decoded) ? $decoded : $default;
+    private function moduleEnabled(string $key, bool $default = true): bool
+    {
+        return (bool) $this->getSetting($key, $default);
     }
 
     private function canUseChat(): bool
@@ -98,7 +103,16 @@ class ChatWidget extends Component
                 $this->newChatError = 'The selected user could not be found.';
                 return;
             }
-            $name = $otherUser?->name ?? 'Direct Message';
+            $name = $otherUser->name ?? 'Direct Message';
+
+            // Prevent duplicate DMs with the same person
+            $existing = $this->findExistingDm($user->id, $selectedMembers[0]);
+            if ($existing) {
+                $this->selectedChat = $existing->id;
+                $this->showNewChatForm = false;
+                $this->newChatMembers = [];
+                return;
+            }
         } else {
             $name = trim($this->newChatName);
             if ($name === '') {
@@ -107,22 +121,38 @@ class ChatWidget extends Component
             }
         }
 
-        $members = array_merge($selectedMembers, [$user->id]);
-        $members = array_unique(array_filter($members));
+        $members = array_values(array_unique(array_merge($selectedMembers, [$user->id])));
 
-        // Create the chat
-        $chat = Chat::create([
-            'name'    => $name,
-            'type'    => $this->newChatType,
-            'members' => $members,
-        ]);
+        try {
+            $chat = Chat::create([
+                'name'       => $name,
+                'type'       => $this->newChatType,
+                'members'    => $members,
+                'created_by' => $user->id,
+            ]);
 
-        $this->selectedChat = $chat->id;
-        $this->showNewChatForm = false;
-        $this->newChatName = '';
-        $this->newChatMembers = [];
-        $this->messageInput = '';
-        $this->newChatError = '';
+            $this->selectedChat = $chat->id;
+            $this->showNewChatForm = false;
+            $this->newChatName = '';
+            $this->newChatMembers = [];
+            $this->messageInput = '';
+            $this->newChatError = '';
+        } catch (\Throwable $e) {
+            Log::error('Chat creation failed (widget)', ['error' => $e->getMessage(), 'user' => $user->id]);
+            $this->newChatError = 'Failed to create chat. Please try again.';
+        }
+    }
+
+    private function findExistingDm(int $userId, int $otherUserId): ?Chat
+    {
+        return Chat::where('type', 'dm')->get()->first(function ($chat) use ($userId, $otherUserId) {
+            $members = is_array($chat->members) ? $chat->members : json_decode($chat->members ?? '[]', true);
+            $memberIds = array_map('intval', array_values($members));
+            sort($memberIds);
+            $target = [$userId, $otherUserId];
+            sort($target);
+            return $memberIds === $target;
+        });
     }
 
     public function sendMessage(): void
@@ -136,14 +166,19 @@ class ChatWidget extends Component
             return;
         }
 
-        Message::create([
-            'chat_id'   => $this->selectedChat,
-            'sender_id' => auth()->id(),
-            'text'      => $text,
-        ]);
+        try {
+            Message::create([
+                'chat_id'      => $this->selectedChat,
+                'message_type' => 'text',
+                'sender_id'    => auth()->id(),
+                'text'         => $text,
+            ]);
 
-        Chat::where('id', $this->selectedChat)->update(['updated_at' => now()]);
-        $this->messageInput = '';
+            Chat::where('id', $this->selectedChat)->update(['updated_at' => now()]);
+            $this->messageInput = '';
+        } catch (\Throwable $e) {
+            Log::error('Message send failed (widget)', ['error' => $e->getMessage()]);
+        }
     }
 
     public function render()
