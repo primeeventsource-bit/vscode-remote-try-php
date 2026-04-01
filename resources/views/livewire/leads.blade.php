@@ -377,92 +377,53 @@
         <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center backdrop-blur-sm" wire:click.self="$set('showImportModal', false)">
             <div class="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 mx-4">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-base font-bold">Import CSV</h3>
+                    <h3 class="text-base font-bold">Import Leads</h3>
                     <button wire:click="$set('showImportModal', false)" class="text-crm-t3 hover:text-crm-t1 text-lg">&times;</button>
                 </div>
-                <p class="text-xs text-crm-t3 mb-3">Drop a CSV file here or click to choose one. Maximum import size is 10,000 leads per file. Expected columns: Resort, Owner Name, Phone 1, Phone 2, City, State, Zip, Resort Location</p>
 
-                <div
-                    x-data="{
-                        dragging: false,
-                        fileName: '',
-                        csvRaw: '',
-                        importing: false,
-                        importedRows: 0,
-                        readFile(file) {
-                            if (!file) return;
-                            this.fileName = file.name;
-                            const reader = new FileReader();
-                            reader.onload = (e) => {
-                                this.csvRaw = e.target?.result ?? '';
-                                $wire.set('csvText', this.csvRaw);
-                            };
-                            reader.readAsText(file);
-                        },
-                        async importFileInChunks() {
-                            if (!this.csvRaw) {
-                                await $wire.importCsv();
-                                return;
-                            }
-                            this.importing = true;
-                            this.importedRows = 0;
-                            const lines = this.csvRaw.split(/\r\n|\r|\n/).filter(l => l.trim() !== '');
-                            const firstCols = (lines[0] ?? '').split(',').map(c => c.trim().toLowerCase());
-                            const hasHeader = (firstCols[0] ?? '').includes('resort') || (firstCols[1] ?? '').includes('owner');
-                            const totalRows = Math.max(0, lines.length - (hasHeader ? 1 : 0));
-                            const canImport = await $wire.beginCsvImport(totalRows);
-                            if (canImport === false) {
-                                this.importing = false;
-                                return;
-                            }
-                            const chunkSize = 250;
-                            for (let i = 0; i < lines.length; i += chunkSize) {
-                                const chunk = lines.slice(i, i + chunkSize);
-                                const ok = await $wire.importCsvChunk(chunk, i === 0);
-                                this.importedRows += chunk.length;
-                                if (ok === false) {
-                                    this.importing = false;
-                                    return;
-                                }
-                            }
-                            await $wire.clearImportState();
-                            this.importing = false;
-                            this.csvRaw = '';
-                            this.fileName = '';
-                        }
-                    }"
-                    @dragover.prevent="dragging = true"
-                    @dragleave.prevent="dragging = false"
-                    @drop.prevent="dragging = false; readFile($event.dataTransfer.files[0])"
-                    class="relative mb-3"
-                >
-                    <label
-                        for="leads-csv-file"
-                        class="flex min-h-[120px] w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed px-4 py-6 text-center transition"
-                        :class="dragging ? 'border-blue-500 bg-blue-50' : 'border-crm-border bg-crm-surface hover:border-blue-400'"
-                    >
-                        <div class="text-sm font-semibold text-crm-t2">Drag & drop CSV here</div>
-                        <div class="mt-1 text-xs text-crm-t3">or click to browse files</div>
-                        <template x-if="fileName">
-                            <div class="mt-3 rounded bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-700" x-text="`Loaded: ${fileName}`"></div>
-                        </template>
-                        <template x-if="importing">
-                            <div class="mt-2 text-xs font-semibold text-blue-700" x-text="`Importing... ${importedRows} rows processed`"></div>
-                        </template>
+                <p class="text-xs text-crm-t3 mb-3">Upload a CSV file (max 10,000 rows). Expected columns: Resort, Owner Name, Phone 1, Phone 2, City, State, Zip, Resort Location</p>
+
+                {{-- Error display --}}
+                @if($importError)
+                    <div class="mb-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                        {{ $importError }}
+                    </div>
+                @endif
+
+                @if($importStatus)
+                    <div class="mb-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
+                        {{ $importStatus }}
+                    </div>
+                @endif
+
+                {{-- File Upload via Livewire --}}
+                <div class="mb-3">
+                    <label class="flex min-h-[120px] w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-crm-border bg-crm-surface hover:border-blue-400 px-4 py-6 text-center transition">
+                        <div class="text-sm font-semibold text-crm-t2">Click to select CSV file</div>
+                        <div class="mt-1 text-xs text-crm-t3">or drag and drop here</div>
+                        @if($leadFile)
+                            <div class="mt-3 rounded bg-blue-100 px-3 py-1.5 text-xs font-semibold text-blue-700">
+                                {{ $leadFile->getClientOriginalName() }} ({{ number_format($leadFile->getSize() / 1024, 1) }} KB)
+                            </div>
+                        @endif
+                        <input type="file" wire:model="leadFile" accept=".csv,.txt" class="hidden">
                     </label>
-                    <input id="leads-csv-file" type="file" accept=".csv,text/csv,.txt" @change="readFile($event.target.files[0])" class="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0">
-                    @error('csvText')
+                    @error('leadFile')
                         <p class="mt-2 text-xs font-semibold text-red-600">{{ $message }}</p>
                     @enderror
                 </div>
 
-                <details class="mb-2">
+                <details class="mb-3">
                     <summary class="cursor-pointer text-xs font-semibold text-crm-t2">Or paste CSV manually</summary>
-                    <textarea wire:model="csvText" rows="8" class="mt-2 w-full px-3 py-2 text-sm font-mono bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400" placeholder="Resort,Owner Name,Phone1,Phone2,City,St,Zip,Resort Location"></textarea>
+                    <textarea wire:model="csvText" rows="6" class="mt-2 w-full px-3 py-2 text-sm font-mono bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400" placeholder="Resort,Owner Name,Phone1,Phone2,City,St,Zip,Resort Location"></textarea>
                 </details>
-                <div class="flex justify-end gap-2 mt-4">
+
+                <div class="flex justify-end gap-2">
                     <button wire:click="$set('showImportModal', false)" class="px-4 py-2 text-sm font-semibold text-crm-t2 bg-crm-card border border-crm-border rounded-lg hover:bg-crm-hover transition">Cancel</button>
-                    <button @click="importFileInChunks()" :disabled="importing" class="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60 transition">Import</button>
+                    <button wire:click="importLeads" wire:loading.attr="disabled" class="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-60 transition">
+                        <span wire:loading.remove wire:target="importLeads">Import</span>
+                        <span wire:loading wire:target="importLeads">Importing...</span>
+                    </button>
                 </div>
             </div>
         </div>

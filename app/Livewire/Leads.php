@@ -4,14 +4,18 @@ namespace App\Livewire;
 
 use App\Models\Lead;
 use App\Models\User;
+use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 #[Layout('components.layouts.app')]
 #[Title('Leads')]
 class Leads extends Component
 {
+    use WithFileUploads;
+
     private const MAX_IMPORT_ROWS = 10000;
 
     public string $search = '';
@@ -28,6 +32,9 @@ class Leads extends Component
     public array $selectedLeads = [];
     public string $bulkFronter = '';
     public array $newLead = ['resort' => '', 'owner_name' => '', 'phone1' => '', 'phone2' => '', 'city' => '', 'st' => '', 'zip' => '', 'resort_location' => ''];
+    public $leadFile = null;
+    public string $importStatus = '';
+    public string $importError = '';
 
     public function selectLead($id) { $this->selectedLead = $this->selectedLead === $id ? null : $id; }
 
@@ -117,23 +124,60 @@ class Leads extends Component
         $this->newLead = ['resort' => '', 'owner_name' => '', 'phone1' => '', 'phone2' => '', 'city' => '', 'st' => '', 'zip' => '', 'resort_location' => ''];
     }
 
+    public function importLeads(): void
+    {
+        $this->importStatus = '';
+        $this->importError = '';
+
+        // Determine CSV content from file upload OR pasted text
+        $csvContent = '';
+
+        if ($this->leadFile) {
+            try {
+                $this->validate(['leadFile' => 'file|max:25600|mimes:csv,txt']);
+                $csvContent = file_get_contents($this->leadFile->getRealPath());
+                // Strip UTF-8 BOM
+                $csvContent = preg_replace('/^\xEF\xBB\xBF/', '', $csvContent);
+            } catch (\Throwable $e) {
+                $this->importError = 'Invalid file: ' . $e->getMessage();
+                return;
+            }
+        } elseif (trim($this->csvText) !== '') {
+            $csvContent = $this->csvText;
+        } else {
+            $this->importError = 'Upload a CSV file or paste CSV data before importing.';
+            return;
+        }
+
+        $lineCount = $this->countImportableRows($csvContent);
+        if ($lineCount === 0) {
+            $this->importError = 'No importable rows found in the file.';
+            return;
+        }
+        if ($lineCount > self::MAX_IMPORT_ROWS) {
+            $this->importError = "CSV has {$lineCount} rows — max is 10,000. Split the file.";
+            return;
+        }
+
+        try {
+            $this->processCsvContent($csvContent);
+            $this->leadFile = null;
+            $this->csvText = '';
+            $this->showImportModal = false;
+        } catch (\Throwable $e) {
+            Log::error('Lead import failed', [
+                'error' => $e->getMessage(),
+                'user' => auth()->id(),
+                'file' => $this->leadFile?->getClientOriginalName(),
+            ]);
+            $this->importError = 'Import failed: ' . $e->getMessage();
+        }
+    }
+
+    // Keep legacy method for backward compatibility
     public function importCsv()
     {
-        if (trim($this->csvText) === '') {
-            $this->addError('csvText', 'Upload a CSV file or paste CSV data before importing.');
-            return;
-        }
-
-        $lineCount = $this->countImportableRows($this->csvText);
-        if ($lineCount > self::MAX_IMPORT_ROWS) {
-            $this->addError('csvText', 'CSV exceeds the 10,000 lead limit. Split the file and import 10,000 or fewer rows at a time.');
-            return;
-        }
-
-        $this->processCsvContent($this->csvText);
-
-        $this->csvText = '';
-        $this->showImportModal = false;
+        $this->importLeads();
     }
 
     public function beginCsvImport(int $totalRows = 0): bool
@@ -311,7 +355,8 @@ class Leads extends Component
             $imported += count($batch);
         }
 
-        session()->flash('message', "Import complete: {$imported} leads imported, {$skipped} rows skipped.");
+        $this->importStatus = "Import complete: {$imported} leads imported, {$skipped} rows skipped.";
+        Log::info('Lead import success', ['user' => auth()->id(), 'imported' => $imported, 'skipped' => $skipped]);
     }
 
     private function countImportableRows(string $csv): int
