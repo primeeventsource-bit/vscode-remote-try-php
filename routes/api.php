@@ -9,6 +9,7 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ChargebackController;
+use App\Http\Controllers\GifController;
 
 // ─── Public routes ───────────────────────────────────────────
 Route::post('/login', [AuthController::class, 'login']);
@@ -72,4 +73,13 @@ Route::middleware([])->group(function () {
     Route::post('/chargebacks', [ChargebackController::class, 'store']);
     Route::patch('/chargebacks/{id}', [ChargebackController::class, 'update']);
     Route::post('/chargebacks/{id}/events', [ChargebackController::class, 'storeEvent']);
+
+    // GIFs
+    Route::get('/gifs/trending', [GifController::class, 'trending']);
+    Route::get('/gifs/search', [GifController::class, 'search']);
+    Route::get('/gifs/movies', [GifController::class, 'movies']);
+    Route::get('/gifs/recent', [GifController::class, 'recent']);
+    Route::get('/gifs/favorites', [GifController::class, 'favorites']);
+    Route::post('/gifs/favorites', [GifController::class, 'storeFavorite']);
+    Route::delete('/gifs/favorites/{id}', [GifController::class, 'destroyFavorite']);
 });

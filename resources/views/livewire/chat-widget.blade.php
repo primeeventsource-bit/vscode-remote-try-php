@@ -169,16 +169,35 @@
                              style="background:{{ $msgUser->color ?? '#6b7280' }}">
                             {{ $msgUser->avatar ?? substr($msgUser->name ?? '?', 0, 2) }}
                         </div>
-                        <div class="max-w-[72%] rounded-lg px-3 py-2 text-sm {{ $bubble }}">
-                            {{ $msg->body ?? $msg->content ?? $msg->text ?? '' }}
-                        </div>
+                        @if(($msg->message_type ?? 'text') === 'gif' && $msg->gif_url)
+                            <div class="max-w-[72%] overflow-hidden rounded-xl border {{ $isMine ? 'border-blue-500 bg-blue-600/10' : 'border-crm-border bg-white' }}">
+                                <a href="{{ $msg->gif_url }}" target="_blank" rel="noreferrer" class="block">
+                                    <img src="{{ $msg->gif_preview_url ?: $msg->gif_url }}" alt="{{ $msg->gif_title ?? 'GIF' }}" class="max-h-52 w-full object-cover" loading="lazy">
+                                </a>
+                                <div class="px-2 py-1.5 text-[11px] {{ $isMine ? 'bg-blue-600 text-blue-50' : 'bg-crm-card text-crm-t2' }}">
+                                    {{ $msg->gif_title ?: 'GIF' }}
+                                </div>
+                            </div>
+                        @else
+                            <div class="max-w-[72%] rounded-lg px-3 py-2 text-sm {{ $bubble }}">
+                                {{ $msg->body ?? $msg->content ?? $msg->text ?? '' }}
+                            </div>
+                        @endif
                     </div>
                 @empty
                     <p class="py-6 text-center text-xs text-crm-t3">No messages yet. Say hello! 👋</p>
                 @endforelse
             </div>
 
-            <div class="flex flex-shrink-0 gap-2 border-t border-crm-border bg-crm-surface px-3 py-2">
+            <div class="flex flex-shrink-0 gap-2 border-t border-crm-border bg-crm-surface px-3 py-2 relative">
+                @include('livewire.partials.gif-picker', [
+                    'gifPickerId' => 'chat-widget-gif-picker',
+                    'gifPickerPanelClass' => 'right-0 bottom-full mb-2 w-[20rem]',
+                    'gifPickerSettings' => $gifPickerSettings,
+                    'canUseGifPicker' => $canUseGifPicker,
+                    'currentUserId' => $currentUserId,
+                    'sendAction' => 'sendGif',
+                ])
                 <input
                     wire:model="messageInput"
                     wire:keydown.enter="sendMessage"

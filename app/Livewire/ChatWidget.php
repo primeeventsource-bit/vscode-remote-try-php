@@ -34,6 +34,34 @@ class ChatWidget extends Component
         return (bool) $this->getSetting($key, $default);
     }
 
+    private function canUseGifPicker(): bool
+    {
+        $user = auth()->user();
+        if (!$this->canUseChat() || !$this->moduleEnabled('gifs.module_enabled', true) || !$user) {
+            return false;
+        }
+
+        if ($user->hasRole('master_admin')) {
+            return true;
+        }
+
+        return $user->hasPerm('send_gifs') || $user->hasPerm('view_gif_picker') || $user->hasPerm('view_chat');
+    }
+
+    private function gifPickerSettings(): array
+    {
+        return [
+            'module_enabled' => $this->moduleEnabled('gifs.module_enabled', true),
+            'trending_enabled' => $this->moduleEnabled('gifs.trending_enabled', true),
+            'movies_enabled' => $this->moduleEnabled('gifs.movies_enabled', true),
+            'search_enabled' => $this->moduleEnabled('gifs.search_enabled', true),
+            'recent_enabled' => $this->moduleEnabled('gifs.recent_enabled', true),
+            'favorites_enabled' => $this->moduleEnabled('gifs.favorites_enabled', true),
+            'provider' => (string) $this->getSetting('gifs.provider', config('services.gifs.provider', 'giphy')),
+            'results_limit' => (int) $this->getSetting('gifs.results_limit', 24),
+        ];
+    }
+
     private function canUseChat(): bool
     {
         $user = auth()->user();
@@ -181,6 +209,42 @@ class ChatWidget extends Component
         }
     }
 
+    public function sendGif(array $gif): void
+    {
+        if (!$this->canUseGifPicker() || !$this->selectedChat || empty($gif['url'])) {
+            return;
+        }
+
+        try {
+            Message::create([
+                'chat_id'         => $this->selectedChat,
+                'message_type'    => 'gif',
+                'sender_id'       => auth()->id(),
+                'gif_url'         => $gif['url'],
+                'gif_preview_url' => $gif['preview_url'] ?? $gif['url'],
+                'gif_provider'    => $gif['provider'] ?? $this->getSetting('gifs.provider', config('services.gifs.provider', 'giphy')),
+                'gif_external_id' => $gif['id'] ?? null,
+                'gif_title'       => $gif['title'] ?? 'GIF',
+                'metadata'        => [
+                    'width'  => $gif['width'] ?? null,
+                    'height' => $gif['height'] ?? null,
+                ],
+            ]);
+
+            Chat::where('id', $this->selectedChat)->update(['updated_at' => now()]);
+
+            app(\App\Services\GifUsageService::class)->recordRecent(auth()->user(), [
+                'id'          => $gif['id'] ?? '',
+                'provider'    => $gif['provider'] ?? '',
+                'url'         => $gif['url'],
+                'preview_url' => $gif['preview_url'] ?? $gif['url'],
+                'title'       => $gif['title'] ?? 'GIF',
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('GIF send failed (widget)', ['error' => $e->getMessage()]);
+        }
+    }
+
     public function render()
     {
         if (!$this->canUseChat()) {
@@ -189,6 +253,9 @@ class ChatWidget extends Component
                 'messages' => collect(),
                 'activeChat' => null,
                 'users' => collect(),
+                'gifPickerSettings' => [],
+                'canUseGifPicker' => false,
+                'currentUserId' => 0,
             ]);
         }
 
@@ -205,7 +272,10 @@ class ChatWidget extends Component
 
         $activeChat = $this->selectedChat ? Chat::find($this->selectedChat) : null;
         $users      = User::all()->keyBy('id');
+        $gifPickerSettings = $this->gifPickerSettings();
+        $canUseGifPicker = $this->canUseGifPicker();
+        $currentUserId = (int) auth()->id();
 
-        return view('livewire.chat-widget', compact('chats', 'messages', 'activeChat', 'users'));
+        return view('livewire.chat-widget', compact('chats', 'messages', 'activeChat', 'users', 'gifPickerSettings', 'canUseGifPicker', 'currentUserId'));
     }
 }
