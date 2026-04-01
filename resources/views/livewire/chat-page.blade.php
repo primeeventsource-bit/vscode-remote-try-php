@@ -44,7 +44,7 @@
                     <button wire:click="selectChat({{ $chat->id }})" class="w-full text-left px-3 py-2 flex items-center gap-2 transition {{ ($selectedChat === $chat->id) ? 'bg-blue-50 text-blue-600' : ($chat->unread > 0 ? 'bg-blue-50/50 font-semibold' : 'hover:bg-crm-hover text-crm-t2') }}">
                         @if($other)
                             <div class="relative flex-shrink-0">
-                                <div class="w-6 h-6 rounded-full flex items-center justify-center text-[8px] font-bold text-white" style="background: {{ $other->color ?? '#6b7280' }}">{{ $other->avatar ?? substr($other->name, 0, 2) }}</div>
+                                <div class="w-6 h-6 rounded-full flex items-center justify-center text-[8px] font-bold text-white" style="background: {{ $other->color ?? '#6b7280' }}">{{ $other->avatar ?? substr($other->name ?? '?', 0, 2) }}</div>
                                 @if($chat->unread > 0)
                                     <span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full badge-blink-blue"></span>
                                 @endif
@@ -205,16 +205,16 @@
                             @if(!$isMine)
                                 <div class="flex-shrink-0 mr-2 mt-1">
                                     @if($msgUser?->avatar_path)
-                                        <img src="{{ asset('storage/' . $msgUser->avatar_path) }}" class="w-7 h-7 rounded-full object-cover">
+                                        <img src="{{ asset('storage/' . $msgUser?->avatar_path) }}" class="w-7 h-7 rounded-full object-cover">
                                     @else
-                                        <div class="w-7 h-7 rounded-full flex items-center justify-center text-[8px] font-bold text-white" style="background: {{ $msgUser->color ?? '#6b7280' }}">{{ $msgUser->avatar ?? substr($msgUser->name ?? '?', 0, 2) }}</div>
+                                        <div class="w-7 h-7 rounded-full flex items-center justify-center text-[8px] font-bold text-white" style="background: {{ $msgUser?->color ?? '#6b7280' }}">{{ $msgUser?->avatar ?? substr($msgUser?->name ?? '?', 0, 2) }}</div>
                                     @endif
                                 </div>
                             @endif
 
                             <div class="max-w-[70%]">
                                 @if(!$isMine && $isGroup)
-                                    <div class="text-[10px] font-semibold text-crm-t3 mb-0.5 ml-1">{{ $msgUser->name ?? 'Unknown' }}</div>
+                                    <div class="text-[10px] font-semibold text-crm-t3 mb-0.5 ml-1">{{ $msgUser?->name ?? 'Unknown' }}</div>
                                 @endif
 
                                 @if(($msg->message_type ?? 'text') === 'gif' && $msg->gif_url)
