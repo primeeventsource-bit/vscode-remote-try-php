@@ -155,108 +155,7 @@
     </div>
 
     {{-- ══════════════════════════════════════════════
-         CHARTS ROW 2 — Chargeback Trend + (Admin only)
-    ══════════════════════════════════════════════ --}}
-    @if(!$isCloser)
-    <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6">
-
-        {{-- Chargeback Trend Line Chart (takes 3/5 width) --}}
-        <div class="lg:col-span-3 bg-crm-card border border-crm-border rounded-lg p-4">
-            <div class="text-sm font-semibold mb-1">Chargeback Trend</div>
-            <div class="text-[10px] text-crm-t3 mb-3">Last 6 months · monthly breakdown</div>
-            @php
-                $maxCBRev = (float) ($monthlyChargebackData->max('rev') ?: 1);
-                $cbPadL   = 10;
-                $cbPadR   = 8;
-                $cbPadT   = 8;
-                $cbPadB   = 25;
-                $cbPlotW  = 100;
-                $cbPlotH  = 70;
-                $cbSvgW   = $cbPadL + $cbPlotW + $cbPadR;
-                $cbSvgH   = $cbPadT + $cbPlotH + $cbPadB;
-                $points   = [];
-            @endphp
-            <svg viewBox="0 0 {{ $cbSvgW }} {{ $cbSvgH }}" class="w-full h-auto" preserveAspectRatio="xMidYMid meet" style="max-height: 180px;">
-                {{-- Grid lines --}}
-                @for ($gl = 0; $gl <= 4; $gl++)
-                    @php $gcy = $cbPadT + ($gl / 4) * $cbPlotH; @endphp
-                    <line x1="{{ $cbPadL }}" y1="{{ $gcy }}" x2="{{ $cbPadL + $cbPlotW }}" y2="{{ $gcy }}" stroke="#fee2e2" stroke-width="0.5"/>
-                    <text x="{{ $cbPadL - 4 }}" y="{{ $gcy + 2 }}" text-anchor="end" font-size="5" fill="#9ca3af">${{ number_format((1 - $gl / 4) * $maxCBRev / 1000, 0) }}k</text>
-                @endfor
-
-                {{-- Generate line path --}}
-                @php
-                    $dataCount = count($monthlyChargebackData);
-                    $xStep = $dataCount > 1 ? $cbPlotW / ($dataCount - 1) : $cbPlotW;
-                    $pathData = '';
-                    foreach($monthlyChargebackData as $i => $cb) {
-                        $x = $cbPadL + $i * $xStep;
-                        $y = $cbPadT + $cbPlotH - (($cb['rev'] / $maxCBRev) * $cbPlotH);
-                        $points[] = ['x' => $x, 'y' => $y, 'rev' => $cb['rev'], 'label' => $cb['label']];
-                        $pathData .= ($i === 0 ? 'M' : 'L') . ' ' . round($x, 1) . ',' . round($y, 1) . ' ';
-                    }
-                @endphp
-                
-                {{-- Line path --}}
-                <polyline points="{{ implode(' ', array_map(fn($p) => round($p['x'], 1) . ',' . round($p['y'], 1), $points)) }}"
-                          fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                
-                {{-- Data points --}}
-                @foreach($points as $i => $p)
-                    <circle cx="{{ $p['x'] }}" cy="{{ $p['y'] }}" r="3.5"
-                            fill="{{ $i === count($points) - 1 ? '#991b1b' : '#fecaca' }}"
-                            stroke="{{ $i === count($points) - 1 ? '#7f1d1d' : '#dc2626' }}"
-                            stroke-width="1.5"/>
-                    @if($p['rev'] > 0)
-                        <text x="{{ $p['x'] }}" y="{{ $p['y'] - 8 }}"
-                              text-anchor="middle" font-size="5" fill="{{ $i === count($points) - 1 ? '#991b1b' : '#7f1d1d' }}" font-weight="bold">
-                            ${{ $p['rev'] >= 1000 ? number_format($p['rev'] / 1000, 1) . 'k' : number_format($p['rev']) }}
-                        </text>
-                    @endif
-                @endforeach
-
-                {{-- Month labels --}}
-                @foreach($points as $i => $p)
-                    <text x="{{ $p['x'] }}" y="{{ $cbSvgH - 4 }}"
-                          text-anchor="middle" font-size="7"
-                          fill="{{ $i === count($points) - 1 ? '#991b1b' : '#9ca3af' }}"
-                          font-weight="{{ $i === count($points) - 1 ? 'bold' : 'normal' }}">{{ $points[$i]['label'] }}</text>
-                @endforeach
-            </svg>
-        </div>
-
-        {{-- Chargeback Stats Card (takes 2/5) --}}
-        <div class="lg:col-span-2 bg-crm-card border border-crm-border rounded-lg p-4">
-            <div class="text-sm font-semibold mb-1">Chargeback Stats</div>
-            <div class="text-[10px] text-crm-t3 mb-4">All time summary</div>
-            <div class="space-y-3">
-                <div>
-                    <div class="text-[10px] text-crm-t3 uppercase tracking-wider mb-1">Total Chargebacks</div>
-                    <div class="text-2xl font-extrabold text-red-600">{{ $chargebacks->count() }}</div>
-                </div>
-                <div>
-                    <div class="text-[10px] text-crm-t3 uppercase tracking-wider mb-1">Chargeback Revenue</div>
-                    <div class="text-xl font-bold text-red-500">${{ number_format($cbRev) }}</div>
-                </div>
-                <div class="pt-2 border-t border-crm-border">
-                    <div class="text-[10px] text-crm-t3 uppercase tracking-wider mb-1">CB Rate</div>
-                    <div class="text-lg font-semibold">
-                        {{ $deals->count() > 0 ? number_format(($chargebacks->count() / $deals->count()) * 100, 1) : 0 }}%
-                    </div>
-                </div>
-                <div class="pt-2 border-t border-crm-border">
-                    <div class="text-[10px] text-crm-t3 uppercase tracking-wider mb-1">Avg CB Amount</div>
-                    <div class="text-lg font-semibold">
-                        {{ $chargebacks->count() > 0 ? '$' . number_format($chargebacks->sum('fee') / $chargebacks->count()) : '$0' }}
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    @endif
-
-    {{-- ══════════════════════════════════════════════
-         CHARTS ROW 3 — Top Closers + Revenue + Recent
+         CHARTS ROW 2 — Top Closers + Revenue + Recent
     ══════════════════════════════════════════════ --}}
     @if(!$isCloser)
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6">
@@ -335,6 +234,107 @@
                         </div>
                     </div>
                 @endforeach
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- ══════════════════════════════════════════════
+         CHARTS ROW 3 — Chargeback Trend + Stats
+    ══════════════════════════════════════════════ --}}
+    @if(!$isCloser)
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6">
+
+        {{-- Chargeback Trend Line Chart (takes 3/5 width) --}}
+        <div class="lg:col-span-3 bg-crm-card border border-crm-border rounded-lg p-4">
+            <div class="text-sm font-semibold mb-1">Chargeback Trend</div>
+            <div class="text-[10px] text-crm-t3 mb-3">Last 6 months · monthly breakdown</div>
+            @php
+                $maxCBRev = (float) ($monthlyChargebackData->max('rev') ?: 1);
+                $cbPadL   = 10;
+                $cbPadR   = 8;
+                $cbPadT   = 8;
+                $cbPadB   = 25;
+                $cbPlotW  = 100;
+                $cbPlotH  = 70;
+                $cbSvgW   = $cbPadL + $cbPlotW + $cbPadR;
+                $cbSvgH   = $cbPadT + $cbPlotH + $cbPadB;
+                $points   = [];
+            @endphp
+            <svg viewBox="0 0 {{ $cbSvgW }} {{ $cbSvgH }}" class="w-full h-auto" preserveAspectRatio="xMidYMid meet" style="max-height: 180px;">
+                {{-- Grid lines --}}
+                @for ($gl = 0; $gl <= 4; $gl++)
+                    @php $gcy = $cbPadT + ($gl / 4) * $cbPlotH; @endphp
+                    <line x1="{{ $cbPadL }}" y1="{{ $gcy }}" x2="{{ $cbPadL + $cbPlotW }}" y2="{{ $gcy }}" stroke="#fee2e2" stroke-width="0.5"/>
+                    <text x="{{ $cbPadL - 4 }}" y="{{ $gcy + 2 }}" text-anchor="end" font-size="5" fill="#9ca3af">${{ number_format((1 - $gl / 4) * $maxCBRev / 1000, 0) }}k</text>
+                @endfor
+
+                {{-- Generate line path --}}
+                @php
+                    $dataCount = count($monthlyChargebackData);
+                    $xStep = $dataCount > 1 ? $cbPlotW / ($dataCount - 1) : $cbPlotW;
+                    $pathData = '';
+                    foreach($monthlyChargebackData as $i => $cb) {
+                        $x = $cbPadL + $i * $xStep;
+                        $y = $cbPadT + $cbPlotH - (($cb['rev'] / $maxCBRev) * $cbPlotH);
+                        $points[] = ['x' => $x, 'y' => $y, 'rev' => $cb['rev'], 'label' => $cb['label']];
+                        $pathData .= ($i === 0 ? 'M' : 'L') . ' ' . round($x, 1) . ',' . round($y, 1) . ' ';
+                    }
+                @endphp
+
+                {{-- Line path --}}
+                <polyline points="{{ implode(' ', array_map(fn($p) => round($p['x'], 1) . ',' . round($p['y'], 1), $points)) }}"
+                          fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+                {{-- Data points --}}
+                @foreach($points as $i => $p)
+                    <circle cx="{{ $p['x'] }}" cy="{{ $p['y'] }}" r="3.5"
+                            fill="{{ $i === count($points) - 1 ? '#991b1b' : '#fecaca' }}"
+                            stroke="{{ $i === count($points) - 1 ? '#7f1d1d' : '#dc2626' }}"
+                            stroke-width="1.5"/>
+                    @if($p['rev'] > 0)
+                        <text x="{{ $p['x'] }}" y="{{ $p['y'] - 8 }}"
+                              text-anchor="middle" font-size="5" fill="{{ $i === count($points) - 1 ? '#991b1b' : '#7f1d1d' }}" font-weight="bold">
+                            ${{ $p['rev'] >= 1000 ? number_format($p['rev'] / 1000, 1) . 'k' : number_format($p['rev']) }}
+                        </text>
+                    @endif
+                @endforeach
+
+                {{-- Month labels --}}
+                @foreach($points as $i => $p)
+                    <text x="{{ $p['x'] }}" y="{{ $cbSvgH - 4 }}"
+                          text-anchor="middle" font-size="7"
+                          fill="{{ $i === count($points) - 1 ? '#991b1b' : '#9ca3af' }}"
+                          font-weight="{{ $i === count($points) - 1 ? 'bold' : 'normal' }}">{{ $points[$i]['label'] }}</text>
+                @endforeach
+            </svg>
+        </div>
+
+        {{-- Chargeback Stats Card (takes 2/5) --}}
+        <div class="lg:col-span-2 bg-crm-card border border-crm-border rounded-lg p-4">
+            <div class="text-sm font-semibold mb-1">Chargeback Stats</div>
+            <div class="text-[10px] text-crm-t3 mb-4">All time summary</div>
+            <div class="space-y-3">
+                <div>
+                    <div class="text-[10px] text-crm-t3 uppercase tracking-wider mb-1">Total Chargebacks</div>
+                    <div class="text-2xl font-extrabold text-red-600">{{ $chargebacks->count() }}</div>
+                </div>
+                <div>
+                    <div class="text-[10px] text-crm-t3 uppercase tracking-wider mb-1">Chargeback Revenue</div>
+                    <div class="text-xl font-bold text-red-500">${{ number_format($cbRev) }}</div>
+                </div>
+                <div class="pt-2 border-t border-crm-border">
+                    <div class="text-[10px] text-crm-t3 uppercase tracking-wider mb-1">CB Rate</div>
+                    <div class="text-lg font-semibold">
+                        {{ $deals->count() > 0 ? number_format(($chargebacks->count() / $deals->count()) * 100, 1) : 0 }}%
+                    </div>
+                </div>
+                <div class="pt-2 border-t border-crm-border">
+                    <div class="text-[10px] text-crm-t3 uppercase tracking-wider mb-1">Avg CB Amount</div>
+                    <div class="text-lg font-semibold">
+                        {{ $chargebacks->count() > 0 ? '$' . number_format($chargebacks->sum('fee') / $chargebacks->count()) : '$0' }}
+                    </div>
+                </div>
             </div>
         </div>
     </div>

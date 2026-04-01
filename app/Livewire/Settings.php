@@ -1,6 +1,8 @@
 <?php
 namespace App\Livewire;
 
+use App\Models\MerchantAccount;
+use App\Models\Processor;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
@@ -59,6 +61,18 @@ class Settings extends Component
     public string $integrationSipProtocol = 'sip:';
     public string $integrationSipServer = '';
 
+    public array $processors = [];
+    public array $merchantAccounts = [];
+
+    public string $newProcessorName = '';
+    public string $newProcessorType = 'gateway';
+    public bool $newProcessorActive = true;
+
+    public string $newMerchantName = '';
+    public string $newMerchantMid = '';
+    public string $newMerchantProcessorId = '';
+    public bool $newMerchantActive = true;
+
     public function mount()
     {
         $u = auth()->user();
@@ -109,6 +123,8 @@ class Settings extends Component
         $this->integrationWebhookUrl = (string) $this->getSetting('integration.webhook_url', '');
         $this->integrationSipProtocol = (string) $this->getSetting('integration.sip_protocol', 'sip:');
         $this->integrationSipServer = (string) $this->getSetting('integration.sip_server', '');
+
+        $this->loadMerchantIntegrationData();
     }
 
     private function getSetting($key, $default)
@@ -212,6 +228,116 @@ class Settings extends Component
         $this->saveSetting('integration.webhook_url', $this->integrationWebhookUrl);
         $this->saveSetting('integration.sip_protocol', $this->integrationSipProtocol);
         $this->saveSetting('integration.sip_server', $this->integrationSipServer);
+
+        $this->loadMerchantIntegrationData();
+    }
+
+    private function loadMerchantIntegrationData(): void
+    {
+        $this->processors = Processor::query()
+            ->orderBy('name')
+            ->get(['id', 'name', 'provider_type', 'active'])
+            ->toArray();
+
+        $this->merchantAccounts = MerchantAccount::query()
+            ->with('processor:id,name')
+            ->orderBy('name')
+            ->get(['id', 'processor_id', 'name', 'mid_masked', 'active'])
+            ->map(function (MerchantAccount $account): array {
+                return [
+                    'id' => $account->id,
+                    'processor_id' => $account->processor_id,
+                    'processor_name' => $account->processor?->name ?? '--',
+                    'name' => $account->name,
+                    'mid_masked' => $account->mid_masked,
+                    'active' => (bool) $account->active,
+                ];
+            })
+            ->toArray();
+
+        if ($this->newMerchantProcessorId === '' && !empty($this->processors)) {
+            $this->newMerchantProcessorId = (string) $this->processors[0]['id'];
+        }
+    }
+
+    public function addProcessor(): void
+    {
+        if (!auth()->user()?->hasRole('master_admin')) {
+            return;
+        }
+
+        $this->validate([
+            'newProcessorName' => ['required', 'string', 'max:120'],
+            'newProcessorType' => ['nullable', 'string', 'max:60'],
+        ]);
+
+        Processor::create([
+            'name' => trim($this->newProcessorName),
+            'provider_type' => trim($this->newProcessorType) !== '' ? trim($this->newProcessorType) : null,
+            'active' => $this->newProcessorActive,
+        ]);
+
+        $this->newProcessorName = '';
+        $this->newProcessorType = 'gateway';
+        $this->newProcessorActive = true;
+
+        $this->loadMerchantIntegrationData();
+    }
+
+    public function addMerchantAccount(): void
+    {
+        if (!auth()->user()?->hasRole('master_admin')) {
+            return;
+        }
+
+        $this->validate([
+            'newMerchantName' => ['required', 'string', 'max:120'],
+            'newMerchantProcessorId' => ['required', 'integer', 'exists:processors,id'],
+            'newMerchantMid' => ['nullable', 'string', 'max:32'],
+        ]);
+
+        MerchantAccount::create([
+            'name' => trim($this->newMerchantName),
+            'processor_id' => (int) $this->newMerchantProcessorId,
+            'mid_masked' => trim($this->newMerchantMid) !== '' ? trim($this->newMerchantMid) : null,
+            'active' => $this->newMerchantActive,
+        ]);
+
+        $this->newMerchantName = '';
+        $this->newMerchantMid = '';
+        $this->newMerchantActive = true;
+
+        $this->loadMerchantIntegrationData();
+    }
+
+    public function toggleProcessorActive(int $id): void
+    {
+        if (!auth()->user()?->hasRole('master_admin')) {
+            return;
+        }
+
+        $row = Processor::find($id);
+        if (!$row) {
+            return;
+        }
+
+        $row->update(['active' => !$row->active]);
+        $this->loadMerchantIntegrationData();
+    }
+
+    public function toggleMerchantAccountActive(int $id): void
+    {
+        if (!auth()->user()?->hasRole('master_admin')) {
+            return;
+        }
+
+        $row = MerchantAccount::find($id);
+        if (!$row) {
+            return;
+        }
+
+        $row->update(['active' => !$row->active]);
+        $this->loadMerchantIntegrationData();
     }
 
     public function render() { return view('livewire.settings'); }

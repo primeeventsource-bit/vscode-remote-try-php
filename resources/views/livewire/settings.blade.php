@@ -125,6 +125,76 @@
                     <input wire:model.defer="integrationSipServer" type="text" placeholder="SIP server" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                 </div>
                 <div class="mt-3 text-right"><button wire:click="saveIntegrations" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg">Save Integrations</button></div>
+
+                <div class="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div class="bg-white border border-crm-border rounded-lg p-3">
+                        <div class="text-xs font-semibold mb-2">Payment Processors</div>
+                        @if($isMaster)
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
+                                <input wire:model.defer="newProcessorName" type="text" placeholder="Processor name" class="sm:col-span-2 px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                                <input wire:model.defer="newProcessorType" type="text" placeholder="Type" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                            </div>
+                            <div class="flex items-center justify-between mb-3">
+                                <label class="text-xs flex items-center gap-2"><input type="checkbox" wire:model="newProcessorActive"> Active</label>
+                                <button wire:click="addProcessor" class="px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-lg">Add Processor</button>
+                            </div>
+                        @endif
+
+                        <div class="space-y-2 max-h-56 overflow-auto pr-1">
+                            @forelse($processors as $p)
+                                <div class="flex items-center justify-between border border-crm-border rounded-lg px-2.5 py-2 text-xs">
+                                    <div>
+                                        <div class="font-semibold">{{ $p['name'] }}</div>
+                                        <div class="text-crm-t3">{{ $p['provider_type'] ?: 'gateway' }}</div>
+                                    </div>
+                                    <button wire:click="toggleProcessorActive({{ $p['id'] }})" class="px-2 py-1 rounded {{ $p['active'] ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-600' }}">
+                                        {{ $p['active'] ? 'Active' : 'Inactive' }}
+                                    </button>
+                                </div>
+                            @empty
+                                <div class="text-xs text-crm-t3">No processors added yet.</div>
+                            @endforelse
+                        </div>
+                    </div>
+
+                    <div class="bg-white border border-crm-border rounded-lg p-3">
+                        <div class="text-xs font-semibold mb-2">Merchant Accounts</div>
+                        @if($isMaster)
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
+                                <input wire:model.defer="newMerchantName" type="text" placeholder="Merchant account name" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                                <input wire:model.defer="newMerchantMid" type="text" placeholder="MID (masked)" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+                                <select wire:model.defer="newMerchantProcessorId" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                                    <option value="">Select processor</option>
+                                    @foreach($processors as $p)
+                                        <option value="{{ $p['id'] }}">{{ $p['name'] }}</option>
+                                    @endforeach
+                                </select>
+                                <div class="flex items-center justify-between">
+                                    <label class="text-xs flex items-center gap-2"><input type="checkbox" wire:model="newMerchantActive"> Active</label>
+                                    <button wire:click="addMerchantAccount" class="px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-lg">Add Account</button>
+                                </div>
+                            </div>
+                        @endif
+
+                        <div class="space-y-2 max-h-56 overflow-auto pr-1">
+                            @forelse($merchantAccounts as $m)
+                                <div class="flex items-center justify-between border border-crm-border rounded-lg px-2.5 py-2 text-xs">
+                                    <div>
+                                        <div class="font-semibold">{{ $m['name'] }}</div>
+                                        <div class="text-crm-t3">{{ $m['processor_name'] }} · {{ $m['mid_masked'] ?: 'No MID' }}</div>
+                                    </div>
+                                    <button wire:click="toggleMerchantAccountActive({{ $m['id'] }})" class="px-2 py-1 rounded {{ $m['active'] ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-600' }}">
+                                        {{ $m['active'] ? 'Active' : 'Inactive' }}
+                                    </button>
+                                </div>
+                            @empty
+                                <div class="text-xs text-crm-t3">No merchant accounts added yet.</div>
+                            @endforelse
+                        </div>
+                    </div>
+                </div>
             @endif
         </div>
     </div>
