@@ -59,6 +59,7 @@
                 $user = auth()->user();
                 $nav = collect([
                     ['route' => 'dashboard',    'icon' => '◫',  'label' => 'Dashboard',      'perm' => 'view_dashboard'],
+                    ['route' => 'chargebacks',  'icon' => '⚠️',  'label' => 'Chargebacks',     'perm' => null],
                     ['route' => 'stats',        'icon' => '📊', 'label' => 'Statistics',      'perm' => 'view_stats'],
                     ['route' => 'leads',        'icon' => '✏️',  'label' => 'Leads',           'perm' => 'view_leads'],
                     ['route' => 'pipeline',     'icon' => '📈', 'label' => 'Pipeline',        'perm' => 'view_pipeline'],

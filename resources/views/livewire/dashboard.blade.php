@@ -340,9 +340,7 @@
     </div>
     @endif
 
-    @if(!$isCloser)
-        <livewire:chargeback-dashboard-section />
-    @endif
+    <livewire:chargeback-dashboard-section />
 
     {{-- ══════════════════════════════════════════════
          CLOSER-ONLY: My Recent Deals
