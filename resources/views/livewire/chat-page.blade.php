@@ -135,6 +135,7 @@
                 </div>
             </div>
         @elseif(isset($activeChat) && $activeChat)
+            @php $memberIds = is_array($activeChat->members) ? $activeChat->members : json_decode($activeChat->members ?? '[]', true); @endphp
             {{-- Chat Header --}}
             <div class="px-4 py-3 border-b border-crm-border bg-crm-surface flex items-center gap-3">
                 @if($activeChat->type === 'channel')
@@ -142,11 +143,16 @@
                 @endif
                 <h4 class="text-sm font-bold">{{ $activeChat->name ?? 'Chat' }}</h4>
                 <span class="text-[10px] text-crm-t3">
-                    @php $memberIds = is_array($activeChat->members) ? $activeChat->members : json_decode($activeChat->members ?? '[]', true); @endphp
                     {{ count($memberIds) }} member{{ count($memberIds) !== 1 ? 's' : '' }}
                 </span>
+                <button wire:click="toggleInfoPanel" class="ml-auto flex h-7 w-7 items-center justify-center rounded-lg text-crm-t3 hover:bg-crm-hover hover:text-crm-t1 transition" title="Conversation info">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </button>
             </div>
 
+            <div class="flex flex-1 overflow-hidden">
+            {{-- Messages + Input Column --}}
+            <div class="flex-1 flex flex-col overflow-hidden">
             {{-- Messages Thread --}}
             <div class="flex-1 overflow-y-auto p-4 space-y-3" id="message-thread">
                 @if(isset($messages))
@@ -165,7 +171,7 @@
                                 @if(($msg->message_type ?? 'text') === 'gif' && $msg->gif_url)
                                     <div class="overflow-hidden rounded-2xl border {{ $isMine ? 'border-blue-500 bg-blue-600/10' : 'border-crm-border bg-white' }}">
                                         <a href="{{ $msg->gif_url }}" target="_blank" rel="noreferrer" class="block">
-                                            <img src="{{ $msg->gif_preview_url ?: $msg->gif_url }}" alt="{{ $msg->gif_title ?? 'GIF' }}" class="max-h-72 w-full object-cover">
+                                            <img src="{{ $msg->gif_preview_url ?: $msg->gif_url }}" alt="{{ $msg->gif_title ?? 'GIF' }}" class="max-h-72 w-full object-cover" loading="lazy">
                                         </a>
                                         <div class="px-3 py-2 text-xs {{ $isMine ? 'text-blue-50 bg-blue-600' : 'text-crm-t2 bg-crm-card' }}">
                                             {{ $msg->gif_title ?: 'GIF' }}
@@ -206,6 +212,66 @@
                     </button>
                 </div>
             </div>
+            </div>{{-- /messages+input column --}}
+
+            {{-- Conversation Info Panel --}}
+            @if($showInfoPanel)
+            <div class="w-64 border-l border-crm-border bg-crm-surface flex flex-col flex-shrink-0 overflow-y-auto">
+                <div class="px-4 py-3 border-b border-crm-border">
+                    <h4 class="text-sm font-bold">Conversation Info</h4>
+                </div>
+
+                {{-- Chat Details --}}
+                <div class="px-4 py-3 border-b border-crm-border">
+                    <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mb-2">Details</div>
+                    <div class="space-y-1.5">
+                        <div class="text-sm font-medium">{{ $activeChat->name ?? 'Chat' }}</div>
+                        <div class="text-xs text-crm-t3 capitalize">{{ $activeChat->type }} chat</div>
+                        <div class="text-xs text-crm-t3">Created {{ $activeChat->created_at?->format('M j, Y') ?? '' }}</div>
+                    </div>
+                </div>
+
+                {{-- Members --}}
+                <div class="px-4 py-3 border-b border-crm-border">
+                    <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mb-2">Members ({{ count($memberIds) }})</div>
+                    <div class="space-y-2">
+                        @foreach($memberIds as $memberId)
+                            @php $member = $users->get((int) $memberId); @endphp
+                            @if($member)
+                            <div class="flex items-center gap-2">
+                                <div class="w-7 h-7 rounded-full flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0" style="background: {{ $member->color ?? '#6b7280' }}">{{ $member->avatar ?? substr($member->name, 0, 2) }}</div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="text-sm font-medium truncate">{{ $member->name }}</div>
+                                    <div class="text-[10px] text-crm-t3 capitalize">{{ str_replace('_', ' ', $member->role ?? '') }}</div>
+                                </div>
+                                @if($memberId == auth()->id())
+                                    <span class="text-[9px] text-crm-t3 font-semibold">you</span>
+                                @endif
+                            </div>
+                            @endif
+                        @endforeach
+                    </div>
+                </div>
+
+                {{-- Shared Media --}}
+                <div class="px-4 py-3">
+                    <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mb-2">Shared Media</div>
+                    @if($sharedMedia->count() > 0)
+                        <div class="grid grid-cols-3 gap-1">
+                            @foreach($sharedMedia as $media)
+                                <a href="{{ $media->gif_url }}" target="_blank" rel="noreferrer" class="block overflow-hidden rounded-lg border border-crm-border">
+                                    <img src="{{ $media->gif_preview_url ?: $media->gif_url }}" alt="{{ $media->gif_title ?? 'GIF' }}" class="h-16 w-full object-cover" loading="lazy">
+                                </a>
+                            @endforeach
+                        </div>
+                    @else
+                        <p class="text-xs text-crm-t3">No shared media yet.</p>
+                    @endif
+                </div>
+            </div>
+            @endif
+            </div>{{-- /flex messages+info wrapper --}}
+
         @else
             {{-- No Chat Selected --}}
             <div class="flex-1 flex items-center justify-center">

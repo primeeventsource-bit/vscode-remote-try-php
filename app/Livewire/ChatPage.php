@@ -17,6 +17,7 @@ class ChatPage extends Component
     public ?int $selectedChat = null;
     public string $messageInput = '';
     public bool $showNewChatForm = false;
+    public bool $showInfoPanel = false;
     public string $newChatType = 'dm';
     public string $newChatName = '';
     public array $newChatMembers = [];
@@ -91,6 +92,12 @@ class ChatPage extends Component
     {
         $this->selectedChat = $id;
         $this->showNewChatForm = false;
+        $this->showInfoPanel = false;
+    }
+
+    public function toggleInfoPanel(): void
+    {
+        $this->showInfoPanel = !$this->showInfoPanel;
     }
 
     public function toggleNewChatForm(): void
@@ -262,6 +269,15 @@ class ChatPage extends Component
         $canUseGifPicker = $this->canUseGifPicker();
         $currentUserId = (int) auth()->id();
 
-        return view('livewire.chat-page', compact('chats', 'messages', 'activeChat', 'users', 'gifPickerSettings', 'canUseGifPicker', 'currentUserId'));
+        $sharedMedia = ($this->selectedChat && $this->showInfoPanel)
+            ? Message::where('chat_id', $this->selectedChat)
+                ->where('message_type', 'gif')
+                ->whereNotNull('gif_url')
+                ->orderByDesc('id')
+                ->limit(20)
+                ->get()
+            : collect();
+
+        return view('livewire.chat-page', compact('chats', 'messages', 'activeChat', 'users', 'gifPickerSettings', 'canUseGifPicker', 'currentUserId', 'sharedMedia'));
     }
 }

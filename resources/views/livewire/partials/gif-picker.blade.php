@@ -48,15 +48,34 @@
             canShowTab(name) {
                 return !!this.settings[name + '_enabled'];
             },
+            categories: {
+                reactions: 'reactions',
+                funny: 'funny',
+                love: 'love',
+                celebrations: 'celebrations party',
+            },
+            activeCategory: null,
             endpointForTab() {
                 if (this.tab === 'movies') return '/api/gifs/movies';
-                if (this.tab === 'search') return '/api/gifs/search';
+                if (this.tab === 'search' || this.tab === 'category') return '/api/gifs/search';
                 if (this.tab === 'recent') return '/api/gifs/recent';
                 if (this.tab === 'favorites') return '/api/gifs/favorites';
                 return '/api/gifs/trending';
             },
             async setTab(tabName) {
                 this.tab = tabName;
+                this.activeCategory = null;
+                this.error = null;
+                this.cursor = null;
+                this.items = [];
+                if (this.open) {
+                    await this.load(true);
+                }
+            },
+            async setCategory(name) {
+                this.tab = 'category';
+                this.activeCategory = name;
+                this.query = this.categories[name] || name;
                 this.error = null;
                 this.cursor = null;
                 this.items = [];
@@ -92,7 +111,9 @@
                     if (this.userId) params.set('user_id', this.userId);
                     params.set('limit', String(this.settings.results_limit || 24));
                     if (!reset && this.cursor) params.set('cursor', this.cursor);
-                    if ((this.tab === 'search' || this.tab === 'movies') && this.query.trim().length >= 2) {
+                    if (this.tab === 'category' && this.activeCategory) {
+                        params.set('q', this.categories[this.activeCategory] || this.activeCategory);
+                    } else if ((this.tab === 'search' || this.tab === 'movies') && this.query.trim().length >= 2) {
                         params.set('q', this.query.trim());
                     }
 
@@ -307,6 +328,14 @@
                     @if($gifPickerSettings['favorites_enabled'] ?? true)
                         <button type="button" @click="setTab('favorites')" :class="tab === 'favorites' ? 'bg-blue-600 text-white' : 'bg-white text-crm-t2 border border-crm-border'" class="rounded-full px-3 py-1 text-xs font-semibold transition">Favorites</button>
                     @endif
+                </div>
+
+                {{-- Category quick filters --}}
+                <div class="mt-2 flex flex-wrap gap-1.5">
+                    <button type="button" @click="setCategory('reactions')" :class="activeCategory === 'reactions' ? 'bg-purple-600 text-white' : 'bg-crm-surface text-crm-t3 border border-crm-border'" class="rounded-full px-2.5 py-0.5 text-[10px] font-semibold transition">Reactions</button>
+                    <button type="button" @click="setCategory('funny')" :class="activeCategory === 'funny' ? 'bg-purple-600 text-white' : 'bg-crm-surface text-crm-t3 border border-crm-border'" class="rounded-full px-2.5 py-0.5 text-[10px] font-semibold transition">Funny</button>
+                    <button type="button" @click="setCategory('love')" :class="activeCategory === 'love' ? 'bg-purple-600 text-white' : 'bg-crm-surface text-crm-t3 border border-crm-border'" class="rounded-full px-2.5 py-0.5 text-[10px] font-semibold transition">Love</button>
+                    <button type="button" @click="setCategory('celebrations')" :class="activeCategory === 'celebrations' ? 'bg-purple-600 text-white' : 'bg-crm-surface text-crm-t3 border border-crm-border'" class="rounded-full px-2.5 py-0.5 text-[10px] font-semibold transition">Celebrations</button>
                 </div>
             </div>
 
