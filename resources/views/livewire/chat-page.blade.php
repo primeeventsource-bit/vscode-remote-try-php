@@ -1,3 +1,9 @@
+<style>
+    @keyframes pulse-badge { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .7; transform: scale(1.15); } }
+    .badge-blink-blue { animation: pulse-badge 1.5s ease-in-out infinite; background: #3b82f6; }
+    .badge-blink-red { animation: pulse-badge 1.5s ease-in-out infinite; background: #ef4444; }
+    .msg-unread { background: rgba(59,130,246,0.06); border-left: 3px solid #3b82f6; }
+</style>
 <div class="flex h-[calc(100vh-3rem)]" wire:poll.5s>
     {{-- Left Panel: Chat List --}}
     <div class="w-72 border-r border-crm-border bg-crm-surface flex flex-col flex-shrink-0">
@@ -35,15 +41,20 @@
                         $otherId = collect($members)->first(fn($m) => $m != auth()->id());
                         $other = isset($users) ? $users->firstWhere('id', $otherId) : null;
                     @endphp
-                    <button wire:click="selectChat({{ $chat->id }})" class="w-full text-left px-3 py-2 flex items-center gap-2 transition {{ (isset($activeChat) && $activeChat === $chat->id) ? 'bg-blue-50 text-blue-600' : 'hover:bg-crm-hover text-crm-t2' }}">
+                    <button wire:click="selectChat({{ $chat->id }})" class="w-full text-left px-3 py-2 flex items-center gap-2 transition {{ ($selectedChat === $chat->id) ? 'bg-blue-50 text-blue-600' : ($chat->unread > 0 ? 'bg-blue-50/50 font-semibold' : 'hover:bg-crm-hover text-crm-t2') }}">
                         @if($other)
-                            <div class="w-6 h-6 rounded-full flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0" style="background: {{ $other->color ?? '#6b7280' }}">{{ $other->avatar ?? substr($other->name, 0, 2) }}</div>
-                            <span class="text-sm font-medium truncate">{{ $other->name }}</span>
+                            <div class="relative flex-shrink-0">
+                                <div class="w-6 h-6 rounded-full flex items-center justify-center text-[8px] font-bold text-white" style="background: {{ $other->color ?? '#6b7280' }}">{{ $other->avatar ?? substr($other->name, 0, 2) }}</div>
+                                @if($chat->unread > 0)
+                                    <span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full badge-blink-blue"></span>
+                                @endif
+                            </div>
+                            <span class="text-sm font-medium truncate flex-1">{{ $other->name }}</span>
                         @else
-                            <span class="text-sm font-medium truncate">{{ $chat->name ?? 'DM' }}</span>
+                            <span class="text-sm font-medium truncate flex-1">{{ $chat->name ?? 'DM' }}</span>
                         @endif
-                        @if(isset($chat->unread) && $chat->unread > 0)
-                            <span class="ml-auto w-4 h-4 flex items-center justify-center text-[8px] font-bold text-white bg-blue-600 rounded-full">{{ $chat->unread }}</span>
+                        @if($chat->unread > 0)
+                            <span class="ml-auto min-w-[18px] h-[18px] flex items-center justify-center text-[9px] font-bold text-white badge-blink-blue rounded-full px-1">{{ $chat->unread }}</span>
                         @endif
                     </button>
                 @endforeach
@@ -55,15 +66,20 @@
             </div>
             @if(isset($chats))
                 @foreach($chats->where('type', 'group') as $chat)
-                    <button wire:click="selectChat({{ $chat->id }})" class="w-full text-left px-3 py-2 flex items-center gap-2 transition {{ (isset($activeChat) && $activeChat === $chat->id) ? 'bg-blue-50 text-blue-600' : 'hover:bg-crm-hover text-crm-t2' }}">
-                        @if($chat->icon_path)
-                            <img src="{{ asset('storage/' . $chat->icon_path) }}" class="w-6 h-6 rounded-lg object-cover flex-shrink-0">
-                        @else
-                            <span class="w-6 h-6 rounded-lg bg-crm-card border border-crm-border flex items-center justify-center text-[8px] font-bold text-crm-t3 flex-shrink-0">G</span>
-                        @endif
-                        <span class="text-sm font-medium truncate">{{ $chat->name }}</span>
-                        @if(isset($chat->unread) && $chat->unread > 0)
-                            <span class="ml-auto w-4 h-4 flex items-center justify-center text-[8px] font-bold text-white bg-blue-600 rounded-full">{{ $chat->unread }}</span>
+                    <button wire:click="selectChat({{ $chat->id }})" class="w-full text-left px-3 py-2 flex items-center gap-2 transition {{ ($selectedChat === $chat->id) ? 'bg-blue-50 text-blue-600' : ($chat->unread > 0 ? 'bg-red-50/50 font-semibold' : 'hover:bg-crm-hover text-crm-t2') }}">
+                        <div class="relative flex-shrink-0">
+                            @if($chat->icon_path)
+                                <img src="{{ asset('storage/' . $chat->icon_path) }}" class="w-6 h-6 rounded-lg object-cover">
+                            @else
+                                <span class="w-6 h-6 rounded-lg bg-crm-card border border-crm-border flex items-center justify-center text-[8px] font-bold text-crm-t3">G</span>
+                            @endif
+                            @if($chat->unread > 0)
+                                <span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full badge-blink-red"></span>
+                            @endif
+                        </div>
+                        <span class="text-sm font-medium truncate flex-1">{{ $chat->name }}</span>
+                        @if($chat->unread > 0)
+                            <span class="ml-auto min-w-[18px] h-[18px] flex items-center justify-center text-[9px] font-bold text-white badge-blink-red rounded-full px-1">{{ $chat->unread }}</span>
                         @endif
                     </button>
                 @endforeach
@@ -180,9 +196,10 @@
                             </div>
                         @endif
 
+                        @php $isUnread = !$isMine && !$msg->seen_at; @endphp
+
                         {{-- Message Bubble --}}
-                        <div class="flex {{ $isMine ? 'justify-end' : 'justify-start' }} mb-1 group">
-                            {{-- Receiver avatar (not for own messages) --}}
+                        <div class="flex {{ $isMine ? 'justify-end' : 'justify-start' }} mb-1 {{ $isUnread ? 'msg-unread rounded-lg' : '' }}">
                             @if(!$isMine)
                                 <div class="flex-shrink-0 mr-2 mt-1">
                                     @if($msgUser?->avatar_path)
@@ -194,40 +211,42 @@
                             @endif
 
                             <div class="max-w-[70%]">
-                                {{-- Sender name for group incoming messages --}}
                                 @if(!$isMine && $isGroup)
                                     <div class="text-[10px] font-semibold text-crm-t3 mb-0.5 ml-1">{{ $msgUser->name ?? 'Unknown' }}</div>
                                 @endif
 
-                                {{-- Bubble --}}
                                 @if(($msg->message_type ?? 'text') === 'gif' && $msg->gif_url)
                                     <div class="overflow-hidden {{ $isMine ? 'rounded-2xl rounded-br-md' : 'rounded-2xl rounded-bl-md' }} shadow-sm">
                                         <a href="{{ $msg->gif_url }}" target="_blank" rel="noreferrer" class="block bg-black/5">
                                             <img src="{{ $msg->gif_preview_url ?: $msg->gif_url }}" alt="{{ $msg->gif_title ?? 'GIF' }}" class="max-h-64 w-full object-cover" loading="lazy">
                                         </a>
+                                        {{-- Timestamp inside GIF bubble --}}
+                                        <div class="flex items-center justify-between px-2.5 py-1 {{ $isMine ? 'bg-blue-600 text-blue-100' : 'bg-gray-100 text-gray-400' }}">
+                                            <span class="text-[10px]">{{ $msg->gif_title ?: 'GIF' }}</span>
+                                            <span class="text-[10px]">{{ $msg->created_at?->format('g:i A') ?? '' }}@if($isMine) @if($msg->seen_at) ✓✓ @elseif($msg->delivered_at) ✓✓ @else ✓ @endif @endif</span>
+                                        </div>
                                     </div>
                                 @else
-                                    <div class="px-3.5 py-2 text-sm leading-relaxed shadow-sm
+                                    {{-- Text bubble with timestamp INSIDE --}}
+                                    <div class="px-3 pt-2 pb-1 text-sm leading-relaxed shadow-sm
                                         {{ $isMine
                                             ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl rounded-br-md'
                                             : 'bg-white border border-gray-200 text-gray-900 rounded-2xl rounded-bl-md' }}">
-                                        {{ $msg->text ?? '' }}
+                                        <div>{{ $msg->text ?? '' }}</div>
+                                        <div class="flex items-center gap-1 justify-end mt-0.5 {{ $isMine ? 'text-blue-200' : 'text-gray-400' }}">
+                                            <span class="text-[10px]">{{ $msg->created_at?->format('g:i A') ?? '' }}</span>
+                                            @if($isMine)
+                                                @if($msg->seen_at)
+                                                    <span class="text-[10px]">✓✓</span>
+                                                @elseif($msg->delivered_at)
+                                                    <span class="text-[10px] opacity-70">✓✓</span>
+                                                @else
+                                                    <span class="text-[10px] opacity-70">✓</span>
+                                                @endif
+                                            @endif
+                                        </div>
                                     </div>
                                 @endif
-
-                                {{-- Timestamp + Status --}}
-                                <div class="flex items-center gap-1.5 mt-0.5 {{ $isMine ? 'justify-end mr-1' : 'ml-1' }}">
-                                    <span class="text-[10px] text-gray-400">{{ $msg->created_at?->format('g:i A') ?? '' }}</span>
-                                    @if($isMine)
-                                        @if($msg->seen_at)
-                                            <span class="text-[10px] text-blue-500 font-medium">Seen</span>
-                                        @elseif($msg->delivered_at)
-                                            <span class="text-[10px] text-gray-400">Delivered</span>
-                                        @else
-                                            <span class="text-[10px] text-gray-400">Sent</span>
-                                        @endif
-                                    @endif
-                                </div>
                             </div>
                         </div>
                     @endforeach

@@ -356,6 +356,23 @@ class ChatPage extends Component
             return in_array($user->id, $members) || in_array((string) $user->id, $members);
         });
 
+        // Compute unread count per chat for current user
+        try {
+            $unreadCounts = Message::whereIn('chat_id', $chats->pluck('id'))
+                ->where('sender_id', '!=', $user->id)
+                ->whereNull('seen_at')
+                ->selectRaw('chat_id, COUNT(*) as cnt')
+                ->groupBy('chat_id')
+                ->pluck('cnt', 'chat_id');
+        } catch (\Throwable $e) {
+            $unreadCounts = collect();
+        }
+
+        // Attach unread count to each chat
+        foreach ($chats as $chat) {
+            $chat->unread = $unreadCounts->get($chat->id, 0);
+        }
+
         $messages = $this->selectedChat
             ? Message::where('chat_id', $this->selectedChat)->orderBy('id')->limit(200)->get()
             : collect();
