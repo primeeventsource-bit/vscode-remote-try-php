@@ -33,7 +33,16 @@ class ChatPage extends Component
 
     public function mount(): void
     {
-        // Skip module check if crm_settings table doesn't exist
+        try {
+            $raw = DB::table('crm_settings')->where('key', 'chat.module_enabled')->value('value');
+            $enabled = $raw === null ? true : (bool) json_decode($raw, true);
+            if (!$enabled || !auth()->user()?->hasPerm('view_chat')) {
+                $this->redirectRoute('dashboard');
+                session()->flash('error', 'Chat module is disabled or you do not have access.');
+            }
+        } catch (\Throwable $e) {
+            // crm_settings table may not exist yet — allow access by default
+        }
     }
 
     public function selectChat($id)
@@ -349,12 +358,25 @@ class ChatPage extends Component
         $activeChat = $this->selectedChat ? Chat::find($this->selectedChat) : null;
         $users = User::all()->keyBy('id');
 
-        // GIF settings — skip if crm_settings table doesn't exist
-        $canUseGifPicker = true;
+        // GIF settings — read from DB with safe fallbacks
+        $getSetting = function (string $key, mixed $default) {
+            try {
+                $raw = DB::table('crm_settings')->where('key', $key)->value('value');
+                return $raw === null ? $default : json_decode($raw, true);
+            } catch (\Throwable $e) {
+                return $default;
+            }
+        };
+        $canUseGifPicker = (bool) $getSetting('gifs.module_enabled', true);
         $gifPickerSettings = [
-            'module_enabled' => true, 'trending_enabled' => true, 'movies_enabled' => true,
-            'search_enabled' => true, 'recent_enabled' => true, 'favorites_enabled' => true,
-            'provider' => 'giphy', 'results_limit' => 24,
+            'module_enabled' => (bool) $getSetting('gifs.module_enabled', true),
+            'trending_enabled' => (bool) $getSetting('gifs.trending_enabled', true),
+            'movies_enabled' => (bool) $getSetting('gifs.movies_enabled', true),
+            'search_enabled' => (bool) $getSetting('gifs.search_enabled', true),
+            'recent_enabled' => (bool) $getSetting('gifs.recent_enabled', true),
+            'favorites_enabled' => (bool) $getSetting('gifs.favorites_enabled', true),
+            'provider' => (string) $getSetting('gifs.provider', 'giphy'),
+            'results_limit' => (int) $getSetting('gifs.results_limit', 24),
         ];
         $currentUserId = (int) auth()->id();
 
