@@ -19,18 +19,18 @@
     @mouseup.window="if(dragging) stopDrag()"
 >
     <style>
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
         @keyframes wdg-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.7;transform:scale(1.15)} }
+        .unread { animation:blink 1s infinite; background-color:red; }
         .wdg-badge-red { animation:wdg-pulse 1.5s ease-in-out infinite; background:#ef4444; }
         .wdg-msg-unread { background:rgba(239,68,68,0.08); border-left:2px solid #ef4444; }
     </style>
 
     {{-- Floating Bubble Button --}}
     <button @click="open = !open; if(open) $wire.$refresh()" title="Toggle Chat"
-        class="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-600/30 transition hover:scale-105 hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-200">
+        class="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full {{ $totalUnread > 0 ? 'unread' : 'bg-blue-600' }} text-white shadow-lg shadow-blue-600/30 transition hover:scale-105 hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-200">
         @if($totalUnread > 0)
             <span class="absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-30 animate-ping"></span>
-        @else
-            <span class="absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-20 animate-ping"></span>
         @endif
         <span class="relative text-2xl leading-none" x-text="open ? '✕' : '💬'"></span>
         @if($totalUnread > 0)
