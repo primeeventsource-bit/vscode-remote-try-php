@@ -159,12 +159,25 @@
             {{-- ─── Message Thread (chat selected) ─── --}}
             <div class="flex-1 overflow-y-auto space-y-2 p-3" id="cwt-messages"
                  x-data x-init="$nextTick(() => $el.scrollTop = $el.scrollHeight)">
+                @php $prevDate = null; @endphp
                 @forelse($messages as $msg)
                     @php
                         $msgUser = $users->get($msg->sender_id);
                         $isMine  = $msg->sender_id === auth()->id();
-                        $bubble  = $isMine ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-crm-card border border-crm-border text-crm-t1 rounded-bl-sm';
+                        $curDate = $msg->created_at?->format('Y-m-d');
+                        $showDate = $curDate !== $prevDate;
+                        $prevDate = $curDate;
                     @endphp
+
+                    {{-- Date divider --}}
+                    @if($showDate)
+                        <div class="flex justify-center my-2">
+                            <span class="px-2.5 py-0.5 rounded-full bg-crm-surface border border-crm-border text-[9px] font-semibold text-crm-t3">
+                                {{ $msg->created_at?->isToday() ? 'Today' : ($msg->created_at?->isYesterday() ? 'Yesterday' : $msg->created_at?->format('M j, Y')) }}
+                            </span>
+                        </div>
+                    @endif
+
                     <div class="flex items-end gap-2 {{ $isMine ? 'flex-row-reverse' : '' }}">
                         <div class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[8px] font-bold text-white"
                              style="background:{{ $msgUser?->color ?? '#6b7280' }}">
@@ -175,13 +188,20 @@
                                 <a href="{{ $msg->gif_url }}" target="_blank" rel="noreferrer" class="block">
                                     <img src="{{ $msg->gif_preview_url ?: $msg->gif_url }}" alt="{{ $msg->gif_title ?? 'GIF' }}" class="max-h-52 w-full object-cover" loading="lazy">
                                 </a>
-                                <div class="px-2 py-1.5 text-[11px] {{ $isMine ? 'bg-blue-600 text-blue-50' : 'bg-crm-card text-crm-t2' }}">
-                                    {{ $msg->gif_title ?: 'GIF' }}
+                                <div class="flex items-center justify-between px-2 py-1 {{ $isMine ? 'bg-blue-600 text-blue-100' : 'bg-crm-card text-crm-t3' }}">
+                                    <span class="text-[9px] truncate">{{ $msg->gif_title ?: 'GIF' }}</span>
+                                    <span class="text-[9px] ml-1 flex-shrink-0">{{ $msg->created_at?->format('g:i A') ?? '' }}</span>
                                 </div>
                             </div>
                         @else
-                            <div class="max-w-[72%] rounded-lg px-3 py-2 text-sm {{ $bubble }}">
-                                {{ $msg->text ?? '' }}
+                            <div class="max-w-[72%] rounded-lg px-3 pt-1.5 pb-1 text-sm {{ $isMine ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-crm-card border border-crm-border text-crm-t1 rounded-bl-sm' }}">
+                                <div>{{ $msg->text ?? '' }}</div>
+                                <div class="flex items-center gap-1 justify-end {{ $isMine ? 'text-blue-200' : 'text-crm-t3' }}">
+                                    <span class="text-[9px]">{{ $msg->created_at?->format('g:i A') ?? '' }}</span>
+                                    @if($isMine)
+                                        <span class="text-[9px]">{{ !empty($msg->seen_at) ? '✓✓' : '✓' }}</span>
+                                    @endif
+                                </div>
                             </div>
                         @endif
                     </div>
