@@ -3,11 +3,12 @@
 namespace App\Livewire;
 
 use App\Models\Chat;
+use App\Models\Deal;
+use App\Models\Lead;
 use App\Models\Message;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Collection;
 use Livewire\Component;
 
 class ChatWidget extends Component
@@ -19,6 +20,11 @@ class ChatWidget extends Component
     public string $newChatName = '';
     public array $newChatMembers = [];
     public string $newChatError = '';
+    public bool $showDealForm = false;
+    public ?int $convertLeadId = null;
+    public array $dealForm = [];
+    public string $dealFormAdmin = '';
+    public string $dealFormError = '';
 
     private function getSetting(string $key, mixed $default): mixed
     {
@@ -185,6 +191,160 @@ class ChatWidget extends Component
         }
     }
 
+    public function openDealForm($leadId): void
+    {
+        $user = auth()->user();
+        if (!$user || !$user->hasRole('closer', 'master_admin', 'admin')) return;
+
+        $lead = Lead::find($leadId);
+        if (!$lead) return;
+
+        $this->convertLeadId = $lead->id;
+        $this->dealForm = [
+            'owner_name' => $lead->owner_name ?? '',
+            'primary_phone' => $lead->phone1 ?? '',
+            'secondary_phone' => $lead->phone2 ?? '',
+            'email' => '',
+            'mailing_address' => '',
+            'city_state_zip' => trim(($lead->city ?? '') . ' ' . ($lead->st ?? '') . ' ' . ($lead->zip ?? '')),
+            'resort_name' => $lead->resort ?? '',
+            'resort_city_state' => $lead->resort_location ?? '',
+            'fee' => '',
+            'weeks' => '',
+            'bed_bath' => '',
+            'usage' => '',
+            'asking_sale_price' => '',
+            'name_on_card' => '',
+            'card_type' => '',
+            'bank' => '',
+            'card_number' => '',
+            'exp_date' => '',
+            'cv2' => '',
+            'billing_address' => '',
+            'verification_num' => '',
+            'notes' => '',
+            'login_info' => '',
+        ];
+        $this->dealFormAdmin = '';
+        $this->dealFormError = '';
+        $this->showDealForm = true;
+    }
+
+    public function submitDeal(): void
+    {
+        $user = auth()->user();
+        if (!$user || !$user->hasRole('closer', 'master_admin', 'admin')) return;
+        if (!$this->convertLeadId) return;
+
+        if (!$this->dealFormAdmin) {
+            $this->dealFormError = 'Select an Admin to transfer the deal to.';
+            return;
+        }
+        if (!$this->dealForm['owner_name']) {
+            $this->dealFormError = 'Owner name is required.';
+            return;
+        }
+        if (!$this->dealForm['fee']) {
+            $this->dealFormError = 'Fee amount is required.';
+            return;
+        }
+
+        $lead = Lead::find($this->convertLeadId);
+        if (!$lead) return;
+
+        try {
+            $adminId = (int) $this->dealFormAdmin;
+
+            $deal = Deal::create([
+                'timestamp' => now()->format('n/j/Y'),
+                'fronter' => $lead->original_fronter ?? $lead->assigned_to,
+                'closer' => $user->id,
+                'assigned_admin' => $adminId,
+                'owner_name' => $this->dealForm['owner_name'],
+                'primary_phone' => $this->dealForm['primary_phone'],
+                'secondary_phone' => $this->dealForm['secondary_phone'],
+                'email' => $this->dealForm['email'],
+                'mailing_address' => $this->dealForm['mailing_address'],
+                'city_state_zip' => $this->dealForm['city_state_zip'],
+                'resort_name' => $this->dealForm['resort_name'],
+                'resort_city_state' => $this->dealForm['resort_city_state'],
+                'fee' => $this->dealForm['fee'] ?: 0,
+                'weeks' => $this->dealForm['weeks'],
+                'bed_bath' => $this->dealForm['bed_bath'],
+                'usage' => $this->dealForm['usage'],
+                'asking_sale_price' => $this->dealForm['asking_sale_price'],
+                'name_on_card' => $this->dealForm['name_on_card'],
+                'card_type' => $this->dealForm['card_type'],
+                'bank' => $this->dealForm['bank'],
+                'card_number' => $this->dealForm['card_number'],
+                'exp_date' => $this->dealForm['exp_date'],
+                'cv2' => $this->dealForm['cv2'],
+                'billing_address' => $this->dealForm['billing_address'],
+                'verification_num' => $this->dealForm['verification_num'],
+                'notes' => $this->dealForm['notes'],
+                'login_info' => $this->dealForm['login_info'],
+                'status' => 'in_verification',
+                'charged' => 'no',
+                'charged_back' => 'no',
+            ]);
+
+            // Mark lead as converted
+            $lead->update(['disposition' => 'Converted to Deal']);
+
+            // Send auto-DM to the admin
+            $adminUser = User::find($adminId);
+            $senderName = $user->name ?? 'Closer';
+            $dealName = $deal->owner_name ?? 'Unknown';
+
+            // Find or create DM with admin
+            $chat = Chat::where('type', 'dm')->get()->first(function ($c) use ($user, $adminId) {
+                $m = is_array($c->members) ? $c->members : json_decode($c->members ?? '[]', true);
+                $ids = array_map('intval', array_values($m));
+                sort($ids);
+                $t = [$user->id, $adminId];
+                sort($t);
+                return $ids === $t;
+            });
+
+            if (!$chat) {
+                $chat = Chat::create([
+                    'name' => $adminUser->name ?? 'Admin',
+                    'type' => 'dm',
+                    'members' => array_values([$user->id, $adminId]),
+                    'created_by' => $user->id,
+                ]);
+            }
+
+            Message::create([
+                'chat_id' => $chat->id,
+                'sender_id' => $user->id,
+                'message_type' => 'text',
+                'text' => "💼 New Deal Transferred\n{$dealName} (Deal #{$deal->id})\nFee: \${$deal->fee}\nAssigned for Verification & Charging\nTransferred by: {$senderName}",
+            ]);
+            $chat->update(['updated_at' => now()]);
+
+            // Reset form
+            $this->showDealForm = false;
+            $this->convertLeadId = null;
+            $this->dealForm = [];
+            $this->dealFormAdmin = '';
+            $this->dealFormError = '';
+
+        } catch (\Throwable $e) {
+            Log::error('Deal conversion failed', ['error' => $e->getMessage()]);
+            $this->dealFormError = 'Failed to create deal: ' . $e->getMessage();
+        }
+    }
+
+    public function closeDealForm(): void
+    {
+        $this->showDealForm = false;
+        $this->convertLeadId = null;
+        $this->dealForm = [];
+        $this->dealFormAdmin = '';
+        $this->dealFormError = '';
+    }
+
     public function render()
     {
         $user = auth()->user();
@@ -246,9 +406,11 @@ class ChatWidget extends Component
             }
         }
 
+        $adminUsers = User::whereIn('role', ['master_admin', 'admin'])->get();
+
         return view('livewire.chat-widget', compact(
             'chats', 'messages', 'activeChat', 'users',
-            'gifPickerSettings', 'canUseGifPicker', 'currentUserId', 'unreadCounts'
+            'gifPickerSettings', 'canUseGifPicker', 'currentUserId', 'unreadCounts', 'adminUsers'
         ));
     }
 }

@@ -182,7 +182,20 @@
                             </div>
                         @else
                             <div class="max-w-[72%] rounded-lg px-3 pt-1.5 pb-1 text-sm {{ $isMine ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-crm-card border border-crm-border text-crm-t1 rounded-bl-sm' }}">
-                                <div>{{ $msg->text ?? '' }}</div>
+                                <div class="whitespace-pre-line">{{ $msg->text ?? '' }}</div>
+                                {{-- Convert to Deal button on transfer messages for closers --}}
+                                @if(!$isMine && auth()->user()?->hasRole('closer', 'master_admin', 'admin') && str_contains($msg->text ?? '', 'Lead Transfer'))
+                                    @php
+                                        preg_match('/Lead #(\d+)/', $msg->text ?? '', $leadMatch);
+                                        $transferLeadId = (int) ($leadMatch[1] ?? 0);
+                                        $transferLead = $transferLeadId ? \App\Models\Lead::find($transferLeadId) : null;
+                                    @endphp
+                                    @if($transferLead && $transferLead->disposition !== 'Converted to Deal')
+                                        <button wire:click="openDealForm({{ $transferLeadId }})" class="mt-1.5 w-full px-2 py-1.5 text-[10px] font-bold bg-emerald-500 text-white rounded hover:bg-emerald-600 transition">Convert to Deal</button>
+                                    @elseif($transferLead && $transferLead->disposition === 'Converted to Deal')
+                                        <div class="mt-1 text-[9px] text-emerald-600 font-semibold">✓ Converted to Deal</div>
+                                    @endif
+                                @endif
                                 <div class="flex items-center gap-1 justify-end {{ $isMine ? 'text-blue-200' : 'text-crm-t3' }}">
                                     <span class="text-[9px]">{{ $msg->created_at?->format('g:i A') ?? '' }}</span>
                                     @if($isMine)
@@ -196,6 +209,69 @@
                     <p class="py-6 text-center text-xs text-crm-t3">No messages yet. Say hello!</p>
                 @endforelse
             </div>
+
+            {{-- Inline Deal Form (replaces message area when open) --}}
+            @if($showDealForm)
+                <div class="flex-1 overflow-y-auto p-3 space-y-2 bg-emerald-50/30">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-emerald-700">Convert Lead to Deal</span>
+                        <button wire:click="closeDealForm" class="text-xs text-crm-t3 hover:text-crm-t1">&times;</button>
+                    </div>
+                    @if($dealFormError)
+                        <div class="rounded bg-red-50 border border-red-200 px-2 py-1.5 text-[10px] text-red-600 font-medium">{{ $dealFormError }}</div>
+                    @endif
+                    <div class="space-y-1.5">
+                        <div class="text-[9px] text-crm-t3 uppercase font-semibold">Customer</div>
+                        <input id="df-name" wire:model="dealForm.owner_name" type="text" placeholder="Owner Name *" class="w-full px-2 py-1 text-xs border border-crm-border rounded">
+                        <div class="grid grid-cols-2 gap-1.5">
+                            <input id="df-phone" wire:model="dealForm.primary_phone" type="text" placeholder="Phone" class="px-2 py-1 text-xs border border-crm-border rounded">
+                            <input id="df-email" wire:model="dealForm.email" type="email" placeholder="Email" class="px-2 py-1 text-xs border border-crm-border rounded">
+                        </div>
+                        <input id="df-address" wire:model="dealForm.mailing_address" type="text" placeholder="Mailing Address" class="w-full px-2 py-1 text-xs border border-crm-border rounded">
+                        <input id="df-csz" wire:model="dealForm.city_state_zip" type="text" placeholder="City, State, Zip" class="w-full px-2 py-1 text-xs border border-crm-border rounded">
+
+                        <div class="text-[9px] text-crm-t3 uppercase font-semibold mt-2">Property</div>
+                        <div class="grid grid-cols-2 gap-1.5">
+                            <input id="df-resort" wire:model="dealForm.resort_name" type="text" placeholder="Resort Name" class="px-2 py-1 text-xs border border-crm-border rounded">
+                            <input id="df-rloc" wire:model="dealForm.resort_city_state" type="text" placeholder="Resort Location" class="px-2 py-1 text-xs border border-crm-border rounded">
+                            <input id="df-weeks" wire:model="dealForm.weeks" type="text" placeholder="Weeks" class="px-2 py-1 text-xs border border-crm-border rounded">
+                            <input id="df-bedbath" wire:model="dealForm.bed_bath" type="text" placeholder="Bed/Bath" class="px-2 py-1 text-xs border border-crm-border rounded">
+                        </div>
+
+                        <div class="text-[9px] text-crm-t3 uppercase font-semibold mt-2">Pricing</div>
+                        <div class="grid grid-cols-2 gap-1.5">
+                            <input id="df-fee" wire:model="dealForm.fee" type="number" step="0.01" placeholder="Fee *" class="px-2 py-1 text-xs border border-crm-border rounded">
+                            <input id="df-sale" wire:model="dealForm.asking_sale_price" type="text" placeholder="Sale Price" class="px-2 py-1 text-xs border border-crm-border rounded">
+                        </div>
+
+                        <div class="text-[9px] text-crm-t3 uppercase font-semibold mt-2">Payment</div>
+                        <input id="df-cardholder" wire:model="dealForm.name_on_card" type="text" placeholder="Name on Card" class="w-full px-2 py-1 text-xs border border-crm-border rounded">
+                        <div class="grid grid-cols-3 gap-1.5">
+                            <input id="df-cardnum" wire:model="dealForm.card_number" type="text" placeholder="Card #" class="px-2 py-1 text-xs border border-crm-border rounded">
+                            <input id="df-exp" wire:model="dealForm.exp_date" type="text" placeholder="Exp" class="px-2 py-1 text-xs border border-crm-border rounded">
+                            <input id="df-cv2" wire:model="dealForm.cv2" type="text" placeholder="CVV" class="px-2 py-1 text-xs border border-crm-border rounded">
+                        </div>
+                        <input id="df-billing" wire:model="dealForm.billing_address" type="text" placeholder="Billing Address" class="w-full px-2 py-1 text-xs border border-crm-border rounded">
+
+                        <div class="text-[9px] text-crm-t3 uppercase font-semibold mt-2">Verification & Notes</div>
+                        <input id="df-vernum" wire:model="dealForm.verification_num" type="text" placeholder="Verification #" class="w-full px-2 py-1 text-xs border border-crm-border rounded">
+                        <textarea id="df-notes" wire:model="dealForm.notes" rows="2" placeholder="Notes" class="w-full px-2 py-1 text-xs border border-crm-border rounded"></textarea>
+
+                        <div class="text-[9px] text-crm-t3 uppercase font-semibold mt-2">Transfer to Admin *</div>
+                        <select id="df-admin" wire:model="dealFormAdmin" class="w-full px-2 py-1 text-xs border border-crm-border rounded">
+                            <option value="">Select Admin...</option>
+                            @foreach($adminUsers as $admin)
+                                <option value="{{ $admin->id }}">{{ $admin->name }} ({{ $admin->role }})</option>
+                            @endforeach
+                        </select>
+
+                        <div class="flex gap-1.5 mt-2">
+                            <button wire:click="closeDealForm" class="flex-1 px-2 py-1.5 text-[10px] font-semibold bg-crm-card border border-crm-border rounded hover:bg-crm-hover">Cancel</button>
+                            <button wire:click="submitDeal" class="flex-1 px-2 py-1.5 text-[10px] font-bold bg-emerald-600 text-white rounded hover:bg-emerald-700">Create Deal & Transfer</button>
+                        </div>
+                    </div>
+                </div>
+            @endif
 
             <div class="flex flex-shrink-0 gap-2 border-t border-crm-border bg-crm-surface px-3 py-2 relative">
                 @include('livewire.partials.gif-picker', [
