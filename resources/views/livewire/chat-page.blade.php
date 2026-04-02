@@ -112,7 +112,7 @@
 
                     <div>
                         <label class="block text-xs text-crm-t3 uppercase font-semibold mb-1">Chat Type</label>
-                        <select wire:model="newChatType" class="w-full rounded-lg border border-crm-border bg-white px-3 py-2 text-sm focus:border-blue-400 focus:outline-none">
+                        <select id="cp-chat-type" name="newChatType" wire:model.live="newChatType" class="w-full rounded-lg border border-crm-border bg-white px-3 py-2 text-sm focus:border-blue-400 focus:outline-none">
                             <option value="dm">Direct Message</option>
                             <option value="group">Group Chat</option>
                         </select>
@@ -121,7 +121,7 @@
                     @if($newChatType === 'group')
                     <div>
                         <label class="block text-xs text-crm-t3 uppercase font-semibold mb-1">Group Name</label>
-                        <input wire:model="newChatName" type="text" placeholder="E.g., Sales Team"
+                        <input id="cp-chat-name" name="newChatName" wire:model="newChatName" type="text" placeholder="E.g., Sales Team"
                                class="w-full rounded-lg border border-crm-border bg-white px-3 py-2 text-sm focus:border-blue-400 focus:outline-none">
                     </div>
                     @endif
@@ -269,7 +269,7 @@
                         'currentUserId' => $currentUserId,
                         'sendAction' => 'sendGif',
                     ])
-                    <input wire:model="messageInput" wire:keydown.enter="sendMessage" type="text" placeholder="Type a message..."
+                    <input id="cp-msg-input" name="messageInput" wire:model="messageInput" wire:keydown.enter="sendMessage" type="text" placeholder="Type a message..."
                         class="flex-1 px-4 py-2.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                     <button wire:click="sendMessage" class="px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition flex-shrink-0">
                         Send

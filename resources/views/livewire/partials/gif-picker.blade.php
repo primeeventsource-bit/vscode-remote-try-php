@@ -53,7 +53,7 @@
                 <span class="text-xs font-bold text-gray-700">GIF Picker</span>
                 <button type="button" @click="close()" class="text-gray-400 hover:text-gray-700 text-sm leading-none">&times;</button>
             </div>
-            <input type="text" x-model="query" @input.debounce.400ms="onSearch()" placeholder="Search GIFs..."
+            <input id="gif-search" name="gif_search" type="text" x-model="query" @input.debounce.400ms="onSearch()" placeholder="Search GIFs..."
                 class="w-full rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm focus:border-blue-400 focus:outline-none">
             <div class="flex flex-wrap gap-1 mt-2">
                 <button type="button" @click="setTab('trending')" :class="tab==='trending'&&!activeCategory?'bg-blue-600 text-white':'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'" class="rounded-full px-2.5 py-0.5 text-[10px] font-semibold transition">Trending</button>
