@@ -3,6 +3,12 @@
     .wdg-badge-red { animation:wdg-pulse 1.5s ease-in-out infinite; background:#ef4444; }
     .wdg-msg-unread { background:rgba(239,68,68,0.08); border-left:2px solid #ef4444; }
 </style>
+@php
+    $totalUnread = 0;
+    if (isset($unreadCounts) && $unreadCounts instanceof \Illuminate\Support\Collection) {
+        $totalUnread = $unreadCounts->sum();
+    }
+@endphp
 <div
     x-data="{
         open: false,
@@ -28,14 +34,21 @@
     @mouseup.window="if(dragging) stopDrag()"
     wire:poll.10s
 >
-    {{-- ─── Floating Bubble ─── --}}
+    {{-- ─── Floating Bubble Button ─── --}}
     <button
         @click="open = !open"
         class="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-600/30 transition hover:scale-105 hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-200"
         title="Toggle Chat"
     >
-        <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-20"></span>
+        @if($totalUnread > 0)
+            <span class="absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-30 animate-ping"></span>
+        @else
+            <span class="absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-20 animate-ping"></span>
+        @endif
         <span class="relative text-2xl leading-none" x-text="open ? '✕' : '💬'"></span>
+        @if($totalUnread > 0)
+            <span class="absolute -top-1 -right-1 min-w-[22px] h-[22px] flex items-center justify-center text-[10px] font-bold text-white wdg-badge-red rounded-full px-1 z-10">{{ $totalUnread }}</span>
+        @endif
     </button>
 
     {{-- ─── Draggable Chat Popup ─── --}}
@@ -62,6 +75,9 @@
             @else
                 <span class="text-base">💬</span>
                 <h4 class="flex-1 text-sm font-bold">Chat</h4>
+                @if($totalUnread > 0)
+                    <span class="min-w-[18px] h-[18px] flex items-center justify-center text-[9px] font-bold text-white wdg-badge-red rounded-full px-1">{{ $totalUnread }}</span>
+                @endif
             @endif
             <button @click="open = false" class="flex h-6 w-6 items-center justify-center rounded text-lg text-crm-t3 hover:bg-crm-hover hover:text-crm-t1 transition leading-none">&times;</button>
         </div>
@@ -77,15 +93,15 @@
                         $bg      = $other?->color ?? '#3b82f6';
                         $initials = $chat->type === 'channel' ? '#' : ($other?->avatar ?? substr($other?->name ?? 'G', 0, 2));
                         $displayName = $chat->type === 'dm' ? ($other?->name ?? $chat->name ?? 'DM') : $chat->name;
+                        $chatUnread = $unreadCounts[$chat->id] ?? 0;
                     @endphp
-                    @php $chatUnread = $unreadCounts[$chat->id] ?? 0; @endphp
                     <button wire:click="selectChat({{ $chat->id }})"
-                        class="flex w-full items-center gap-3 border-b border-crm-border px-4 py-3 text-left transition {{ $chatUnread > 0 ? ('bg-red-50/60') : 'hover:bg-crm-hover' }}">
+                        class="flex w-full items-center gap-3 border-b border-crm-border px-4 py-3 text-left transition {{ $chatUnread > 0 ? 'bg-red-50/60' : 'hover:bg-crm-hover' }}">
                         <div class="relative flex-shrink-0">
                             <div class="flex h-9 w-9 items-center justify-center rounded-full text-[10px] font-bold text-white"
                                  style="background:{{ $bg }}">{{ $initials }}</div>
                             @if($chatUnread > 0)
-                                <span class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full {{ $chat->type === 'group' ? 'wdg-badge-red' : 'wdg-badge-red' }}"></span>
+                                <span class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full wdg-badge-red"></span>
                             @endif
                         </div>
                         <div class="min-w-0 flex-1">
@@ -93,7 +109,7 @@
                             <div class="text-[10px] text-crm-t3">{{ $chat->updated_at?->diffForHumans() ?? '' }}</div>
                         </div>
                         @if($chatUnread > 0)
-                            <span class="min-w-[18px] h-[18px] flex items-center justify-center text-[9px] font-bold text-white rounded-full px-1 {{ $chat->type === 'group' ? 'wdg-badge-red' : 'wdg-badge-red' }}">{{ $chatUnread }}</span>
+                            <span class="min-w-[18px] h-[18px] flex items-center justify-center text-[9px] font-bold text-white rounded-full px-1 wdg-badge-red">{{ $chatUnread }}</span>
                         @endif
                     </button>
                 @empty
@@ -129,7 +145,7 @@
                     @if($newChatType === 'group')
                     <div>
                         <label class="text-xs text-crm-t3 uppercase font-semibold">Group Name</label>
-                        <input wire:model="newChatName" type="text" placeholder="E.g., Sales Team" 
+                        <input wire:model="newChatName" type="text" placeholder="E.g., Sales Team"
                                class="w-full mt-1 rounded border border-crm-border bg-white px-2 py-1.5 text-sm focus:border-blue-400 focus:outline-none">
                     </div>
                     @endif
@@ -140,7 +156,7 @@
                             @foreach($users as $u)
                                 @if($u->id !== auth()->id())
                                     <label class="flex items-center gap-2 border-b border-crm-border px-3 py-2 last:border-0 cursor-pointer hover:bg-crm-hover text-sm">
-                                        <input type="checkbox" wire:model="newChatMembers" value="{{ $u->id }}" 
+                                        <input type="checkbox" wire:model="newChatMembers" value="{{ $u->id }}"
                                                  @if($newChatType === 'dm' && count($newChatMembers) > 0 && !in_array($u->id, $newChatMembers)) disabled @endif
                                                class="h-4 w-4 rounded border-crm-border">
                                         <div class="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-[8px] font-bold text-white"
@@ -163,9 +179,8 @@
                 </div>
             </div>
 
-        {{-- ─── Chat List (no chat selected, no form) ─── --}}
+        {{-- ─── Message Thread (chat selected) ─── --}}
         @else
-            {{-- ─── Message Thread (chat selected) ─── --}}
             <div class="flex-1 overflow-y-auto space-y-2 p-3" id="cwt-messages"
                  x-data x-init="$nextTick(() => $el.scrollTop = $el.scrollHeight)">
                 @php $prevDate = null; @endphp
@@ -176,6 +191,7 @@
                         $curDate = $msg->created_at?->format('Y-m-d');
                         $showDate = $curDate !== $prevDate;
                         $prevDate = $curDate;
+                        $isUnread = !$isMine && empty($msg->seen_at);
                     @endphp
 
                     {{-- Date divider --}}
@@ -187,7 +203,6 @@
                         </div>
                     @endif
 
-                    @php $isUnread = !$isMine && empty($msg->seen_at); @endphp
                     <div class="flex items-end gap-2 {{ $isMine ? 'flex-row-reverse' : '' }} {{ $isUnread ? 'wdg-msg-unread rounded-md px-1 py-0.5' : '' }}">
                         <div class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[8px] font-bold text-white"
                              style="background:{{ $msgUser?->color ?? '#6b7280' }}">
