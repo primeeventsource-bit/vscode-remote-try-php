@@ -151,21 +151,7 @@
         {{ $slot }}
     </main>
 
-    @php
-        $chatSettingEnabled = true;
-        try {
-            $chatRaw = \Illuminate\Support\Facades\DB::table('crm_settings')->where('key', 'chat.module_enabled')->value('value');
-            if ($chatRaw !== null) {
-                $chatSettingEnabled = json_decode($chatRaw, true) === true;
-            }
-        } catch (\Throwable $e) {
-            // crm_settings table may not exist yet
-        }
-    @endphp
-
-    @if($chatSettingEnabled && auth()->user()?->hasPerm('view_chat') && !request()->routeIs('chat'))
-        @livewire('chat-widget')
-    @endif
+    {{-- Chat widget removed — use /chat page instead --}}
 
     @livewireScripts
 </body>
