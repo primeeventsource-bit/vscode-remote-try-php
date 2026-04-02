@@ -160,7 +160,7 @@
         } catch (\Throwable $e) {}
     @endphp
 
-    @if($chatSettingEnabled && auth()->user()?->hasPerm('view_chat'))
+    @if($chatSettingEnabled && auth()->check())
         @livewire('chat-widget')
     @endif
 
