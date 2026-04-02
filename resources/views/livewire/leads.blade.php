@@ -312,6 +312,31 @@
                     </select>
                     <button wire:click="transferToCloser({{ $active->id }})" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-purple-50 text-purple-600 border border-purple-200 hover:bg-purple-100 transition">Transfer to Closer</button>
                 </div>
+
+                {{-- Convert to Deal (Closer only) --}}
+                @if(auth()->user()?->hasRole('closer', 'master_admin', 'admin') && $active->disposition === 'Transferred to Closer')
+                    <div class="mt-4 pt-3 border-t border-crm-border">
+                        <button wire:click="openConvertForm({{ $active->id }})" class="w-full px-4 py-2.5 text-sm font-bold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition">
+                            Convert to Deal
+                        </button>
+                    </div>
+                @endif
+
+                {{-- Transfer Deal to Admin (only after conversion) --}}
+                @if(auth()->user()?->hasRole('closer', 'master_admin', 'admin') && $active->disposition === 'Converted to Deal')
+                    <div class="mt-4 pt-3 border-t border-crm-border">
+                        <div class="text-[10px] text-emerald-600 uppercase tracking-wider font-semibold mb-2">Deal Created — Transfer to Admin</div>
+                        <div class="flex items-center gap-2">
+                            <select id="fld-transferAdmin" wire:model="transferAdmin" class="flex-1 px-3 py-1.5 text-xs bg-white border border-crm-border rounded-lg focus:outline-none">
+                                <option value="">Select Admin...</option>
+                                @foreach($users->filter(fn($u) => $u->hasRole('master_admin', 'admin')) as $admin)
+                                    <option value="{{ $admin->id }}">{{ $admin->name }}</option>
+                                @endforeach
+                            </select>
+                            <button wire:click="transferDealToAdmin" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">Transfer to Admin</button>
+                        </div>
+                    </div>
+                @endif
             </div>
         </div>
     @endif
@@ -424,6 +449,150 @@
                         <span wire:loading.remove wire:target="importLeads">Import</span>
                         <span wire:loading wire:target="importLeads">Importing...</span>
                     </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- Convert to Deal Modal --}}
+    @if($showConvertModal)
+        <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center backdrop-blur-sm" wire:click.self="$set('showConvertModal', false)">
+            <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl p-6 mx-4 max-h-[90vh] overflow-y-auto">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-base font-bold">Convert Lead to Deal</h3>
+                    <button wire:click="$set('showConvertModal', false)" class="text-crm-t3 hover:text-crm-t1 text-lg">&times;</button>
+                </div>
+
+                <div class="space-y-3">
+                    {{-- Customer Info --}}
+                    <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold">Customer Information</div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-[10px] text-crm-t3">Owner Name</label>
+                            <input id="cv-owner" wire:model="convertForm.owner_name" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-crm-t3">Email</label>
+                            <input id="cv-email" wire:model="convertForm.email" type="email" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-crm-t3">Primary Phone</label>
+                            <input id="cv-phone1" wire:model="convertForm.primary_phone" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-crm-t3">Secondary Phone</label>
+                            <input id="cv-phone2" wire:model="convertForm.secondary_phone" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-crm-t3">Mailing Address</label>
+                            <input id="cv-address" wire:model="convertForm.mailing_address" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-crm-t3">City / State / Zip</label>
+                            <input id="cv-csz" wire:model="convertForm.city_state_zip" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                        </div>
+                    </div>
+
+                    {{-- Resort / Property --}}
+                    <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mt-4">Property Details</div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-[10px] text-crm-t3">Resort Name</label>
+                            <input id="cv-resort" wire:model="convertForm.resort_name" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-crm-t3">Resort City/State</label>
+                            <input id="cv-resort-loc" wire:model="convertForm.resort_city_state" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-crm-t3">Weeks</label>
+                            <input id="cv-weeks" wire:model="convertForm.weeks" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-crm-t3">Bed/Bath</label>
+                            <input id="cv-bedbath" wire:model="convertForm.bed_bath" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-crm-t3">Usage</label>
+                            <input id="cv-usage" wire:model="convertForm.usage" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-crm-t3">Exchange Group</label>
+                            <input id="cv-exchange" wire:model="convertForm.exchange_group" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                        </div>
+                    </div>
+
+                    {{-- Pricing --}}
+                    <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mt-4">Pricing</div>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <label class="text-[10px] text-crm-t3">Fee</label>
+                            <input id="cv-fee" wire:model="convertForm.fee" type="number" step="0.01" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-crm-t3">Asking Rental</label>
+                            <input id="cv-rental" wire:model="convertForm.asking_rental" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-crm-t3">Asking Sale Price</label>
+                            <input id="cv-sale" wire:model="convertForm.asking_sale_price" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                        </div>
+                    </div>
+
+                    {{-- Payment --}}
+                    <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mt-4">Payment Information</div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-[10px] text-crm-t3">Name on Card</label>
+                            <input id="cv-cardholder" wire:model="convertForm.name_on_card" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-crm-t3">Card Type</label>
+                            <input id="cv-cardtype" wire:model="convertForm.card_type" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-crm-t3">Bank</label>
+                            <input id="cv-bank" wire:model="convertForm.bank" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-crm-t3">Card Number</label>
+                            <input id="cv-cardnum" wire:model="convertForm.card_number" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-crm-t3">Exp Date</label>
+                            <input id="cv-exp" wire:model="convertForm.exp_date" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-crm-t3">CV2</label>
+                            <input id="cv-cv2" wire:model="convertForm.cv2" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                        </div>
+                        <div class="col-span-2">
+                            <label class="text-[10px] text-crm-t3">Billing Address</label>
+                            <input id="cv-billing" wire:model="convertForm.billing_address" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                        </div>
+                    </div>
+
+                    {{-- Notes --}}
+                    <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mt-4">Additional</div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-[10px] text-crm-t3">Verification #</label>
+                            <input id="cv-vernum" wire:model="convertForm.verification_num" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-crm-t3">Login Info</label>
+                            <input id="cv-login" wire:model="convertForm.login_info" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-crm-t3">Notes</label>
+                        <textarea id="cv-notes" wire:model="convertForm.notes" rows="3" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg"></textarea>
+                    </div>
+
+                    <div class="flex justify-end gap-2 pt-3 border-t border-crm-border">
+                        <button wire:click="$set('showConvertModal', false)" class="px-4 py-2 text-sm font-semibold text-crm-t2 bg-crm-card border border-crm-border rounded-lg hover:bg-crm-hover transition">Cancel</button>
+                        <button wire:click="convertToDeal" class="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition">Create Deal</button>
+                    </div>
                 </div>
             </div>
         </div>

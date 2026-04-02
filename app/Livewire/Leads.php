@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Livewire\Concerns\SendsTransferDm;
+use App\Models\Deal;
 use App\Models\Lead;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
@@ -36,6 +37,9 @@ class Leads extends Component
     public $leadFile = null;
     public string $importStatus = '';
     public string $importError = '';
+    public bool $showConvertModal = false;
+    public array $convertForm = [];
+    public string $transferAdmin = '';
 
     public function selectLead($id) { $this->selectedLead = $this->selectedLead === $id ? null : $id; }
 
@@ -72,6 +76,128 @@ class Leads extends Component
         if (!$this->transferCloser) return;
         $this->setDisposition($id, 'Transferred to Closer', (int) $this->transferCloser);
         $this->transferCloser = '';
+    }
+
+    public function openConvertForm($id): void
+    {
+        $lead = Lead::find($id);
+        if (!$lead) return;
+
+        $user = auth()->user();
+        if (!$user || !$user->hasRole('closer', 'master_admin', 'admin')) return;
+
+        $this->convertForm = [
+            'lead_id' => $lead->id,
+            'owner_name' => $lead->owner_name ?? '',
+            'primary_phone' => $lead->phone1 ?? '',
+            'secondary_phone' => $lead->phone2 ?? '',
+            'resort_name' => $lead->resort ?? '',
+            'resort_city_state' => $lead->resort_location ?? '',
+            'city_state_zip' => trim(($lead->city ?? '') . ' ' . ($lead->st ?? '') . ' ' . ($lead->zip ?? '')),
+            'mailing_address' => '',
+            'email' => '',
+            'fee' => '',
+            'weeks' => '',
+            'asking_rental' => '',
+            'asking_sale_price' => '',
+            'bed_bath' => '',
+            'usage' => '',
+            'exchange_group' => '',
+            'name_on_card' => '',
+            'card_type' => '',
+            'bank' => '',
+            'card_number' => '',
+            'exp_date' => '',
+            'cv2' => '',
+            'billing_address' => '',
+            'notes' => '',
+            'login_info' => '',
+            'verification_num' => '',
+        ];
+        $this->showConvertModal = true;
+    }
+
+    public function convertToDeal(): void
+    {
+        $user = auth()->user();
+        if (!$user || !$user->hasRole('closer', 'master_admin', 'admin')) return;
+        if (empty($this->convertForm['lead_id'])) return;
+
+        $lead = Lead::find($this->convertForm['lead_id']);
+        if (!$lead) return;
+
+        try {
+            $deal = Deal::create([
+                'timestamp' => now()->format('n/j/Y'),
+                'fronter' => $lead->original_fronter ?? $lead->assigned_to,
+                'closer' => $user->id,
+                'owner_name' => $this->convertForm['owner_name'],
+                'primary_phone' => $this->convertForm['primary_phone'],
+                'secondary_phone' => $this->convertForm['secondary_phone'],
+                'resort_name' => $this->convertForm['resort_name'],
+                'resort_city_state' => $this->convertForm['resort_city_state'],
+                'city_state_zip' => $this->convertForm['city_state_zip'],
+                'mailing_address' => $this->convertForm['mailing_address'],
+                'email' => $this->convertForm['email'],
+                'fee' => $this->convertForm['fee'] ?: 0,
+                'weeks' => $this->convertForm['weeks'],
+                'asking_rental' => $this->convertForm['asking_rental'],
+                'asking_sale_price' => $this->convertForm['asking_sale_price'],
+                'bed_bath' => $this->convertForm['bed_bath'],
+                'usage' => $this->convertForm['usage'],
+                'exchange_group' => $this->convertForm['exchange_group'],
+                'name_on_card' => $this->convertForm['name_on_card'],
+                'card_type' => $this->convertForm['card_type'],
+                'bank' => $this->convertForm['bank'],
+                'card_number' => $this->convertForm['card_number'],
+                'exp_date' => $this->convertForm['exp_date'],
+                'cv2' => $this->convertForm['cv2'],
+                'billing_address' => $this->convertForm['billing_address'],
+                'notes' => $this->convertForm['notes'],
+                'login_info' => $this->convertForm['login_info'],
+                'verification_num' => $this->convertForm['verification_num'],
+                'status' => 'pending_admin',
+                'charged' => 'no',
+                'charged_back' => 'no',
+            ]);
+
+            // Mark lead as converted
+            $lead->update(['disposition' => 'Converted to Deal']);
+
+            $this->showConvertModal = false;
+            $this->convertForm = [];
+            $this->selectedLead = null;
+
+            session()->flash('message', "Lead converted to Deal #{$deal->id} successfully.");
+        } catch (\Throwable $e) {
+            Log::error('Convert to deal failed', ['error' => $e->getMessage()]);
+        }
+    }
+
+    public function transferDealToAdmin(): void
+    {
+        if (!$this->transferAdmin || !$this->selectedLead) return;
+
+        $lead = Lead::find($this->selectedLead);
+        if (!$lead || $lead->disposition !== 'Converted to Deal') return;
+
+        // Find the deal created from this lead
+        $deal = Deal::where('owner_name', $lead->owner_name)
+            ->where('closer', auth()->id())
+            ->orderByDesc('id')
+            ->first();
+
+        if (!$deal) return;
+
+        $adminId = (int) $this->transferAdmin;
+        $deal->update([
+            'assigned_admin' => $adminId,
+            'status' => 'in_verification',
+        ]);
+
+        $this->sendTransferDm($adminId, 'Deal', $deal->id, $deal->owner_name ?? 'Unknown', 'Verification');
+        $this->transferAdmin = '';
+        $this->selectedLead = null;
     }
 
     public function saveLead()
