@@ -82,12 +82,16 @@ class Payroll extends Component
         $friday = $monday->copy()->addDays(4);
         $weekLabel = $monday->format('M j') . ' - ' . $friday->format('M j, Y');
 
-        // Rates
-        $settings = DB::table('payroll_settings')->first();
+        // Rates — safe if table is empty or missing
+        try {
+            $settings = DB::table('payroll_settings')->first();
+        } catch (\Throwable $e) {
+            $settings = null;
+        }
         $rates = [
-            'closerPct' => $settings->closer_pct ?? 50, 'fronterPct' => $settings->fronter_pct ?? 10,
-            'snrPct' => $settings->snr_pct ?? 2, 'vdPct' => $settings->vd_pct ?? 3,
-            'adminSnrPct' => $settings->admin_snr_pct ?? 2, 'hourlyRate' => $settings->hourly_rate ?? 19.50,
+            'closerPct' => $settings?->closer_pct ?? 50, 'fronterPct' => $settings?->fronter_pct ?? 10,
+            'snrPct' => $settings?->snr_pct ?? 2, 'vdPct' => $settings?->vd_pct ?? 3,
+            'adminSnrPct' => $settings?->admin_snr_pct ?? 2, 'hourlyRate' => $settings?->hourly_rate ?? 19.50,
         ];
 
         $charged = Deal::where('charged', 'yes')->where(fn($q) => $q->where('charged_back', '!=', 'yes')->orWhereNull('charged_back'))->get();
@@ -127,7 +131,7 @@ class Payroll extends Component
             $commission = $totalPayout * $commPct;
             $cbTotal = $myCB->sum('fee');
             $netPay = $commission - ($cbTotal * $commPct);
-            return (object) compact('u', 'myDeals', 'totalSold', 'totalPayout', 'commission', 'commPct', 'cbTotal', 'netPay') + ['dealCount' => $myDeals->count(), 'cbCount' => $myCB->count()];
+            return (object) array_merge(compact('u', 'myDeals', 'totalSold', 'totalPayout', 'commission', 'commPct', 'cbTotal', 'netPay'), ['dealCount' => $myDeals->count(), 'cbCount' => $myCB->count()]);
         };
 
         $payCards = collect();
