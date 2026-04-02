@@ -1,8 +1,3 @@
-<style>
-    @keyframes wdg-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.7;transform:scale(1.15)} }
-    .wdg-badge-red { animation:wdg-pulse 1.5s ease-in-out infinite; background:#ef4444; }
-    .wdg-msg-unread { background:rgba(239,68,68,0.08); border-left:2px solid #ef4444; }
-</style>
 @php
     $totalUnread = 0;
     if (isset($unreadCounts) && $unreadCounts instanceof \Illuminate\Support\Collection) {
@@ -23,6 +18,12 @@
     @mousemove.window="if(dragging) doDrag($event)"
     @mouseup.window="if(dragging) stopDrag()"
 >
+    <style>
+        @keyframes wdg-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.7;transform:scale(1.15)} }
+        .wdg-badge-red { animation:wdg-pulse 1.5s ease-in-out infinite; background:#ef4444; }
+        .wdg-msg-unread { background:rgba(239,68,68,0.08); border-left:2px solid #ef4444; }
+    </style>
+
     {{-- Floating Bubble Button --}}
     <button @click="open = !open; if(open) $wire.$refresh()" title="Toggle Chat"
         class="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-600/30 transition hover:scale-105 hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-200">
