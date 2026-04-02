@@ -19,6 +19,8 @@ class Deals extends Component
     public bool $showNewDeal = false;
     public array $dealForm = [];
     public array $newDeal = [];
+    public string $dispoCallbackDate = '';
+    public string $dispoChargedDate = '';
 
     public function mount() { $this->resetForm(); }
 
@@ -38,7 +40,14 @@ class Deals extends Component
     public function saveDeal()
     {
         if (!empty($this->dealForm['id'])) {
-            Deal::where('id', $this->dealForm['id'])->update(collect($this->dealForm)->except('id')->toArray());
+            $deal = Deal::find($this->dealForm['id']);
+            if ($deal && $deal->is_locked && !auth()->user()?->hasRole('master_admin')) {
+                return; // Locked deals can only be edited by master admin
+            }
+            $updateData = collect($this->dealForm)->except('id')->toArray();
+            $updateData['last_edited_by'] = auth()->id();
+            $updateData['last_edited_at'] = now();
+            Deal::where('id', $this->dealForm['id'])->update($updateData);
         } else {
             Deal::create($this->newDeal ?: $this->dealForm);
         }
@@ -51,6 +60,41 @@ class Deals extends Component
     {
         $d = Deal::find($id);
         if ($d) { $this->dealForm = $d->toArray(); $this->showModal = true; }
+    }
+
+    public function setDealDisposition($id, $disposition, $callbackDate = null, $chargedDate = null): void
+    {
+        $user = auth()->user();
+        if (!$user || !$user->hasRole('master_admin', 'admin')) return;
+
+        $deal = Deal::find($id);
+        if (!$deal) return;
+
+        $data = [
+            'disposition_status' => $disposition,
+            'last_edited_by' => $user->id,
+            'last_edited_at' => now(),
+        ];
+
+        if ($disposition === 'charged') {
+            $data['charged'] = 'yes';
+            $data['charged_date'] = $chargedDate ?: now()->format('Y-m-d');
+            $data['is_locked'] = true;
+            $data['status'] = 'charged';
+        } elseif ($disposition === 'callback') {
+            $data['callback_date'] = $callbackDate;
+        } elseif ($disposition === 'declined') {
+            $data['status'] = 'cancelled';
+        }
+
+        $deal->update($data);
+    }
+
+    public function unlockDeal($id): void
+    {
+        $user = auth()->user();
+        if (!$user || !$user->hasRole('master_admin', 'admin')) return;
+        Deal::where('id', $id)->update(['is_locked' => false, 'last_edited_by' => $user->id, 'last_edited_at' => now()]);
     }
 
     public function updateStatus($id, $status, $extra = [])

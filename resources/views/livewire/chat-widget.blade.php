@@ -253,8 +253,17 @@
                         </div>
                         <input id="df-billing" wire:model="dealForm.billing_address" type="text" placeholder="Billing Address" class="w-full px-2 py-1 text-xs border border-crm-border rounded">
 
-                        <div class="text-[9px] text-crm-t3 uppercase font-semibold mt-2">Verification & Notes</div>
-                        <input id="df-vernum" wire:model="dealForm.verification_num" type="text" placeholder="Verification #" class="w-full px-2 py-1 text-xs border border-crm-border rounded">
+                        <div class="text-[9px] text-crm-t3 uppercase font-semibold mt-2">Closing & Verification</div>
+                        <div class="grid grid-cols-2 gap-1.5">
+                            <div>
+                                <label class="text-[8px] text-crm-t3">Closing Date *</label>
+                                <input id="df-closing" wire:model="dealForm.closing_date" type="date" class="w-full px-2 py-1 text-xs border border-crm-border rounded">
+                            </div>
+                            <div>
+                                <label class="text-[8px] text-crm-t3">Verification #</label>
+                                <input id="df-vernum" wire:model="dealForm.verification_num" type="text" placeholder="Verification #" class="w-full px-2 py-1 text-xs border border-crm-border rounded">
+                            </div>
+                        </div>
                         <textarea id="df-notes" wire:model="dealForm.notes" rows="2" placeholder="Notes" class="w-full px-2 py-1 text-xs border border-crm-border rounded"></textarea>
 
                         <div class="text-[9px] text-crm-t3 uppercase font-semibold mt-2">Transfer to Admin *</div>
@@ -265,9 +274,9 @@
                             @endforeach
                         </select>
 
-                        <div class="flex gap-1.5 mt-2">
-                            <button wire:click="closeDealForm" class="flex-1 px-2 py-1.5 text-[10px] font-semibold bg-crm-card border border-crm-border rounded hover:bg-crm-hover">Cancel</button>
-                            <button wire:click="submitDeal" class="flex-1 px-2 py-1.5 text-[10px] font-bold bg-emerald-600 text-white rounded hover:bg-emerald-700">Create Deal & Transfer</button>
+                        <div class="flex gap-2 mt-3">
+                            <button wire:click="closeDealForm" class="px-4 py-2 text-xs font-semibold bg-white border border-crm-border rounded-lg hover:bg-crm-hover transition">Cancel</button>
+                            <button wire:click="submitDeal" class="flex-1 px-4 py-2.5 text-sm font-bold bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md transition">Submit Deal</button>
                         </div>
                     </div>
                 </div>

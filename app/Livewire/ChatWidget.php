@@ -224,6 +224,7 @@ class ChatWidget extends Component
             'verification_num' => '',
             'notes' => '',
             'login_info' => '',
+            'closing_date' => now()->format('Y-m-d'),
         ];
         $this->dealFormAdmin = '';
         $this->dealFormError = '';
@@ -246,6 +247,10 @@ class ChatWidget extends Component
         }
         if (!$this->dealForm['fee']) {
             $this->dealFormError = 'Fee amount is required.';
+            return;
+        }
+        if (empty($this->dealForm['closing_date'])) {
+            $this->dealFormError = 'Closing date is required.';
             return;
         }
 
@@ -283,6 +288,7 @@ class ChatWidget extends Component
                 'verification_num' => $this->dealForm['verification_num'],
                 'notes' => $this->dealForm['notes'],
                 'login_info' => $this->dealForm['login_info'],
+                'closing_date' => $this->dealForm['closing_date'] ?? null,
                 'status' => 'in_verification',
                 'charged' => 'no',
                 'charged_back' => 'no',

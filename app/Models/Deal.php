@@ -58,9 +58,19 @@ class Deal extends Model
         'status',
         'charged',
         'charged_back',
+        'closing_date',
+        'disposition_status',
+        'callback_date',
+        'last_edited_by',
+        'last_edited_at',
+        'is_locked',
     ];
 
     protected $casts = [
+        'closing_date' => 'date',
+        'callback_date' => 'datetime',
+        'last_edited_at' => 'datetime',
+        'is_locked' => 'boolean',
         'timestamp' => 'date',
         'charged_date' => 'date',
         'correspondence' => 'array',
