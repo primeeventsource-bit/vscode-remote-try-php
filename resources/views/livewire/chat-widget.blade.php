@@ -1,3 +1,9 @@
+<style>
+    @keyframes wdg-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.7;transform:scale(1.15)} }
+    .wdg-badge-blue { animation:wdg-pulse 1.5s ease-in-out infinite; background:#3b82f6; }
+    .wdg-badge-red { animation:wdg-pulse 1.5s ease-in-out infinite; background:#ef4444; }
+    .wdg-msg-unread { background:rgba(59,130,246,0.08); border-left:2px solid #3b82f6; }
+</style>
 <div
     x-data="{
         open: false,
@@ -73,18 +79,22 @@
                         $initials = $chat->type === 'channel' ? '#' : ($other?->avatar ?? substr($other?->name ?? 'G', 0, 2));
                         $displayName = $chat->type === 'dm' ? ($other?->name ?? $chat->name ?? 'DM') : $chat->name;
                     @endphp
+                    @php $chatUnread = $unreadCounts[$chat->id] ?? 0; @endphp
                     <button wire:click="selectChat({{ $chat->id }})"
-                        class="flex w-full items-center gap-3 border-b border-crm-border px-4 py-3 text-left transition hover:bg-crm-hover">
-                        <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
-                             style="background:{{ $bg }}">{{ $initials }}</div>
+                        class="flex w-full items-center gap-3 border-b border-crm-border px-4 py-3 text-left transition {{ $chatUnread > 0 ? ($chat->type === 'group' ? 'bg-red-50/60' : 'bg-blue-50/60') : 'hover:bg-crm-hover' }}">
+                        <div class="relative flex-shrink-0">
+                            <div class="flex h-9 w-9 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                                 style="background:{{ $bg }}">{{ $initials }}</div>
+                            @if($chatUnread > 0)
+                                <span class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full {{ $chat->type === 'group' ? 'wdg-badge-red' : 'wdg-badge-blue' }}"></span>
+                            @endif
+                        </div>
                         <div class="min-w-0 flex-1">
-                            <div class="truncate text-sm font-semibold">{{ $displayName }}</div>
+                            <div class="truncate text-sm {{ $chatUnread > 0 ? 'font-bold' : 'font-semibold' }}">{{ $displayName }}</div>
                             <div class="text-[10px] text-crm-t3">{{ $chat->updated_at?->diffForHumans() ?? '' }}</div>
                         </div>
-                        @if($chat->type === 'channel')
-                            <span class="text-[10px] font-mono text-crm-t3">#</span>
-                        @elseif($chat->type === 'group')
-                            <span class="text-[10px] text-crm-t3">G</span>
+                        @if($chatUnread > 0)
+                            <span class="min-w-[18px] h-[18px] flex items-center justify-center text-[9px] font-bold text-white rounded-full px-1 {{ $chat->type === 'group' ? 'wdg-badge-red' : 'wdg-badge-blue' }}">{{ $chatUnread }}</span>
                         @endif
                     </button>
                 @empty
@@ -178,7 +188,8 @@
                         </div>
                     @endif
 
-                    <div class="flex items-end gap-2 {{ $isMine ? 'flex-row-reverse' : '' }}">
+                    @php $isUnread = !$isMine && empty($msg->seen_at); @endphp
+                    <div class="flex items-end gap-2 {{ $isMine ? 'flex-row-reverse' : '' }} {{ $isUnread ? 'wdg-msg-unread rounded-md px-1 py-0.5' : '' }}">
                         <div class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[8px] font-bold text-white"
                              style="background:{{ $msgUser?->color ?? '#6b7280' }}">
                             {{ $msgUser?->avatar ?? substr($msgUser?->name ?? '?', 0, 2) }}

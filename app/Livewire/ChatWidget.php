@@ -7,6 +7,7 @@ use App\Models\Message;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Collection;
 use Livewire\Component;
 
 class ChatWidget extends Component
@@ -256,6 +257,7 @@ class ChatWidget extends Component
                 'gifPickerSettings' => [],
                 'canUseGifPicker' => false,
                 'currentUserId' => 0,
+                'unreadCounts' => collect(),
             ]);
         }
 
@@ -276,6 +278,20 @@ class ChatWidget extends Component
         $canUseGifPicker = $this->canUseGifPicker();
         $currentUserId = (int) auth()->id();
 
-        return view('livewire.chat-widget', compact('chats', 'messages', 'activeChat', 'users', 'gifPickerSettings', 'canUseGifPicker', 'currentUserId'));
+        // Unread counts per chat
+        $unreadCounts = collect();
+        if ($chats->isNotEmpty()) {
+            try {
+                $unreadCounts = DB::table('messages')
+                    ->whereIn('chat_id', $chats->pluck('id'))
+                    ->where('sender_id', '!=', $user->id)
+                    ->whereNull('seen_at')
+                    ->selectRaw('chat_id, count(*) as cnt')
+                    ->groupBy('chat_id')
+                    ->pluck('cnt', 'chat_id');
+            } catch (\Throwable $e) {}
+        }
+
+        return view('livewire.chat-widget', compact('chats', 'messages', 'activeChat', 'users', 'gifPickerSettings', 'canUseGifPicker', 'currentUserId', 'unreadCounts'));
     }
 }
