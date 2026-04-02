@@ -15,6 +15,7 @@ class ChatWidget extends Component
 {
     public ?int $selectedChat = null;
     public string $messageInput = '';
+    public string $chatSearch = '';
     public bool $showNewChatForm = false;
     public string $newChatType = 'dm';
     public string $newChatName = '';
@@ -414,9 +415,46 @@ class ChatWidget extends Component
 
         $adminUsers = User::whereIn('role', ['master_admin', 'admin'])->get();
 
+        // Search results
+        $searchResults = collect();
+        $searchMessageResults = collect();
+        $isSearching = trim($this->chatSearch) !== '';
+
+        if ($isSearching) {
+            $q = '%' . trim($this->chatSearch) . '%';
+
+            // Search chats by name
+            $searchResults = $chats->filter(function ($c) use ($q, $users) {
+                $name = $c->name ?? '';
+                $members = is_array($c->members) ? $c->members : json_decode($c->members ?? '[]', true);
+                // Match chat name
+                if (stripos($name, trim($this->chatSearch)) !== false) return true;
+                // Match member names
+                foreach ($members as $mid) {
+                    $mu = $users->get((int) $mid);
+                    if ($mu && stripos($mu->name ?? '', trim($this->chatSearch)) !== false) return true;
+                    if ($mu && stripos($mu->email ?? '', trim($this->chatSearch)) !== false) return true;
+                }
+                return false;
+            });
+
+            // Search messages
+            try {
+                $chatIds = $chats->pluck('id');
+                $searchMessageResults = Message::whereIn('chat_id', $chatIds)
+                    ->where('text', 'like', $q)
+                    ->orderByDesc('id')
+                    ->limit(20)
+                    ->get();
+            } catch (\Throwable $e) {
+                $searchMessageResults = collect();
+            }
+        }
+
         return view('livewire.chat-widget', compact(
             'chats', 'messages', 'activeChat', 'users',
-            'gifPickerSettings', 'canUseGifPicker', 'currentUserId', 'unreadCounts', 'adminUsers'
+            'gifPickerSettings', 'canUseGifPicker', 'currentUserId', 'unreadCounts', 'adminUsers',
+            'searchResults', 'searchMessageResults', 'isSearching'
         ));
     }
 }

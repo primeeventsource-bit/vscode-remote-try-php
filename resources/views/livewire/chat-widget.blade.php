@@ -62,7 +62,73 @@
 
         {{-- Chat List --}}
         @if(!$selectedChat && !$showNewChatForm)
+            {{-- Search Bar --}}
+            <div class="px-3 py-2 border-b border-crm-border">
+                <div class="relative">
+                    <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-crm-t3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <input id="chat-search" wire:model.live.debounce.300ms="chatSearch" type="text" placeholder="Search chats, users, messages..."
+                        class="w-full pl-8 pr-3 py-1.5 text-xs bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400"
+                        @keydown.escape="$wire.set('chatSearch', '')">
+                </div>
+            </div>
+
             <div class="flex-1 overflow-y-auto">
+                {{-- Search Results --}}
+                @if($isSearching)
+                    @if($searchResults->isEmpty() && $searchMessageResults->isEmpty())
+                        <div class="flex items-center justify-center p-8 text-center">
+                            <div>
+                                <div class="text-2xl opacity-20 mb-1">🔍</div>
+                                <p class="text-xs text-crm-t3">No results for "{{ $chatSearch }}"</p>
+                            </div>
+                        </div>
+                    @else
+                        {{-- Matching Chats --}}
+                        @if($searchResults->isNotEmpty())
+                            <div class="px-3 pt-2 pb-1"><span class="text-[9px] text-crm-t3 uppercase font-semibold">Chats ({{ $searchResults->count() }})</span></div>
+                        @endif
+                        @foreach($searchResults as $chat)
+                            @php
+                                $members = is_array($chat->members) ? $chat->members : json_decode($chat->members ?? '[]', true);
+                                $otherId = collect($members)->first(fn($m) => (int)$m !== auth()->id());
+                                $other = $otherId ? $users->get($otherId) : null;
+                                $bg = $other?->color ?? '#3b82f6';
+                                $initials = $chat->type === 'channel' ? '#' : ($other?->avatar ?? substr($other?->name ?? 'G', 0, 2));
+                                $displayName = $chat->type === 'dm' ? ($other?->name ?? $chat->name ?? 'DM') : $chat->name;
+                            @endphp
+                            <button wire:key="sr-{{ $chat->id }}" wire:click="selectChat({{ $chat->id }})"
+                                class="flex w-full items-center gap-3 border-b border-crm-border px-4 py-2.5 text-left transition hover:bg-blue-50">
+                                <div class="flex h-8 w-8 items-center justify-center rounded-full text-[9px] font-bold text-white flex-shrink-0" style="background:{{ $bg }}">{{ $initials }}</div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="truncate text-xs font-semibold">{{ $displayName }}</div>
+                                    <div class="text-[9px] text-blue-500 font-medium">Chat match</div>
+                                </div>
+                            </button>
+                        @endforeach
+
+                        {{-- Matching Messages --}}
+                        @if($searchMessageResults->isNotEmpty())
+                            <div class="px-3 pt-2 pb-1"><span class="text-[9px] text-crm-t3 uppercase font-semibold">Messages ({{ $searchMessageResults->count() }})</span></div>
+                        @endif
+                        @foreach($searchMessageResults as $mr)
+                            @php
+                                $mrUser = $users->get($mr->sender_id);
+                                $mrChat = $chats->firstWhere('id', $mr->chat_id);
+                                $mrName = $mrChat?->name ?? $mrUser?->name ?? 'Chat';
+                            @endphp
+                            <button wire:key="mr-{{ $mr->id }}" wire:click="selectChat({{ $mr->chat_id }})"
+                                class="flex w-full items-center gap-3 border-b border-crm-border px-4 py-2.5 text-left transition hover:bg-amber-50">
+                                <div class="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-amber-600 text-[9px] font-bold flex-shrink-0">💬</div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="truncate text-xs font-semibold">{{ $mrName }}</div>
+                                    <div class="truncate text-[10px] text-crm-t2">{{ Str::limit($mr->text, 60) }}</div>
+                                    <div class="text-[9px] text-amber-500 font-medium">Message match · {{ $mr->created_at?->diffForHumans() }}</div>
+                                </div>
+                            </button>
+                        @endforeach
+                    @endif
+                @else
+                {{-- Normal Chat List --}}
                 @forelse($chats as $chat)
                     @php
                         $members = is_array($chat->members) ? $chat->members : json_decode($chat->members ?? '[]', true);
@@ -94,6 +160,7 @@
                         <p class="text-sm text-crm-t3">No conversations yet.</p>
                     </div>
                 @endforelse
+                @endif
             </div>
             <div class="flex-shrink-0 border-t border-crm-border px-3 py-2">
                 <button wire:click="toggleNewChatForm" class="w-full rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700">+ New Chat</button>
