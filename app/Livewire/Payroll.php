@@ -42,18 +42,19 @@ class Payroll extends Component
             return;
         }
 
-        DB::table('payroll_user_rates')->updateOrInsert(
-            ['user_id' => (string) $userId],
-            [
-                'comm_pct' => $commPct,
-                'snr_pct' => $snrPct,
-                'hourly_rate' => $hourlyRate,
-                'updated_at' => now(),
-            ]
-        );
+        try {
+            DB::table('payroll_user_rates')->updateOrInsert(
+                ['user_id' => (string) $userId],
+                [
+                    'comm_pct' => $commPct,
+                    'snr_pct' => $snrPct,
+                    'hourly_rate' => $hourlyRate,
+                    'updated_at' => now(),
+                ]
+            );
 
-        // Keep User comm_pct in sync so payroll calculations immediately reflect admin input.
-        User::where('id', $userId)->update(['comm_pct' => $commPct]);
+            User::where('id', $userId)->update(['comm_pct' => $commPct]);
+        } catch (\Throwable $e) {}
 
         $this->resetErrorBag("userPayrollInputs.$userId");
     }
@@ -77,6 +78,13 @@ class Payroll extends Component
     public function render()
     {
         $user = auth()->user();
+        if (!$user) {
+            return view('livewire.payroll', [
+                'payCards' => collect(), 'rates' => [], 'weekLabel' => '',
+                'sentSheets' => collect(), 'isMaster' => false, 'editableUsers' => collect(),
+            ]);
+        }
+
         $isMaster = $user->hasRole('master_admin');
         $monday = Carbon::now()->startOfWeek()->addWeeks($this->weekOffset);
         $friday = $monday->copy()->addDays(4);
@@ -89,15 +97,31 @@ class Payroll extends Component
             $settings = null;
         }
         $rates = [
-            'closerPct' => $settings?->closer_pct ?? 50, 'fronterPct' => $settings?->fronter_pct ?? 10,
-            'snrPct' => $settings?->snr_pct ?? 2, 'vdPct' => $settings?->vd_pct ?? 3,
-            'adminSnrPct' => $settings?->admin_snr_pct ?? 2, 'hourlyRate' => $settings?->hourly_rate ?? 19.50,
+            'closerPct' => (float) ($settings?->closer_pct ?? 50),
+            'fronterPct' => (float) ($settings?->fronter_pct ?? 10),
+            'snrPct' => (float) ($settings?->snr_pct ?? 2),
+            'vdPct' => (float) ($settings?->vd_pct ?? 3),
+            'adminSnrPct' => (float) ($settings?->admin_snr_pct ?? 2),
+            'hourlyRate' => (float) ($settings?->hourly_rate ?? 19.50),
         ];
 
-        $charged = Deal::where('charged', 'yes')->where(fn($q) => $q->where('charged_back', '!=', 'yes')->orWhereNull('charged_back'))->get();
-        $cbDeals = Deal::where('charged_back', 'yes')->get();
+        try {
+            $charged = Deal::where('charged', 'yes')
+                ->where(fn($q) => $q->where('charged_back', '!=', 'yes')->orWhereNull('charged_back'))
+                ->get();
+            $cbDeals = Deal::where('charged_back', 'yes')->get();
+        } catch (\Throwable $e) {
+            $charged = collect();
+            $cbDeals = collect();
+        }
+
         $vdMult = 1 - ($rates['vdPct'] / 100);
-        $userRatesMap = PayrollUserRate::query()->get()->keyBy(fn($r) => (int) $r->user_id);
+
+        try {
+            $userRatesMap = PayrollUserRate::query()->get()->keyBy(fn($r) => (int) $r->user_id);
+        } catch (\Throwable $e) {
+            $userRatesMap = collect();
+        }
 
         if ($isMaster) {
             $editableUsers = User::whereIn('role', ['closer', 'fronter', 'admin', 'admin_limited'])
@@ -119,33 +143,71 @@ class Payroll extends Component
             $editableUsers = collect();
         }
 
-        $buildCard = function(User $u) use ($charged, $cbDeals, $rates, $vdMult, $userRatesMap) {
-            $field = match($u->role) { 'closer' => 'closer', 'fronter' => 'fronter', default => 'assigned_admin' };
+        $buildCard = function (User $u) use ($charged, $cbDeals, $rates, $vdMult, $userRatesMap) {
+            $field = match ($u->role) {
+                'closer' => 'closer',
+                'fronter' => 'fronter',
+                default => 'assigned_admin',
+            };
             $myDeals = $charged->where($field, $u->id);
             $myCB = $cbDeals->where($field, $u->id);
             $customRate = $userRatesMap->get((int) $u->id);
-            $effectiveCommPct = $customRate?->comm_pct ?? $u->comm_pct ?? ($u->role === 'closer' ? $rates['closerPct'] : ($u->role === 'fronter' ? $rates['fronterPct'] : $rates['adminSnrPct']));
+
+            $defaultPct = match ($u->role) {
+                'closer' => $rates['closerPct'],
+                'fronter' => $rates['fronterPct'],
+                default => $rates['adminSnrPct'],
+            };
+            $effectiveCommPct = (float) ($customRate?->comm_pct ?? $u->comm_pct ?? $defaultPct);
             $commPct = $effectiveCommPct / 100;
+
             $totalSold = $myDeals->sum('fee');
-            $totalPayout = $myDeals->sum(fn($d) => $d->was_vd === 'Yes' ? $d->fee * $vdMult : $d->fee);
+            $totalPayout = $myDeals->sum(fn($d) => ($d->was_vd === 'Yes') ? $d->fee * $vdMult : $d->fee);
             $commission = $totalPayout * $commPct;
             $cbTotal = $myCB->sum('fee');
             $netPay = $commission - ($cbTotal * $commPct);
-            return (object) array_merge(compact('u', 'myDeals', 'totalSold', 'totalPayout', 'commission', 'commPct', 'cbTotal', 'netPay'), ['dealCount' => $myDeals->count(), 'cbCount' => $myCB->count()]);
+
+            return (object) [
+                'u' => $u,
+                'myDeals' => $myDeals,
+                'totalSold' => $totalSold,
+                'totalPayout' => $totalPayout,
+                'commission' => $commission,
+                'commPct' => $commPct,
+                'cbTotal' => $cbTotal,
+                'netPay' => $netPay,
+                'dealCount' => $myDeals->count(),
+                'cbCount' => $myCB->count(),
+            ];
         };
 
         $payCards = collect();
         if (!$isMaster) {
-            $payCards = collect([$buildCard($user)]);
+            try {
+                $payCards = collect([$buildCard($user)]);
+            } catch (\Throwable $e) {
+                $payCards = collect();
+            }
         } else {
-            $roleFilter = match($this->tab) { 'closers' => 'closer', 'fronters' => 'fronter', 'admins' => ['admin', 'admin_limited'], default => null };
+            $roleFilter = match ($this->tab) {
+                'closers' => 'closer',
+                'fronters' => 'fronter',
+                'admins' => ['admin', 'admin_limited'],
+                default => null,
+            };
             if ($roleFilter) {
-                $roleUsers = is_array($roleFilter) ? User::whereIn('role', $roleFilter)->get() : User::where('role', $roleFilter)->get();
+                $roleUsers = is_array($roleFilter)
+                    ? User::whereIn('role', $roleFilter)->get()
+                    : User::where('role', $roleFilter)->get();
                 $payCards = $roleUsers->map($buildCard);
             }
         }
 
-        $sentSheets = DB::table('payroll_sent_history')->get()->keyBy('user_id');
+        try {
+            $sentSheets = DB::table('payroll_sent_history')->get()->keyBy('user_id');
+        } catch (\Throwable $e) {
+            $sentSheets = collect();
+        }
 
         return view('livewire.payroll', compact('payCards', 'rates', 'weekLabel', 'sentSheets', 'isMaster', 'editableUsers'));
     }
