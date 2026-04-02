@@ -15,11 +15,11 @@
         <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
             <div class="col-span-2 md:col-span-3">
                 <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Title</label>
-                <input wire:model="newTitle" type="text" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400" placeholder="Task title...">
+                <input id="fld-newTitle" wire:model="newTitle" type="text" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400" placeholder="Task title...">
             </div>
             <div>
                 <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Assign To</label>
-                <select wire:model="newAssignTo" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
+                <select id="fld-newAssignTo" wire:model="newAssignTo" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
                     <option value="">Select user...</option>
                     @foreach($users as $u)
                         <option value="{{ $u->id }}">{{ $u->name }}</option>
@@ -28,7 +28,7 @@
             </div>
             <div>
                 <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Type</label>
-                <select wire:model="newType" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
+                <select id="fld-newType" wire:model="newType" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
                     <option value="general">General</option>
                     <option value="call">Call</option>
                     <option value="follow_up">Follow Up</option>
@@ -38,7 +38,7 @@
             </div>
             <div>
                 <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Priority</label>
-                <select wire:model="newPriority" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
+                <select id="fld-newPriority" wire:model="newPriority" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
                     <option value="high">High</option>
@@ -47,11 +47,11 @@
             </div>
             <div>
                 <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Due Date</label>
-                <input wire:model="newDueDate" type="datetime-local" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                <input id="fld-newDueDate" wire:model="newDueDate" type="datetime-local" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
             </div>
             <div>
                 <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Description</label>
-                <input wire:model="newDescription" type="text" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400" placeholder="Optional description...">
+                <input id="fld-newDescription" wire:model="newDescription" type="text" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400" placeholder="Optional description...">
             </div>
         </div>
         <div class="flex justify-end mt-3">
@@ -186,7 +186,7 @@
                         <p class="text-xs text-crm-t3 mb-2">No notes yet</p>
                     @endif
                     <div class="flex gap-1">
-                        <input wire:model="newNote" type="text" placeholder="Add note..." class="flex-1 px-2 py-1.5 text-xs bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                        <input id="fld-newNote" wire:model="newNote" type="text" placeholder="Add note..." class="flex-1 px-2 py-1.5 text-xs bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                         <button wire:click="addNote" class="px-2 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">Add</button>
                     </div>
                 </div>

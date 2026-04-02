@@ -37,11 +37,11 @@
             @if($section === 'company')
                 <h3 class="text-sm font-semibold mb-3">Company Info</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <input wire:model.defer="companyName" type="text" placeholder="Company Name" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
-                    <input wire:model.defer="companyLogo" type="text" placeholder="Logo URL" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
-                    <input wire:model.defer="companyPhone" type="text" placeholder="Phone" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
-                    <input wire:model.defer="companyEmail" type="email" placeholder="Email" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
-                    <input wire:model.defer="companyAddress" type="text" placeholder="Address" class="md:col-span-2 px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                    <input id="fld-companyName" wire:model.defer="companyName" type="text" placeholder="Company Name" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                    <input id="fld-companyLogo" wire:model.defer="companyLogo" type="text" placeholder="Logo URL" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                    <input id="fld-companyPhone" wire:model.defer="companyPhone" type="text" placeholder="Phone" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                    <input id="fld-companyEmail" wire:model.defer="companyEmail" type="email" placeholder="Email" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                    <input id="fld-companyAddress" wire:model.defer="companyAddress" type="text" placeholder="Address" class="md:col-span-2 px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                 </div>
                 <div class="mt-3 text-right"><button wire:click="saveCompanyInfo" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg">Save Company Info</button></div>
             @endif
@@ -49,12 +49,12 @@
             @if($section === 'profile')
                 <h3 class="text-sm font-semibold mb-3">User Profile</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <input wire:model.defer="profileName" type="text" placeholder="Name" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
-                    <input wire:model.defer="profileEmail" type="email" placeholder="Email" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
-                    <input wire:model.defer="profileAvatar" type="text" placeholder="Avatar (2 letters)" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
-                    <input wire:model.defer="profileColor" type="color" class="h-10 w-full bg-white border border-crm-border rounded-lg">
-                    <input wire:model.defer="newPassword" type="password" placeholder="New password" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
-                    <input wire:model.defer="newPasswordConfirm" type="password" placeholder="Confirm password" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                    <input id="fld-profileName" wire:model.defer="profileName" type="text" placeholder="Name" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                    <input id="fld-profileEmail" wire:model.defer="profileEmail" type="email" placeholder="Email" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                    <input id="fld-profileAvatar" wire:model.defer="profileAvatar" type="text" placeholder="Avatar (2 letters)" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                    <input id="fld-profileColor" wire:model.defer="profileColor" type="color" class="h-10 w-full bg-white border border-crm-border rounded-lg">
+                    <input id="fld-newPassword" wire:model.defer="newPassword" type="password" placeholder="New password" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                    <input id="fld-newPasswordConfirm" wire:model.defer="newPasswordConfirm" type="password" placeholder="Confirm password" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                 </div>
                 @error('newPassword')<div class="text-xs text-red-600 mt-2">{{ $message }}</div>@enderror
                 <div class="mt-3 text-right"><button wire:click="saveProfile" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg">Save Profile</button></div>
@@ -77,12 +77,12 @@
                     <div class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">Payroll rules can only be edited by master admin.</div>
                 @else
                     <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        <div><label class="text-[10px] text-crm-t3">Closer %</label><input wire:model.defer="payrollRates.closer_pct" type="number" step="0.01" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg"></div>
-                        <div><label class="text-[10px] text-crm-t3">Fronter %</label><input wire:model.defer="payrollRates.fronter_pct" type="number" step="0.01" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg"></div>
-                        <div><label class="text-[10px] text-crm-t3">SNR %</label><input wire:model.defer="payrollRates.snr_pct" type="number" step="0.01" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg"></div>
-                        <div><label class="text-[10px] text-crm-t3">VD %</label><input wire:model.defer="payrollRates.vd_pct" type="number" step="0.01" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg"></div>
-                        <div><label class="text-[10px] text-crm-t3">Admin SNR %</label><input wire:model.defer="payrollRates.admin_snr_pct" type="number" step="0.01" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg"></div>
-                        <div><label class="text-[10px] text-crm-t3">Hourly Rate</label><input wire:model.defer="payrollRates.hourly_rate" type="number" step="0.01" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg"></div>
+                        <div><label class="text-[10px] text-crm-t3">Closer %</label><input id="fld-payrollRates-closer_pct" wire:model.defer="payrollRates.closer_pct" type="number" step="0.01" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg"></div>
+                        <div><label class="text-[10px] text-crm-t3">Fronter %</label><input id="fld-payrollRates-fronter_pct" wire:model.defer="payrollRates.fronter_pct" type="number" step="0.01" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg"></div>
+                        <div><label class="text-[10px] text-crm-t3">SNR %</label><input id="fld-payrollRates-snr_pct" wire:model.defer="payrollRates.snr_pct" type="number" step="0.01" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg"></div>
+                        <div><label class="text-[10px] text-crm-t3">VD %</label><input id="fld-payrollRates-vd_pct" wire:model.defer="payrollRates.vd_pct" type="number" step="0.01" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg"></div>
+                        <div><label class="text-[10px] text-crm-t3">Admin SNR %</label><input id="fld-payrollRates-admin_snr_pct" wire:model.defer="payrollRates.admin_snr_pct" type="number" step="0.01" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg"></div>
+                        <div><label class="text-[10px] text-crm-t3">Hourly Rate</label><input id="fld-payrollRates-hourly_rate" wire:model.defer="payrollRates.hourly_rate" type="number" step="0.01" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg"></div>
                     </div>
                     <div class="mt-3 text-right"><button wire:click="savePayrollRules" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg">Save Payroll Rules</button></div>
                 @endif
@@ -93,7 +93,7 @@
                 <div class="space-y-3">
                     <label class="flex items-center gap-2 text-sm"><input type="checkbox" wire:model="leadAutoAssign"> Auto-assign rules enabled</label>
                     <label class="flex items-center gap-2 text-sm"><input type="checkbox" wire:model="leadRoundRobin"> Round-robin assignment</label>
-                    <textarea wire:model.defer="leadCsvMapping" rows="4" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg" placeholder="CSV column mapping"></textarea>
+                    <textarea id="fld-leadCsvMapping" wire:model.defer="leadCsvMapping" rows="4" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg" placeholder="CSV column mapping"></textarea>
                 </div>
                 <div class="mt-3 text-right"><button wire:click="saveLeadSettings" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg">Save Lead Settings</button></div>
             @endif
@@ -141,19 +141,19 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                     <div>
                         <label class="text-[10px] text-crm-t3">Max File Upload Size (MB)</label>
-                        <input wire:model.defer="chatModuleSettings.max_upload_size" type="number" min="1" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                        <input id="fld-chatModuleSettings-max_upload_size" wire:model.defer="chatModuleSettings.max_upload_size" type="number" min="1" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                     </div>
                     <div>
                         <label class="text-[10px] text-crm-t3">Message Retention (days)</label>
-                        <input wire:model.defer="chatModuleSettings.retention_days" type="number" min="1" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                        <input id="fld-chatModuleSettings-retention_days" wire:model.defer="chatModuleSettings.retention_days" type="number" min="1" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                     </div>
                     <div class="md:col-span-2">
                         <label class="text-[10px] text-crm-t3">Allowed File Types (comma-separated)</label>
-                        <input wire:model.defer="chatModuleSettings.allowed_file_types" type="text" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                        <input id="fld-chatModuleSettings-allowed_file_types" wire:model.defer="chatModuleSettings.allowed_file_types" type="text" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                     </div>
                     <div>
                         <label class="text-[10px] text-crm-t3">Default Chat Permission Level</label>
-                        <select wire:model.defer="chatModuleSettings.default_permission" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                        <select id="fld-chatModuleSettings-default_permission" wire:model.defer="chatModuleSettings.default_permission" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                             <option value="private">Private</option>
                             <option value="team">Team</option>
                             <option value="organization">Organization</option>
@@ -199,11 +199,11 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
                     <div>
                         <label class="text-[10px] text-crm-t3">Auto Save Interval (seconds)</label>
-                        <input wire:model.defer="documentModuleSettings.autosave_interval_seconds" type="number" min="3" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                        <input id="fld-documentModuleSettings-autosave_interval_seconds" wire:model.defer="documentModuleSettings.autosave_interval_seconds" type="number" min="3" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                     </div>
                     <div>
                         <label class="text-[10px] text-crm-t3">Default Document Permission</label>
-                        <select wire:model.defer="documentModuleSettings.default_permission" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                        <select id="fld-documentModuleSettings-default_permission" wire:model.defer="documentModuleSettings.default_permission" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                             <option value="private">Private</option>
                             <option value="team">Team</option>
                             <option value="organization">Organization</option>
@@ -211,7 +211,7 @@
                     </div>
                     <div>
                         <label class="text-[10px] text-crm-t3">Max Document Size (MB)</label>
-                        <input wire:model.defer="documentModuleSettings.max_document_size" type="number" min="1" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                        <input id="fld-documentModuleSettings-max_document_size" wire:model.defer="documentModuleSettings.max_document_size" type="number" min="1" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                     </div>
                 </div>
                 @error('documentModuleSettings.autosave_interval_seconds')<div class="text-xs text-red-600 mb-1">{{ $message }}</div>@enderror
@@ -249,11 +249,11 @@
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
                     <div>
                         <label class="text-[10px] text-crm-t3">Auto Save Interval (seconds)</label>
-                        <input wire:model.defer="spreadsheetModuleSettings.autosave_interval_seconds" type="number" min="3" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                        <input id="fld-spreadsheetModuleSettings-autosave_interval_seconds" wire:model.defer="spreadsheetModuleSettings.autosave_interval_seconds" type="number" min="3" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                     </div>
                     <div>
                         <label class="text-[10px] text-crm-t3">Default Spreadsheet Permission</label>
-                        <select wire:model.defer="spreadsheetModuleSettings.default_permission" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                        <select id="fld-spreadsheetModuleSettings-default_permission" wire:model.defer="spreadsheetModuleSettings.default_permission" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                             <option value="private">Private</option>
                             <option value="team">Team</option>
                             <option value="organization">Organization</option>
@@ -261,11 +261,11 @@
                     </div>
                     <div>
                         <label class="text-[10px] text-crm-t3">Max Rows</label>
-                        <input wire:model.defer="spreadsheetModuleSettings.max_rows" type="number" min="100" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                        <input id="fld-spreadsheetModuleSettings-max_rows" wire:model.defer="spreadsheetModuleSettings.max_rows" type="number" min="100" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                     </div>
                     <div>
                         <label class="text-[10px] text-crm-t3">Max Columns</label>
-                        <input wire:model.defer="spreadsheetModuleSettings.max_columns" type="number" min="10" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                        <input id="fld-spreadsheetModuleSettings-max_columns" wire:model.defer="spreadsheetModuleSettings.max_columns" type="number" min="10" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                     </div>
                 </div>
                 @error('spreadsheetModuleSettings.autosave_interval_seconds')<div class="text-xs text-red-600 mb-1">{{ $message }}</div>@enderror
@@ -284,14 +284,14 @@
             @if($section === 'integrations')
                 <h3 class="text-sm font-semibold mb-3">Integration Settings</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <input wire:model.defer="integrationApiKey" type="text" placeholder="API key" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
-                    <input wire:model.defer="integrationWebhookUrl" type="text" placeholder="Webhook URL" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
-                    <select wire:model.defer="integrationSipProtocol" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                    <input id="fld-integrationApiKey" wire:model.defer="integrationApiKey" type="text" placeholder="API key" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                    <input id="fld-integrationWebhookUrl" wire:model.defer="integrationWebhookUrl" type="text" placeholder="Webhook URL" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                    <select id="fld-integrationSipProtocol" wire:model.defer="integrationSipProtocol" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                         <option value="sip:">sip:</option>
                         <option value="tel:">tel:</option>
                         <option value="callto:">callto:</option>
                     </select>
-                    <input wire:model.defer="integrationSipServer" type="text" placeholder="SIP server" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                    <input id="fld-integrationSipServer" wire:model.defer="integrationSipServer" type="text" placeholder="SIP server" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                 </div>
                 <div class="mt-3 text-right"><button wire:click="saveIntegrations" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg">Save Integrations</button></div>
 
@@ -300,8 +300,8 @@
                         <div class="text-xs font-semibold mb-2">Payment Processors</div>
                         @if($isMaster)
                             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
-                                <input wire:model.defer="newProcessorName" type="text" placeholder="Processor name" class="sm:col-span-2 px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
-                                <input wire:model.defer="newProcessorType" type="text" placeholder="Type" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                                <input id="fld-newProcessorName" wire:model.defer="newProcessorName" type="text" placeholder="Processor name" class="sm:col-span-2 px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                                <input id="fld-newProcessorType" wire:model.defer="newProcessorType" type="text" placeholder="Type" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                             </div>
                             <div class="flex items-center justify-between mb-3">
                                 <label class="text-xs flex items-center gap-2"><input type="checkbox" wire:model="newProcessorActive"> Active</label>
@@ -330,11 +330,11 @@
                         <div class="text-xs font-semibold mb-2">Merchant Accounts</div>
                         @if($isMaster)
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
-                                <input wire:model.defer="newMerchantName" type="text" placeholder="Merchant account name" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
-                                <input wire:model.defer="newMerchantMid" type="text" placeholder="MID (masked)" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                                <input id="fld-newMerchantName" wire:model.defer="newMerchantName" type="text" placeholder="Merchant account name" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                                <input id="fld-newMerchantMid" wire:model.defer="newMerchantMid" type="text" placeholder="MID (masked)" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                             </div>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
-                                <select wire:model.defer="newMerchantProcessorId" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                                <select id="fld-newMerchantProcessorId" wire:model.defer="newMerchantProcessorId" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                                     <option value="">Select processor</option>
                                     @foreach($processors as $p)
                                         <option value="{{ $p['id'] }}">{{ $p['name'] }}</option>

@@ -262,19 +262,19 @@
                     @foreach(['owner_name' => 'Owner Name', 'resort_name' => 'Resort Name', 'fee' => 'Fee ($)', 'primary_phone' => 'Primary Phone', 'secondary_phone' => 'Secondary Phone', 'email' => 'Email', 'mailing_address' => 'Mailing Address', 'city_state_zip' => 'City/State/Zip', 'resort_city_state' => 'Resort City/State', 'weeks' => 'Weeks', 'bed_bath' => 'Bed/Bath', 'usage' => 'Usage'] as $field => $label)
                         <div>
                             <label class="text-[10px] text-crm-t3 uppercase tracking-wider">{{ $label }}</label>
-                            <input wire:model="newDeal.{{ $field }}" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                            <input id="fld-newDeal-{{ $field }}" wire:model="newDeal.{{ $field }}" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                         </div>
                     @endforeach
                     <div>
                         <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Fronter</label>
-                        <select wire:model="newDeal.fronter" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none">
+                        <select id="fld-newDeal-fronter" wire:model="newDeal.fronter" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none">
                             <option value="">Select...</option>
                             @foreach($users as $u) <option value="{{ $u->id }}">{{ $u->name }}</option> @endforeach
                         </select>
                     </div>
                     <div>
                         <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Closer</label>
-                        <select wire:model="newDeal.closer" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none">
+                        <select id="fld-newDeal-closer" wire:model="newDeal.closer" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none">
                             <option value="">Select...</option>
                             @foreach($users->whereIn('role', ['closer']) as $u) <option value="{{ $u->id }}">{{ $u->name }}</option> @endforeach
                         </select>
@@ -282,7 +282,7 @@
                 </div>
                 <div class="mt-3">
                     <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Notes</label>
-                    <textarea wire:model="newDeal.notes" rows="3" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400"></textarea>
+                    <textarea id="fld-newDeal-notes" wire:model="newDeal.notes" rows="3" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400"></textarea>
                 </div>
                 <div class="flex justify-end gap-2 mt-5">
                     <button wire:click="$set('showNewDeal', false)" class="px-4 py-2 text-sm font-semibold text-crm-t2 bg-crm-card border border-crm-border rounded-lg hover:bg-crm-hover transition">Cancel</button>

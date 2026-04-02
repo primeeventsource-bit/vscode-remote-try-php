@@ -25,7 +25,7 @@
 
         {{-- Search --}}
         <div class="px-3 py-2 border-b border-crm-border">
-            <input wire:model.live.debounce.300ms="search" type="text" placeholder="Search documents..." class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+            <input id="fld-search" wire:model.live.debounce.300ms="search" type="text" placeholder="Search documents..." class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
         </div>
 
         {{-- Tabs --}}
@@ -74,7 +74,7 @@
                 @if($isReadOnly)
                     <span class="px-2 py-0.5 text-[10px] font-bold text-amber-700 bg-amber-100 rounded-full uppercase">Read Only</span>
                 @endif
-                <input wire:model.blur="editTitle" @if($isReadOnly) disabled @endif
+                <input id="doc-edit-title" wire:model.blur="editTitle" @if($isReadOnly) disabled @endif
                     class="flex-1 text-sm font-bold bg-transparent border-0 focus:outline-none {{ $isReadOnly ? 'text-crm-t2 cursor-default' : '' }}" placeholder="Document title...">
                 <div class="flex items-center gap-2">
                     @if(!$isReadOnly)
@@ -100,7 +100,7 @@
                     </div>
                 @else
                     <div class="max-w-3xl mx-auto">
-                        <textarea wire:model.blur="editContent" @if($isReadOnly) disabled @endif
+                        <textarea id="doc-edit-content" wire:model.blur="editContent" @if($isReadOnly) disabled @endif
                             class="w-full min-h-[60vh] text-sm leading-relaxed bg-white border border-crm-border rounded-xl p-6 focus:outline-none focus:border-blue-400 resize-none {{ $isReadOnly ? 'bg-gray-50 cursor-default' : '' }}"
                             placeholder="Start writing..."></textarea>
                     </div>
@@ -123,7 +123,7 @@
                 <h3 class="text-sm font-bold mb-4">Share Document</h3>
                 <div class="mb-3">
                     <label class="text-xs text-crm-t3 uppercase font-semibold">Permission</label>
-                    <select wire:model="sharePermission" class="w-full mt-1 rounded-lg border border-crm-border px-3 py-2 text-sm">
+                    <select id="fld-sharePermission" wire:model="sharePermission" class="w-full mt-1 rounded-lg border border-crm-border px-3 py-2 text-sm">
                         <option value="view">View Only</option>
                         <option value="edit">Can Edit</option>
                     </select>

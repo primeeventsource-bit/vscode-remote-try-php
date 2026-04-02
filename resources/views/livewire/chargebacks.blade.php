@@ -10,53 +10,53 @@
     </div>
 
     <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-3 mb-4">
-        <input wire:model.live.debounce.300ms="search" type="text" placeholder="Search dispute #, reason..." class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg" />
-        <input wire:model.live="startDate" type="date" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg" />
-        <input wire:model.live="endDate" type="date" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg" />
+        <input id="fld-search" wire:model.live.debounce.300ms="search" type="text" placeholder="Search dispute #, reason..." class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg" />
+        <input id="fld-startDate" wire:model.live="startDate" type="date" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg" />
+        <input id="fld-endDate" wire:model.live="endDate" type="date" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg" />
 
-        <select wire:model.live="processorId" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+        <select id="fld-processorId" wire:model.live="processorId" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
             <option value="">All Processors</option>
             @foreach($processors as $p)
                 <option value="{{ $p->id }}">{{ $p->name }}</option>
             @endforeach
         </select>
 
-        <select wire:model.live="salesRepId" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+        <select id="fld-salesRepId" wire:model.live="salesRepId" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
             <option value="">All Reps</option>
             @foreach($salesReps as $rep)
                 <option value="{{ $rep->id }}">{{ $rep->name }}</option>
             @endforeach
         </select>
 
-        <select wire:model.live="merchantAccountId" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+        <select id="fld-merchantAccountId" wire:model.live="merchantAccountId" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
             <option value="">All MIDs</option>
             @foreach($merchantAccounts as $m)
                 <option value="{{ $m->id }}">{{ $m->name }}</option>
             @endforeach
         </select>
 
-        <select wire:model.live="status" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+        <select id="fld-status" wire:model.live="status" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
             <option value="">All Statuses</option>
             @foreach($statuses as $s)
                 <option value="{{ $s }}">{{ ucfirst($s) }}</option>
             @endforeach
         </select>
 
-        <select wire:model.live="reasonCode" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+        <select id="fld-reasonCode" wire:model.live="reasonCode" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
             <option value="">All Reason Codes</option>
             @foreach($reasonCodes as $rc)
                 <option value="{{ $rc }}">{{ $rc }}</option>
             @endforeach
         </select>
 
-        <select wire:model.live="cardBrand" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+        <select id="fld-cardBrand" wire:model.live="cardBrand" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
             <option value="">All Brands</option>
             @foreach($cardBrands as $cb)
                 <option value="{{ $cb }}">{{ $cb }}</option>
             @endforeach
         </select>
 
-        <select wire:model.live="paymentMethod" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+        <select id="fld-paymentMethod" wire:model.live="paymentMethod" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
             <option value="">All Payment Methods</option>
             @foreach($paymentMethods as $pm)
                 <option value="{{ $pm }}">{{ $pm }}</option>
@@ -151,7 +151,7 @@
 
                 <div>
                     <div class="text-xs font-semibold mb-2">Add Note</div>
-                    <textarea wire:model="newNote" rows="3" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg" placeholder="Add context, representment notes, deadlines, outcomes..."></textarea>
+                    <textarea id="fld-newNote" wire:model="newNote" rows="3" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg" placeholder="Add context, representment notes, deadlines, outcomes..."></textarea>
                     <button wire:click="addNote" class="mt-2 px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">Save Note</button>
                 </div>
 

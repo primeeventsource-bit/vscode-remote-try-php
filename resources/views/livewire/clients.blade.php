@@ -6,7 +6,7 @@
 
     {{-- Search + Status Tabs --}}
     <div class="flex flex-wrap items-center gap-3 mb-4">
-        <input wire:model.live.debounce.300ms="search" type="text" placeholder="Search clients..." class="flex-1 min-w-[200px] px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+        <input id="fld-search" wire:model.live.debounce.300ms="search" type="text" placeholder="Search clients..." class="flex-1 min-w-[200px] px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
         <div class="flex items-center gap-1 bg-crm-card border border-crm-border rounded-lg p-0.5">
             @foreach(['all' => 'All', 'charged' => 'Charged', 'cb' => 'CB', 'won' => 'Won', 'lost' => 'Lost'] as $key => $label)
                 <button wire:click="$set('statusTab', '{{ $key }}')"

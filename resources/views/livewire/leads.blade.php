@@ -59,14 +59,14 @@
 
     {{-- Search + Filters --}}
     <div class="flex flex-wrap items-center gap-3 mb-4">
-        <input wire:model.live.debounce.300ms="search" type="text" placeholder="Search leads..." class="flex-1 min-w-[200px] px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
-        <select wire:model.live="resortFilter" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
+        <input id="fld-search" wire:model.live.debounce.300ms="search" type="text" placeholder="Search leads..." class="flex-1 min-w-[200px] px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+        <select id="fld-resortFilter" wire:model.live="resortFilter" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
             <option value="all">All Resorts</option>
             @foreach($resorts as $r)
                 <option value="{{ $r }}">{{ $r }}</option>
             @endforeach
         </select>
-        <select wire:model.live="fronterFilter" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
+        <select id="fld-fronterFilter" wire:model.live="fronterFilter" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
             <option value="all">All Fronter Lists</option>
             <option value="unassigned">Unassigned Leads</option>
             @foreach($fronters as $f)
@@ -87,7 +87,7 @@
         <button @click="selectAllVisibleLocal()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white border border-crm-border hover:bg-crm-hover transition">Select All Visible</button>
         <button @click="clearSelectionLocal()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white border border-crm-border hover:bg-crm-hover transition">Clear Selection</button>
         <span class="text-xs text-crm-t3">{{ count($selectedLeads) }} selected</span>
-        <select wire:model="bulkFronter" class="px-3 py-1.5 text-xs bg-white border border-crm-border rounded-lg focus:outline-none">
+        <select id="fld-bulkFronter" wire:model="bulkFronter" class="px-3 py-1.5 text-xs bg-white border border-crm-border rounded-lg focus:outline-none">
             <option value="">Assign selected to fronter...</option>
             @foreach($fronters as $f)
                 <option value="{{ $f->id }}">{{ $f->name }}</option>
@@ -298,13 +298,13 @@
 
                 {{-- Callback --}}
                 <div class="flex items-center gap-2 mt-3">
-                    <input wire:model="callbackDateTime" type="datetime-local" class="px-3 py-1.5 text-xs bg-white border border-crm-border rounded-lg focus:outline-none">
+                    <input id="fld-callbackDateTime" wire:model="callbackDateTime" type="datetime-local" class="px-3 py-1.5 text-xs bg-white border border-crm-border rounded-lg focus:outline-none">
                     <button wire:click="doCallback({{ $active->id }})" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-50 text-amber-600 border border-amber-200 hover:bg-amber-100 transition">Callback</button>
                 </div>
 
                 {{-- Transfer to Closer --}}
                 <div class="flex items-center gap-2 mt-3">
-                    <select wire:model="transferCloser" class="px-3 py-1.5 text-xs bg-white border border-crm-border rounded-lg focus:outline-none">
+                    <select id="fld-transferCloser" wire:model="transferCloser" class="px-3 py-1.5 text-xs bg-white border border-crm-border rounded-lg focus:outline-none">
                         <option value="">Select Closer...</option>
                         @foreach($closers as $c)
                             <option value="{{ $c->id }}">{{ $c->name }}</option>
@@ -328,40 +328,40 @@
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Owner Name</label>
-                            <input wire:model="newLead.owner_name" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                            <input id="fld-newLead-owner_name" wire:model="newLead.owner_name" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                         </div>
                         <div>
                             <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Resort</label>
-                            <input wire:model="newLead.resort" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                            <input id="fld-newLead-resort" wire:model="newLead.resort" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                         </div>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Phone 1</label>
-                            <input wire:model="newLead.phone1" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                            <input id="fld-newLead-phone1" wire:model="newLead.phone1" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                         </div>
                         <div>
                             <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Phone 2</label>
-                            <input wire:model="newLead.phone2" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                            <input id="fld-newLead-phone2" wire:model="newLead.phone2" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                         </div>
                     </div>
                     <div class="grid grid-cols-3 gap-3">
                         <div>
                             <label class="text-[10px] text-crm-t3 uppercase tracking-wider">City</label>
-                            <input wire:model="newLead.city" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                            <input id="fld-newLead-city" wire:model="newLead.city" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                         </div>
                         <div>
                             <label class="text-[10px] text-crm-t3 uppercase tracking-wider">State</label>
-                            <input wire:model="newLead.st" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                            <input id="fld-newLead-st" wire:model="newLead.st" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                         </div>
                         <div>
                             <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Zip</label>
-                            <input wire:model="newLead.zip" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                            <input id="fld-newLead-zip" wire:model="newLead.zip" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                         </div>
                     </div>
                     <div>
                         <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Resort Location</label>
-                        <input wire:model="newLead.resort_location" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                        <input id="fld-newLead-resort_location" wire:model="newLead.resort_location" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                     </div>
                 </div>
                 <div class="flex justify-end gap-2 mt-5">
@@ -415,7 +415,7 @@
 
                 <details class="mb-3">
                     <summary class="cursor-pointer text-xs font-semibold text-crm-t2">Or paste CSV manually</summary>
-                    <textarea wire:model="csvText" rows="6" class="mt-2 w-full px-3 py-2 text-sm font-mono bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400" placeholder="Resort,Owner Name,Phone1,Phone2,City,St,Zip,Resort Location"></textarea>
+                    <textarea id="fld-csvText" wire:model="csvText" rows="6" class="mt-2 w-full px-3 py-2 text-sm font-mono bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400" placeholder="Resort,Owner Name,Phone1,Phone2,City,St,Zip,Resort Location"></textarea>
                 </details>
 
                 <div class="flex justify-end gap-2">

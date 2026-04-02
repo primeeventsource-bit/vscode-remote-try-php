@@ -162,7 +162,7 @@
                         <p class="text-xs text-crm-t3 mb-2">No notes yet</p>
                     @endif
                     <div class="flex gap-1">
-                        <input wire:model="noteInput" type="text" placeholder="Add a note..." class="flex-1 px-2 py-1.5 text-xs bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                        <input id="fld-noteInput" wire:model="noteInput" type="text" placeholder="Add a note..." class="flex-1 px-2 py-1.5 text-xs bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                         <button wire:click="addNote({{ $selectedDeal->id }})" class="px-2 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">Add</button>
                     </div>
                 </div>
