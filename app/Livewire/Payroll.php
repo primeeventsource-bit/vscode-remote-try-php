@@ -19,6 +19,15 @@ class Payroll extends Component
     public int $weekOffset = 0;
     public array $userPayrollInputs = [];
 
+    public function prevWeek(): void { $this->weekOffset--; }
+    public function nextWeek(): void { $this->weekOffset++; }
+    public function thisWeek(): void { $this->weekOffset = 0; }
+    public function addBonus($userId): void {}
+    public function addDeduction($userId): void {}
+    public function addManualDeal($userId): void {}
+    public function addPayNote($userId): void {}
+    public function sendPaysheet($userId): void {}
+
     public function saveUserPayrollInfo(int $userId): void
     {
         $row = $this->userPayrollInputs[$userId] ?? [];
@@ -167,17 +176,24 @@ class Payroll extends Component
             $cbTotal = $myCB->sum('fee');
             $netPay = $commission - ($cbTotal * $commPct);
 
-            return (object) [
-                'u' => $u,
-                'myDeals' => $myDeals,
-                'totalSold' => $totalSold,
-                'totalPayout' => $totalPayout,
+            // Return array matching what blade expects
+            return [
+                'user_id' => $u->id,
+                'gross_revenue' => $totalSold,
+                'commission_rate' => $effectiveCommPct,
                 'commission' => $commission,
-                'commPct' => $commPct,
-                'cbTotal' => $cbTotal,
-                'netPay' => $netPay,
-                'dealCount' => $myDeals->count(),
-                'cbCount' => $myCB->count(),
+                'chargebacks' => $cbTotal * $commPct,
+                'final_pay' => $netPay,
+                'deals' => $myDeals->map(fn($d) => [
+                    'owner_name' => $d->owner_name,
+                    'fee' => $d->fee,
+                    'charged_back' => $d->charged_back,
+                ])->values()->toArray(),
+                'notes' => [],
+                'bonus' => 0,
+                'deductions' => 0,
+                'hours' => 0,
+                'hourly_rate' => $customRate?->hourly_rate ?? $rates['hourlyRate'],
             ];
         };
 
@@ -209,6 +225,7 @@ class Payroll extends Component
             $sentSheets = collect();
         }
 
-        return view('livewire.payroll', compact('payCards', 'rates', 'weekLabel', 'sentSheets', 'isMaster', 'editableUsers'));
+        $users = User::all()->keyBy('id');
+        return view('livewire.payroll', compact('payCards', 'rates', 'weekLabel', 'sentSheets', 'isMaster', 'editableUsers', 'users'));
     }
 }
