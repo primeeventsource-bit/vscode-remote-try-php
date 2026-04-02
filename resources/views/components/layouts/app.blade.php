@@ -93,7 +93,6 @@
                     ['route' => 'documents',    'icon' => '📄', 'label' => 'Documents',       'perm' => 'view_documents', 'enabled' => $documentsEnabled],
                     ['route' => 'spreadsheets', 'icon' => '🧮', 'label' => 'Spreadsheets',    'perm' => 'view_spreadsheets', 'enabled' => $spreadsheetsEnabled],
                     ['route' => 'users',        'icon' => '👥', 'label' => 'Users',           'perm' => 'view_users'],
-                    ['route' => 'chat',         'icon' => '💬', 'label' => 'Chat',            'perm' => 'view_chat', 'enabled' => $chatEnabled],
                 ])->filter(function ($item) use ($user) {
                     $enabled = $item['enabled'] ?? true;
                     return $enabled && (!$item['perm'] || $user->hasPerm($item['perm']));
@@ -151,7 +150,19 @@
         {{ $slot }}
     </main>
 
-    {{-- Chat widget removed — use /chat page instead --}}
+    @php
+        $chatSettingEnabled = true;
+        try {
+            $chatRaw = \Illuminate\Support\Facades\DB::table('crm_settings')->where('key', 'chat.module_enabled')->value('value');
+            if ($chatRaw !== null) {
+                $chatSettingEnabled = json_decode($chatRaw, true) === true;
+            }
+        } catch (\Throwable $e) {}
+    @endphp
+
+    @if($chatSettingEnabled && auth()->user()?->hasPerm('view_chat'))
+        @livewire('chat-widget')
+    @endif
 
     @livewireScripts
 </body>
