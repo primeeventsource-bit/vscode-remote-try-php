@@ -1,8 +1,7 @@
 <style>
     @keyframes wdg-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.7;transform:scale(1.15)} }
-    .wdg-badge-red { animation:wdg-pulse 1.5s ease-in-out infinite; background:#3b82f6; }
     .wdg-badge-red { animation:wdg-pulse 1.5s ease-in-out infinite; background:#ef4444; }
-    .wdg-msg-unread { background:rgba(59,130,246,0.08); border-left:2px solid #3b82f6; }
+    .wdg-msg-unread { background:rgba(239,68,68,0.08); border-left:2px solid #ef4444; }
 </style>
 <div
     x-data="{
