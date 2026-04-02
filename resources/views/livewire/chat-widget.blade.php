@@ -73,7 +73,7 @@
                         $displayName = $chat->type === 'dm' ? ($other?->name ?? $chat->name ?? 'DM') : $chat->name;
                         $chatUnread = $unreadCounts[$chat->id] ?? 0;
                     @endphp
-                    <button wire:click="selectChat({{ $chat->id }})"
+                    <button wire:key="chat-{{ $chat->id }}" wire:click="selectChat({{ $chat->id }})"
                         class="flex w-full items-center gap-3 border-b border-crm-border px-4 py-3 text-left transition {{ $chatUnread > 0 ? 'bg-red-50/60' : 'hover:bg-crm-hover' }}">
                         <div class="relative flex-shrink-0">
                             <div class="flex h-9 w-9 items-center justify-center rounded-full text-[10px] font-bold text-white" style="background:{{ $bg }}">{{ $initials }}</div>
