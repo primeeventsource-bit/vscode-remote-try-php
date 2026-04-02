@@ -22,10 +22,9 @@
     }"
     @mousemove.window="if(dragging) doDrag($event)"
     @mouseup.window="if(dragging) stopDrag()"
-    wire:poll.10s
 >
     {{-- Floating Bubble Button --}}
-    <button @click="open = !open" title="Toggle Chat"
+    <button @click="open = !open; if(open) $wire.$refresh()" title="Toggle Chat"
         class="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-600/30 transition hover:scale-105 hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-200">
         @if($totalUnread > 0)
             <span class="absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-30 animate-ping"></span>
