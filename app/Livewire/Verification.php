@@ -47,7 +47,7 @@ class Verification extends Component
         $deal = Deal::find($this->selectedDeal);
         if (!$deal) return;
         $corr = is_array($deal->correspondence) ? $deal->correspondence : json_decode($deal->correspondence ?? '[]', true);
-        $corr[] = now()->format('n/j') . ' - ' . auth()->user()->name . ': ' . $this->noteInput;
+        $corr[] = now()->format('n/j') . ' - ' . (auth()->user()?->name ?? 'System') . ': ' . $this->noteInput;
         $deal->update(['correspondence' => json_encode($corr)]);
         $this->noteInput = '';
     }
