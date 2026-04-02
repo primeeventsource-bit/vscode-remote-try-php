@@ -7,6 +7,7 @@ use App\Models\Message;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Collection;
 use Livewire\Component;
 
 class ChatWidget extends Component
@@ -34,6 +35,29 @@ class ChatWidget extends Component
         $this->selectedChat = (int) $id;
         $this->messageInput = '';
         $this->showNewChatForm = false;
+
+        // isActiveChat = true → markAllAsSeen → unreadCount = 0
+        $this->markChatAsSeen();
+    }
+
+    private function markChatAsSeen(): void
+    {
+        if (!$this->selectedChat) return;
+
+        try {
+            $now = now()->toDateTimeString();
+
+            // Mark all incoming messages in this chat as seen
+            Message::where('chat_id', $this->selectedChat)
+                ->where('sender_id', '!=', auth()->id())
+                ->whereNull('seen_at')
+                ->update([
+                    'seen_at' => $now,
+                    'delivered_at' => DB::raw("COALESCE(delivered_at, '$now')"),
+                ]);
+        } catch (\Throwable $e) {
+            // seen_at column may not exist yet
+        }
     }
 
     public function clearChat(): void
@@ -122,12 +146,17 @@ class ChatWidget extends Component
         if (!$text || !$this->selectedChat) return;
 
         try {
-            Message::create([
+            $msgData = [
                 'chat_id' => $this->selectedChat,
                 'message_type' => 'text',
                 'sender_id' => auth()->id(),
                 'text' => $text,
-            ]);
+            ];
+
+            // Sender sees own message immediately
+            try { $msgData['seen_at'] = now(); $msgData['delivered_at'] = now(); } catch (\Throwable $e) {}
+
+            Message::create($msgData);
             Chat::where('id', $this->selectedChat)->update(['updated_at' => now()]);
             $this->messageInput = '';
         } catch (\Throwable $e) {
@@ -174,6 +203,11 @@ class ChatWidget extends Component
             });
         } catch (\Throwable $e) {
             $chats = collect();
+        }
+
+        // isActiveChat: if user is viewing a chat, mark as seen
+        if ($this->selectedChat) {
+            $this->markChatAsSeen();
         }
 
         try {
