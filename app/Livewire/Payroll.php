@@ -218,7 +218,7 @@ class Payroll extends Component
         $payCards = collect();
         $roleFilter = match ($this->tab) {
             'closers' => 'closer',
-            'fronters' => ['fronter'],
+            'fronters' => ['fronter', 'fronter_panama'],
             'admins' => ['admin', 'admin_limited', 'master_admin'],
             default => null,
         };
@@ -229,7 +229,7 @@ class Payroll extends Component
                 : User::where('role', $roleFilter)->get();
 
             foreach ($roleUsers as $ru) {
-                $field = match ($ru->role) { 'closer' => 'closer', 'fronter' => 'fronter', default => 'assigned_admin' };
+                $field = match ($ru->role) { 'closer' => 'closer', 'fronter', 'fronter_panama' => 'fronter', default => 'assigned_admin' };
                 $myDeals = $chargedDeals->where($field, $ru->id);
 
                 $payCards->push([
@@ -246,16 +246,16 @@ class Payroll extends Component
                         'vd' => (float) $d->vd_deduction,
                         'charged_back' => $d->charged_back,
                     ])->values()->toArray(),
-                    'commission' => $ru->role === 'closer' ? $myDeals->sum('closer_net_pay') : ($ru->role === 'fronter' ? $myDeals->sum('fronter_comm_amount') : 0),
+                    'commission' => $ru->role === 'closer' ? $myDeals->sum('closer_net_pay') : (in_array($ru->role, ['fronter', 'fronter_panama']) ? $myDeals->sum('fronter_comm_amount') : 0),
                     'total_snr' => $ru->role === 'closer' ? $myDeals->sum('snr_deduction') : 0,
                     'total_vd' => $ru->role === 'closer' ? $myDeals->sum('vd_deduction') : 0,
-                    'final_pay' => $ru->role === 'closer' ? $myDeals->sum('closer_net_pay') : ($ru->role === 'fronter' ? $myDeals->sum('fronter_comm_amount') : 0),
+                    'final_pay' => $ru->role === 'closer' ? $myDeals->sum('closer_net_pay') : (in_array($ru->role, ['fronter', 'fronter_panama']) ? $myDeals->sum('fronter_comm_amount') : 0),
                     'deal_count' => $myDeals->count(),
                 ]);
             }
         } elseif (!$isMaster && !$isAdmin) {
             // Non-admin: show own pay card
-            $field = match ($user->role) { 'closer' => 'closer', 'fronter' => 'fronter', default => 'assigned_admin' };
+            $field = match ($user->role) { 'closer' => 'closer', 'fronter', 'fronter_panama' => 'fronter', default => 'assigned_admin' };
             $myDeals = $chargedDeals->where($field, $user->id);
             $payCards->push([
                 'user_id' => $user->id,
