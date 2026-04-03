@@ -4,6 +4,7 @@ namespace App\Livewire;
 use App\Livewire\Concerns\SendsTransferDm;
 use App\Models\Deal;
 use App\Models\User;
+use App\Services\CommissionCalculator;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -134,6 +135,10 @@ class Deals extends Component
             $data['charged_date'] = $chargedDate ?: now()->format('Y-m-d');
             $data['is_locked'] = true;
             $data['status'] = 'charged';
+            // Calculate commissions when deal is charged
+            $deal->update($data);
+            CommissionCalculator::calculate($deal);
+            return;
         } elseif ($disposition === 'callback') {
             $data['callback_date'] = $callbackDate;
         } elseif ($disposition === 'declined') {
