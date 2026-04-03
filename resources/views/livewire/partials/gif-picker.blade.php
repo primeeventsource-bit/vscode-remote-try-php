@@ -40,8 +40,9 @@
 
     <div x-show="open" x-cloak @click.outside="close()" @click.stop
         x-transition.opacity.duration.100ms
-        class="absolute bottom-12 right-0 z-[99999] flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-[0_12px_40px_rgba(0,0,0,0.18)]"
-        style="width:340px; height:380px;">
+        class="fixed z-[99999] flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-[0_12px_40px_rgba(0,0,0,0.18)]"
+        x-ref="gifpanel"
+        x-effect="if(open){$nextTick(()=>{const b=$root.querySelector('button[title=GIF]');if(!b||!$refs.gifpanel)return;const r=b.getBoundingClientRect();$refs.gifpanel.style.width='340px';$refs.gifpanel.style.height='380px';$refs.gifpanel.style.left=Math.max(8,r.right-340)+'px';$refs.gifpanel.style.top=Math.max(8,r.top-388)+'px';})}">
 
         <div class="flex-shrink-0 border-b border-gray-100 bg-gray-50/80 px-3 py-2">
             <div class="flex items-center justify-between mb-1.5">
