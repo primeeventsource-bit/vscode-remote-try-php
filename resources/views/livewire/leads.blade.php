@@ -227,11 +227,15 @@
 
     {{-- Detail Panel --}}
     @if($active)
-        <div class="bg-crm-card border border-crm-border rounded-lg p-4 mb-4" x-data="{ editing: false }" x-init="editing = false">
+        <div class="bg-crm-card border border-crm-border rounded-lg p-4 mb-4">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-base font-bold">{{ $active->owner_name }}</h3>
                 <div class="flex items-center gap-2">
-                    <button @click="editing = !editing; if(editing) $wire.editLead({{ $active->id }})" class="px-3 py-1.5 text-xs font-semibold rounded-lg transition" :class="editing ? 'bg-gray-200 text-gray-700' : 'bg-blue-600 text-white hover:bg-blue-700'" x-text="editing ? 'Cancel Edit' : 'Edit Lead'"></button>
+                    @if($showEditModal && !empty($editForm) && ($editForm['id'] ?? 0) == $active->id)
+                        <button wire:click="$set('showEditModal', false)" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-200 text-gray-700">Cancel Edit</button>
+                    @else
+                        <button wire:click="editLead({{ $active->id }})" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">Edit Lead</button>
+                    @endif
                     <button wire:click="selectLead({{ $active->id }})" class="text-crm-t3 hover:text-crm-t1 text-lg">&times;</button>
                 </div>
             </div>
@@ -243,8 +247,9 @@
                 </div>
             @endif
 
-            {{-- Editable fields (shown when editing) --}}
-            <div x-show="editing" x-cloak class="mb-4">
+            {{-- Editable fields --}}
+            @if($showEditModal && !empty($editForm) && ($editForm['id'] ?? 0) == $active->id)
+            <div class="mb-4">
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
                     <div>
                         <label for="el-name" class="text-[10px] text-crm-t3 uppercase">Owner Name</label>
@@ -281,9 +286,9 @@
                 </div>
                 <button wire:click="updateLead" class="px-5 py-2 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow transition">Save Lead</button>
             </div>
-
-            {{-- Read-only fields (shown when not editing) --}}
-            <div x-show="!editing" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+            @else
+            {{-- Read-only fields --}}
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
                 <div>
                     <div class="text-[10px] text-crm-t3 uppercase tracking-wider">Resort</div>
                     <div class="text-sm font-semibold mt-0.5">{{ $active->resort }}</div>
@@ -335,6 +340,7 @@
                     <div class="text-sm mt-0.5">{{ $active->source ?? 'N/A' }}</div>
                 </div>
             </div>
+            @endif
 
             {{-- Disposition Buttons --}}
             <div class="border-t border-crm-border pt-4">
