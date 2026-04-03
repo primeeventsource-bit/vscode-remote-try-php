@@ -128,38 +128,75 @@
                         @endforeach
                     @endif
                 @else
-                {{-- Normal Chat List --}}
-                @forelse($chats as $chat)
-                    @php
-                        $members = is_array($chat->members) ? $chat->members : json_decode($chat->members ?? '[]', true);
-                        $otherId = collect($members)->first(fn($m) => (int)$m !== auth()->id());
-                        $other = $otherId ? $users->get($otherId) : null;
-                        $bg = $other?->color ?? '#3b82f6';
-                        $initials = $chat->type === 'channel' ? '#' : ($other?->avatar ?? substr($other?->name ?? 'G', 0, 2));
-                        $displayName = $chat->type === 'dm' ? ($other?->name ?? $chat->name ?? 'DM') : $chat->name;
-                        $chatUnread = $unreadCounts[$chat->id] ?? 0;
-                    @endphp
-                    <button wire:key="chat-{{ $chat->id }}" wire:click="selectChat({{ $chat->id }})"
-                        class="flex w-full items-center gap-3 border-b border-crm-border px-4 py-3 text-left transition {{ $chatUnread > 0 ? 'bg-red-50/60' : 'hover:bg-crm-hover' }}">
-                        <div class="relative flex-shrink-0">
-                            <div class="flex h-9 w-9 items-center justify-center rounded-full text-[10px] font-bold text-white" style="background:{{ $bg }}">{{ $initials }}</div>
+                {{-- DM Folder --}}
+                @php $dmChats = $chats->where('type', 'dm'); $groupChats = $chats->filter(fn($c) => $c->type !== 'dm'); @endphp
+
+                @if($dmChats->isNotEmpty())
+                    <div class="px-3 pt-2 pb-1 flex items-center justify-between">
+                        <span class="text-[9px] text-crm-t3 uppercase font-semibold tracking-wider">Direct Messages</span>
+                        <span class="text-[9px] text-crm-t3">{{ $dmChats->count() }}</span>
+                    </div>
+                    @foreach($dmChats as $chat)
+                        @php
+                            $members = is_array($chat->members) ? $chat->members : json_decode($chat->members ?? '[]', true);
+                            $otherId = collect($members)->first(fn($m) => (int)$m !== auth()->id());
+                            $other = $otherId ? $users->get($otherId) : null;
+                            $bg = $other?->color ?? '#3b82f6';
+                            $initials = $other?->avatar ?? substr($other?->name ?? '?', 0, 2);
+                            $displayName = $other?->name ?? $chat->name ?? 'DM';
+                            $chatUnread = $unreadCounts[$chat->id] ?? 0;
+                        @endphp
+                        <button wire:key="chat-{{ $chat->id }}" wire:click="selectChat({{ $chat->id }})"
+                            class="flex w-full items-center gap-3 border-b border-crm-border px-4 py-2.5 text-left transition {{ $chatUnread > 0 ? 'bg-red-50/60' : 'hover:bg-crm-hover' }}">
+                            <div class="relative flex-shrink-0">
+                                <div class="flex h-8 w-8 items-center justify-center rounded-full text-[9px] font-bold text-white" style="background:{{ $bg }}">{{ $initials }}</div>
+                                @if($chatUnread > 0)<span class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full wdg-badge-red"></span>@endif
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <div class="truncate text-xs {{ $chatUnread > 0 ? 'font-bold' : 'font-semibold' }}">{{ $displayName }}</div>
+                                <div class="text-[10px] text-crm-t3">{{ $chat->updated_at?->diffForHumans() ?? '' }}</div>
+                            </div>
                             @if($chatUnread > 0)
-                                <span class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full wdg-badge-red"></span>
+                                <span class="min-w-[16px] h-[16px] flex items-center justify-center text-[8px] font-bold text-white rounded-full px-1 wdg-badge-red">{{ $chatUnread }}</span>
                             @endif
-                        </div>
-                        <div class="min-w-0 flex-1">
-                            <div class="truncate text-sm {{ $chatUnread > 0 ? 'font-bold' : 'font-semibold' }}">{{ $displayName }}</div>
-                            <div class="text-[10px] text-crm-t3">{{ $chat->updated_at?->diffForHumans() ?? '' }}</div>
-                        </div>
-                        @if($chatUnread > 0)
-                            <span class="min-w-[18px] h-[18px] flex items-center justify-center text-[9px] font-bold text-white rounded-full px-1 wdg-badge-red">{{ $chatUnread }}</span>
-                        @endif
-                    </button>
-                @empty
+                        </button>
+                    @endforeach
+                @endif
+
+                {{-- Group Folder --}}
+                @if($groupChats->isNotEmpty())
+                    <div class="px-3 pt-3 pb-1 flex items-center justify-between">
+                        <span class="text-[9px] text-crm-t3 uppercase font-semibold tracking-wider">Groups</span>
+                        <span class="text-[9px] text-crm-t3">{{ $groupChats->count() }}</span>
+                    </div>
+                    @foreach($groupChats as $chat)
+                        @php $chatUnread = $unreadCounts[$chat->id] ?? 0; @endphp
+                        <button wire:key="chat-{{ $chat->id }}" wire:click="selectChat({{ $chat->id }})"
+                            class="flex w-full items-center gap-3 border-b border-crm-border px-4 py-2.5 text-left transition {{ $chatUnread > 0 ? 'bg-red-50/60' : 'hover:bg-crm-hover' }}">
+                            <div class="relative flex-shrink-0">
+                                @if($chat->icon_path ?? false)
+                                    <img src="{{ asset('storage/' . $chat->icon_path) }}" class="w-8 h-8 rounded-lg object-cover">
+                                @else
+                                    <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-crm-card border border-crm-border text-[9px] font-bold text-crm-t3">G</div>
+                                @endif
+                                @if($chatUnread > 0)<span class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full wdg-badge-red"></span>@endif
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <div class="truncate text-xs {{ $chatUnread > 0 ? 'font-bold' : 'font-semibold' }}">{{ $chat->name }}</div>
+                                <div class="text-[10px] text-crm-t3">{{ $chat->updated_at?->diffForHumans() ?? '' }}</div>
+                            </div>
+                            @if($chatUnread > 0)
+                                <span class="min-w-[16px] h-[16px] flex items-center justify-center text-[8px] font-bold text-white rounded-full px-1 wdg-badge-red">{{ $chatUnread }}</span>
+                            @endif
+                        </button>
+                    @endforeach
+                @endif
+
+                @if($dmChats->isEmpty() && $groupChats->isEmpty())
                     <div class="flex flex-1 items-center justify-center p-8 text-center">
                         <p class="text-sm text-crm-t3">No conversations yet.</p>
                     </div>
-                @endforelse
+                @endif
                 @endif
             </div>
             <div class="flex-shrink-0 border-t border-crm-border px-3 py-2">
@@ -349,13 +386,27 @@
                 </div>
             @endif
 
-            <div class="flex flex-shrink-0 gap-2 border-t border-crm-border bg-crm-surface px-3 py-2 relative">
+            <div class="flex flex-shrink-0 gap-1.5 border-t border-crm-border bg-crm-surface px-3 py-2 relative items-center">
                 @include('livewire.partials.gif-picker', [
                     'gifPickerSettings' => $gifPickerSettings,
                     'canUseGifPicker' => $canUseGifPicker,
                     'currentUserId' => $currentUserId,
                     'sendAction' => 'sendGif',
                 ])
+                {{-- Emoji Picker --}}
+                <div x-data="{ emojiOpen: false }" class="relative">
+                    <button type="button" @click="emojiOpen = !emojiOpen" class="flex h-10 w-10 items-center justify-center rounded-lg border border-crm-border bg-white text-base hover:bg-crm-hover transition" title="Emoji">😊</button>
+                    <div x-show="emojiOpen" x-cloak @click.outside="emojiOpen = false"
+                        class="fixed z-[99999] bg-white border border-gray-200 rounded-2xl shadow-2xl p-2"
+                        :style="(() => { const r = $el.previousElementSibling.getBoundingClientRect(); return `left:${Math.max(8,r.left-120)}px;top:${Math.max(8,r.top-220)}px;width:260px;height:210px;`; })()">
+                        <div class="text-[10px] text-crm-t3 font-semibold mb-1 px-1">Quick Emojis</div>
+                        <div class="grid grid-cols-8 gap-0.5 overflow-y-auto" style="max-height:170px">
+                            @foreach(['😀','😂','🤣','😍','😘','🥰','😎','🤩','😊','🙂','😉','😋','🤤','😜','🤪','😝','😏','😒','😞','😔','😟','😕','🙁','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','🥱','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕','🤑','🤠','👍','👎','👌','✌️','🤞','🤟','🤘','🤙','👋','🖐️','✋','👏','🙌','🤝','🙏','💪','❤️','🔥','⭐','💯','🎉','🎊','💼','📋','📌','✅','❌','⚠️','🚀'] as $emoji)
+                                <button type="button" @click="$wire.set('messageInput', $wire.messageInput + '{{ $emoji }}'); emojiOpen = false" class="text-lg hover:bg-gray-100 rounded p-0.5 cursor-pointer text-center">{{ $emoji }}</button>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
                 <input id="wdg-msg-input" name="messageInput"
                     wire:model="messageInput"
                     wire:keydown.enter="sendMessage"
