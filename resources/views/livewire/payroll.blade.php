@@ -53,15 +53,15 @@
                                 <td class="px-2 py-2 font-semibold">{{ $eu->name }}</td>
                                 <td class="px-2 py-2 text-crm-t2 capitalize">{{ str_replace('_', ' ', $eu->role) }}</td>
                                 <td class="px-2 py-2">
-                                    <input id="fld-userPayrollInputs-{{ $eu->id }}-comm_pct" wire:model.defer="userPayrollInputs.{{ $eu->id }}.comm_pct" type="number" step="0.01" class="w-24 px-2 py-1 border border-crm-border rounded bg-white font-mono">
+                                    <input id="fld-userPayrollInputs-{{ $eu->id }}-comm_pct" wire:model="userPayrollInputs.{{ $eu->id }}.comm_pct" type="number" step="0.01" class="w-24 px-2 py-1 border border-crm-border rounded bg-white font-mono">
                                     @error("userPayrollInputs.$eu->id.comm_pct")<div class="text-[10px] text-red-600 mt-1">{{ $message }}</div>@enderror
                                 </td>
                                 <td class="px-2 py-2">
-                                    <input id="fld-userPayrollInputs-{{ $eu->id }}-snr_pct" wire:model.defer="userPayrollInputs.{{ $eu->id }}.snr_pct" type="number" step="0.01" class="w-24 px-2 py-1 border border-crm-border rounded bg-white font-mono">
+                                    <input id="fld-userPayrollInputs-{{ $eu->id }}-snr_pct" wire:model="userPayrollInputs.{{ $eu->id }}.snr_pct" type="number" step="0.01" class="w-24 px-2 py-1 border border-crm-border rounded bg-white font-mono">
                                     @error("userPayrollInputs.$eu->id.snr_pct")<div class="text-[10px] text-red-600 mt-1">{{ $message }}</div>@enderror
                                 </td>
                                 <td class="px-2 py-2">
-                                    <input id="fld-userPayrollInputs-{{ $eu->id }}-hourly_rate" wire:model.defer="userPayrollInputs.{{ $eu->id }}.hourly_rate" type="number" step="0.01" class="w-24 px-2 py-1 border border-crm-border rounded bg-white font-mono">
+                                    <input id="fld-userPayrollInputs-{{ $eu->id }}-hourly_rate" wire:model="userPayrollInputs.{{ $eu->id }}.hourly_rate" type="number" step="0.01" class="w-24 px-2 py-1 border border-crm-border rounded bg-white font-mono">
                                     @error("userPayrollInputs.$eu->id.hourly_rate")<div class="text-[10px] text-red-600 mt-1">{{ $message }}</div>@enderror
                                 </td>
                                 <td class="px-2 py-2">

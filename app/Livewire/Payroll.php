@@ -39,29 +39,47 @@ class Payroll extends Component
     {
         $row = $this->userPayrollInputs[$userId] ?? [];
         $commPct = $this->norm($row['comm_pct'] ?? null);
+        $snrPct = $this->norm($row['snr_pct'] ?? null);
+        $hourlyRate = $this->norm($row['hourly_rate'] ?? null);
 
         if ($commPct !== null && $commPct > 40) {
-            $this->addError("userPayrollInputs.$userId.comm_pct", 'Max 40% for regular, 25% for Panama.');
+            $this->addError("userPayrollInputs.$userId.comm_pct", 'Max 40%.');
             return;
         }
 
         try {
             DB::table('payroll_user_rates')->updateOrInsert(
                 ['user_id' => (string) $userId],
-                ['comm_pct' => $commPct, 'snr_pct' => $this->norm($row['snr_pct'] ?? null), 'hourly_rate' => $this->norm($row['hourly_rate'] ?? null), 'updated_at' => now()]
+                [
+                    'comm_pct' => $commPct,
+                    'snr_pct' => $snrPct,
+                    'hourly_rate' => $hourlyRate,
+                    'updated_at' => now(),
+                ]
             );
-            User::where('id', $userId)->update(['comm_pct' => $commPct]);
-        } catch (\Throwable $e) {}
 
-        $this->resetErrorBag("userPayrollInputs.$userId");
+            // Only update users.comm_pct if the column exists
+            try {
+                User::where('id', $userId)->update(['comm_pct' => $commPct]);
+            } catch (\Throwable $e) {
+                // comm_pct column may not exist on users table — that's OK
+            }
+
+            $this->resetErrorBag("userPayrollInputs.$userId");
+            session()->flash('deal_success', 'Payroll rate saved for user #' . $userId);
+        } catch (\Throwable $e) {
+            session()->flash('deal_error', 'Failed to save payroll rate: ' . $e->getMessage());
+        }
     }
 
     public function saveAllUserPayrollInfo(): void
     {
+        $count = 0;
         foreach (array_keys($this->userPayrollInputs) as $uid) {
             $this->saveUserPayrollInfo((int) $uid);
+            $count++;
         }
-        $this->payrollMessage = 'All rates saved.';
+        session()->flash('deal_success', "Payroll rates saved for {$count} users.");
     }
 
     public function generateWeeklyReport(): void
