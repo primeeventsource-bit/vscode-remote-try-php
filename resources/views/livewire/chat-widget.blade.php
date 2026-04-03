@@ -407,7 +407,7 @@
                         <div class="text-[10px] text-crm-t3 font-semibold mb-1 px-1">Quick Emojis</div>
                         <div class="grid grid-cols-8 gap-0.5 overflow-y-auto" style="max-height:170px">
                             @foreach(['😀','😂','🤣','😍','😘','🥰','😎','🤩','😊','🙂','😉','😋','🤤','😜','🤪','😝','😏','😒','😞','😔','😟','😕','🙁','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','🥱','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕','🤑','🤠','👍','👎','👌','✌️','🤞','🤟','🤘','🤙','👋','🖐️','✋','👏','🙌','🤝','🙏','💪','❤️','🔥','⭐','💯','🎉','🎊','💼','📋','📌','✅','❌','⚠️','🚀'] as $emoji)
-                                <button type="button" @click="$wire.set('messageInput', $wire.messageInput + '{{ $emoji }}'); emojiOpen = false" class="text-lg hover:bg-gray-100 rounded p-0.5 cursor-pointer text-center">{{ $emoji }}</button>
+                                <button type="button" @click="document.getElementById('wdg-msg-input').value += '{{ $emoji }}'; document.getElementById('wdg-msg-input').dispatchEvent(new Event('input')); emojiOpen = false" class="text-lg hover:bg-gray-100 rounded p-0.5 cursor-pointer text-center">{{ $emoji }}</button>
                             @endforeach
                         </div>
                     </div>
