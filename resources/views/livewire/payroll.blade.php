@@ -14,7 +14,7 @@
     @if($isMaster)
         {{-- Tabs for Master Admin --}}
         <div class="flex flex-wrap items-center gap-1 bg-crm-card border border-crm-border rounded-lg p-0.5 mb-4">
-            @foreach(['inputs' => 'Payroll Inputs', 'closers' => 'Closers', 'fronters' => 'Fronters', 'admins' => 'Admins', 'history' => 'Sent History'] as $key => $label)
+            @foreach(array_merge(['inputs' => 'Payroll Inputs', 'closers' => 'Closers', 'fronters' => 'Fronters', 'admins' => 'Admins'], $isMaster ? ['admin_pay' => 'Admin Pay'] : [], ['history' => 'Sent History']) as $key => $label)
                 <button wire:click="$set('tab', '{{ $key }}')"
                     class="px-3 py-1.5 text-xs font-semibold rounded-md transition {{ $tab === $key ? 'bg-white text-blue-600 shadow-sm' : 'text-crm-t3 hover:text-crm-t1' }}">
                     {{ $label }}
@@ -115,6 +115,60 @@
                     <p class="text-sm text-crm-t3 text-center py-6">No sent payroll sheets</p>
                 @endif
             </div>
+        @elseif($tab === 'admin_pay' && $isMaster)
+            {{-- Admin Payroll Entry (Master Admin Only) --}}
+            <div class="bg-crm-card border border-crm-border rounded-lg p-4">
+                <div class="text-sm font-semibold mb-3">Admin Payroll — Manual Entry</div>
+                <p class="text-[10px] text-crm-t3 mb-4">Enter payroll manually for each Admin. Total can be overridden.</p>
+                @if($payrollMessage)
+                    <div class="mb-3 px-3 py-2 rounded-lg text-xs font-semibold {{ str_starts_with($payrollMessage, '✓') ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200' }}">{{ $payrollMessage }}</div>
+                @endif
+                <div class="space-y-3">
+                    @foreach($adminUsers as $au)
+                        <div class="border border-crm-border rounded-lg p-3 bg-white">
+                            <div class="flex items-center gap-2 mb-2">
+                                <div class="w-8 h-8 rounded-full flex items-center justify-center text-[9px] font-bold text-white" style="background:{{ $au->color ?? '#6b7280' }}">{{ $au->avatar ?? substr($au->name ?? '?', 0, 2) }}</div>
+                                <div>
+                                    <div class="text-sm font-bold">{{ $au->name }}</div>
+                                    <div class="text-[10px] text-crm-t3 capitalize">{{ str_replace('_', ' ', $au->role) }}</div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2 mb-2">
+                                <div>
+                                    <label for="ap-hours-{{ $au->id }}" class="text-[9px] text-crm-t3 uppercase">Hours</label>
+                                    <input id="ap-hours-{{ $au->id }}" wire:model="adminPayrollInputs.{{ $au->id }}.hours_worked" type="number" step="0.5" class="w-full px-2 py-1 text-xs border border-crm-border rounded">
+                                </div>
+                                <div>
+                                    <label for="ap-rate-{{ $au->id }}" class="text-[9px] text-crm-t3 uppercase">Rate $/hr</label>
+                                    <input id="ap-rate-{{ $au->id }}" wire:model="adminPayrollInputs.{{ $au->id }}.hourly_rate" type="number" step="0.01" class="w-full px-2 py-1 text-xs border border-crm-border rounded">
+                                </div>
+                                <div>
+                                    <label for="ap-bonus-{{ $au->id }}" class="text-[9px] text-crm-t3 uppercase">Commission/Bonus $</label>
+                                    <input id="ap-bonus-{{ $au->id }}" wire:model="adminPayrollInputs.{{ $au->id }}.commission_bonus" type="number" step="0.01" class="w-full px-2 py-1 text-xs border border-crm-border rounded">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2 mb-2">
+                                <div>
+                                    <label for="ap-ded-{{ $au->id }}" class="text-[9px] text-crm-t3 uppercase">Deductions $</label>
+                                    <input id="ap-ded-{{ $au->id }}" wire:model="adminPayrollInputs.{{ $au->id }}.deductions" type="number" step="0.01" class="w-full px-2 py-1 text-xs border border-crm-border rounded">
+                                </div>
+                                <div>
+                                    <label for="ap-total-{{ $au->id }}" class="text-[9px] text-crm-t3 uppercase">Total Check Pay $</label>
+                                    <input id="ap-total-{{ $au->id }}" wire:model="adminPayrollInputs.{{ $au->id }}.total_check_pay" type="number" step="0.01" class="w-full px-2 py-1 text-xs border border-crm-border rounded font-bold">
+                                </div>
+                                <div class="flex items-end">
+                                    <button wire:click="saveAdminPayroll({{ $au->id }})" class="w-full px-3 py-1.5 text-xs font-bold bg-blue-600 text-white rounded hover:bg-blue-700 transition">Save</button>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="ap-notes-{{ $au->id }}" class="text-[9px] text-crm-t3 uppercase">Notes</label>
+                                <input id="ap-notes-{{ $au->id }}" wire:model="adminPayrollInputs.{{ $au->id }}.notes" type="text" placeholder="e.g. Holiday bonus included" class="w-full px-2 py-1 text-xs border border-crm-border rounded">
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+
         @else
             {{-- Pay Cards --}}
             @if(isset($payCards) && count($payCards))
@@ -206,6 +260,28 @@
             @endif
         @endif
     @else
+        {{-- Regular Admin: own paysheet read-only --}}
+        @if(isset($myAdminPaysheet) && $myAdminPaysheet)
+            <div class="bg-crm-card border border-crm-border rounded-lg p-4 mb-4">
+                <div class="text-sm font-semibold mb-3">Your Admin Paysheet — {{ $weekLabel }}</div>
+                <div class="grid grid-cols-3 gap-3 text-xs">
+                    <div><span class="text-crm-t3">Hours:</span> <span class="font-semibold">{{ $myAdminPaysheet->hours_worked }}</span></div>
+                    <div><span class="text-crm-t3">Rate:</span> <span class="font-semibold">${{ number_format($myAdminPaysheet->hourly_rate, 2) }}</span></div>
+                    <div><span class="text-crm-t3">Commission/Bonus:</span> <span class="font-semibold">${{ number_format($myAdminPaysheet->commission_bonus, 2) }}</span></div>
+                    <div><span class="text-crm-t3">Deductions:</span> <span class="font-semibold text-red-500">-${{ number_format($myAdminPaysheet->deductions, 2) }}</span></div>
+                    <div><span class="text-crm-t3">Total Check Pay:</span> <span class="font-bold text-emerald-600 text-sm">${{ number_format($myAdminPaysheet->total_check_pay, 2) }}</span></div>
+                    @if($myAdminPaysheet->notes)
+                        <div><span class="text-crm-t3">Notes:</span> <span>{{ $myAdminPaysheet->notes }}</span></div>
+                    @endif
+                </div>
+                <div class="mt-2 text-[10px] text-crm-t3">Read-only — entered by Master Admin</div>
+            </div>
+        @elseif(auth()->user()?->hasRole('admin', 'admin_limited'))
+            <div class="bg-crm-card border border-crm-border rounded-lg p-4 mb-4">
+                <div class="text-sm text-crm-t3 text-center py-4">Payroll not yet entered for this period.</div>
+            </div>
+        @endif
+
         {{-- Non-master: Own Paysheet Only --}}
         @if(isset($payCards) && count($payCards))
             @php $card = $payCards[0] ?? []; $cardUser = auth()->user(); @endphp

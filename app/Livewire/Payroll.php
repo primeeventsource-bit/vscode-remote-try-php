@@ -1,6 +1,7 @@
 <?php
 namespace App\Livewire;
 
+use App\Models\AdminPayroll;
 use App\Models\Deal;
 use App\Models\PayrollReport;
 use App\Models\PayrollUserRate;
@@ -20,6 +21,7 @@ class Payroll extends Component
     public int $weekOffset = 0;
     public array $userPayrollInputs = [];
     public string $payrollMessage = '';
+    public array $adminPayrollInputs = [];
 
     public function mount(): void
     {
@@ -87,6 +89,40 @@ class Payroll extends Component
             $count++;
         }
         $this->payrollMessage = "✓ Payroll rates saved for {$count} users.";
+    }
+
+    public function saveAdminPayroll(int $adminUserId): void
+    {
+        $user = auth()->user();
+        if (!$user?->hasRole('master_admin')) {
+            $this->payrollMessage = '✕ Only Master Admin can enter Admin payroll.';
+            return;
+        }
+
+        $row = $this->adminPayrollInputs[$adminUserId] ?? [];
+        $monday = Carbon::now()->startOfWeek()->addWeeks($this->weekOffset);
+        $sunday = $monday->copy()->addDays(6);
+
+        try {
+            AdminPayroll::updateOrCreate(
+                ['admin_user_id' => $adminUserId, 'pay_period_start' => $monday->toDateString()],
+                [
+                    'entered_by_user_id' => $user->id,
+                    'pay_period_end' => $sunday->toDateString(),
+                    'hours_worked' => (float) ($row['hours_worked'] ?? 0),
+                    'hourly_rate' => (float) ($row['hourly_rate'] ?? 0),
+                    'commission_bonus' => (float) ($row['commission_bonus'] ?? 0),
+                    'deductions' => (float) ($row['deductions'] ?? 0),
+                    'total_check_pay' => (float) ($row['total_check_pay'] ?? 0),
+                    'notes' => $row['notes'] ?? '',
+                ]
+            );
+
+            $adminName = User::find($adminUserId)?->name ?? "Admin #{$adminUserId}";
+            $this->payrollMessage = "✓ Payroll saved for {$adminName}";
+        } catch (\Throwable $e) {
+            $this->payrollMessage = '✕ Failed to save Admin payroll: ' . $e->getMessage();
+        }
     }
 
     public function generateWeeklyReport(): void
@@ -286,6 +322,40 @@ class Payroll extends Component
             }
         }
 
+        // Admin payroll (master admin only)
+        $adminUsers = collect();
+        $adminPayrollRecords = collect();
+        $myAdminPaysheet = null;
+
+        if ($isMaster) {
+            $adminUsers = User::whereIn('role', ['admin', 'admin_limited', 'master_admin'])->orderBy('name')->get();
+            try {
+                $adminPayrollRecords = AdminPayroll::where('pay_period_start', $monday->toDateString())->get()->keyBy('admin_user_id');
+            } catch (\Throwable $e) { $adminPayrollRecords = collect(); }
+
+            // Pre-fill inputs
+            if (empty($this->adminPayrollInputs)) {
+                foreach ($adminUsers as $au) {
+                    $rec = $adminPayrollRecords->get($au->id);
+                    $this->adminPayrollInputs[$au->id] = [
+                        'hours_worked' => $rec?->hours_worked ?? '',
+                        'hourly_rate' => $rec?->hourly_rate ?? '',
+                        'commission_bonus' => $rec?->commission_bonus ?? '',
+                        'deductions' => $rec?->deductions ?? '',
+                        'total_check_pay' => $rec?->total_check_pay ?? '',
+                        'notes' => $rec?->notes ?? '',
+                    ];
+                }
+            }
+        } elseif ($isAdmin) {
+            // Regular admin sees own paysheet read-only
+            try {
+                $myAdminPaysheet = AdminPayroll::where('admin_user_id', $user->id)
+                    ->where('pay_period_start', $monday->toDateString())
+                    ->first();
+            } catch (\Throwable $e) {}
+        }
+
         // Past reports
         try {
             $pastReports = PayrollReport::where('status', 'finalized')
@@ -302,7 +372,8 @@ class Payroll extends Component
 
         return view('livewire.payroll', compact(
             'payCards', 'weekLabel', 'isMaster', 'editableUsers', 'users',
-            'pastReports', 'currentReports', 'isAdmin'
+            'pastReports', 'currentReports', 'isAdmin',
+            'adminUsers', 'myAdminPaysheet'
         ));
     }
 }
