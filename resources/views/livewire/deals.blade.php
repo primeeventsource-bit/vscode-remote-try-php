@@ -73,7 +73,7 @@
                                     };
                                 @endphp
                                 <span class="text-[8px] font-semibold px-1.5 py-0.5 rounded {{ $sColor }}">{{ $sLabel }}</span>
-                                @if($deal->disposition_status === 'callback')
+                                @if(($deal->disposition_status ?? '') === 'callback')
                                     <span class="text-[7px] font-semibold px-1 py-0.5 rounded bg-amber-100 text-amber-700 ml-0.5">CB {{ $deal->callback_date?->format('n/j') }}</span>
                                 @endif
                             </td>
@@ -101,14 +101,14 @@
                 <div class="flex items-center gap-3">
                     <h3 class="text-base font-bold">{{ $active->owner_name }} - Deal Detail</h3>
                     {{-- Disposition Badge --}}
-                    @if($active->disposition_status === 'charged')
+                    @if(($active->disposition_status ?? '') === 'charged')
                         <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-700">Charged</span>
-                    @elseif($active->disposition_status === 'callback')
+                    @elseif(($active->disposition_status ?? '') === 'callback')
                         <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-100 text-amber-700">Callback {{ $active->callback_date?->format('n/j g:i A') }}</span>
-                    @elseif($active->disposition_status === 'declined')
+                    @elseif(($active->disposition_status ?? '') === 'declined')
                         <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-red-100 text-red-700">Declined</span>
                     @endif
-                    @if($active->is_locked)
+                    @if($active->is_locked ?? false)
                         <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-gray-200 text-gray-600">Locked</span>
                     @endif
                 </div>
@@ -122,19 +122,19 @@
 
             {{-- Closing Date / Charged Date --}}
             <div class="flex gap-4 mb-3 text-xs">
-                @if($active->closing_date)
-                    <div><span class="text-crm-t3">Closing Date:</span> <span class="font-semibold">{{ $active->closing_date->format('M j, Y') }}</span></div>
+                @if(!empty($active->closing_date))
+                    <div><span class="text-crm-t3">Closing Date:</span> <span class="font-semibold">{{ $active->closing_date instanceof \Carbon\Carbon ? $active->closing_date->format('M j, Y') : $active->closing_date }}</span></div>
                 @endif
-                @if($active->charged_date)
-                    <div><span class="text-crm-t3">Charged Date:</span> <span class="font-semibold text-emerald-600">{{ $active->charged_date->format('M j, Y') }}</span></div>
+                @if(!empty($active->charged_date))
+                    <div><span class="text-crm-t3">Charged Date:</span> <span class="font-semibold text-emerald-600">{{ $active->charged_date instanceof \Carbon\Carbon ? $active->charged_date->format('M j, Y') : $active->charged_date }}</span></div>
                 @endif
-                @if($active->last_edited_by)
+                @if(!empty($active->last_edited_by))
                     <div><span class="text-crm-t3">Last edit:</span> <span class="font-semibold">{{ $users->get($active->last_edited_by)?->name ?? '?' }} {{ $active->last_edited_at?->diffForHumans() }}</span></div>
                 @endif
             </div>
 
             {{-- Admin Disposition Controls --}}
-            @if($isAdmin && !$active->is_locked)
+            @if($isAdmin && !($active->is_locked ?? false))
                 <div class="mb-4 p-3 bg-crm-surface rounded-lg border border-crm-border">
                     <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mb-2">Set Disposition</div>
                     <div class="flex flex-wrap items-center gap-2">
@@ -146,7 +146,7 @@
                         <button wire:click="setDealDisposition({{ $active->id }}, 'declined')" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-red-500 text-white hover:bg-red-600 transition">Declined</button>
                     </div>
                 </div>
-            @elseif($active->is_locked)
+            @elseif($active->is_locked ?? false)
                 <div class="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
                     <div class="flex items-center justify-between">
                         <span class="text-xs text-gray-600">This deal is locked. Only Master Admin can edit.</span>
