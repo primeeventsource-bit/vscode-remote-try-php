@@ -41,25 +41,78 @@ class Deals extends Component
     {
         if (!empty($this->dealForm['id'])) {
             $deal = Deal::find($this->dealForm['id']);
-            if ($deal && $deal->is_locked && !auth()->user()?->hasRole('master_admin')) {
-                return; // Locked deals can only be edited by master admin
+            if (!$deal) return;
+
+            $user = auth()->user();
+            // Locked deals: only master admin can edit
+            if ($deal->is_locked && !$user?->hasRole('master_admin')) {
+                return;
             }
-            $updateData = collect($this->dealForm)->except('id')->toArray();
+
+            $updateData = collect($this->dealForm)->except(['id', 'created_at', 'updated_at'])->toArray();
             $updateData['last_edited_by'] = auth()->id();
             $updateData['last_edited_at'] = now();
+
             Deal::where('id', $this->dealForm['id'])->update($updateData);
+
+            session()->flash('deal_success', 'Deal saved successfully.');
         } else {
             Deal::create($this->newDeal ?: $this->dealForm);
+            session()->flash('deal_success', 'Deal created successfully.');
         }
         $this->showNewDeal = false;
         $this->showModal = false;
         $this->resetForm();
     }
 
+    public function saveAndLockDeal(): void
+    {
+        $user = auth()->user();
+        if (!$user || !$user->hasRole('master_admin', 'admin')) return;
+        if (empty($this->dealForm['id'])) return;
+
+        $deal = Deal::find($this->dealForm['id']);
+        if (!$deal) return;
+        if ($deal->is_locked && !$user->hasRole('master_admin')) return;
+
+        $updateData = collect($this->dealForm)->except(['id', 'created_at', 'updated_at'])->toArray();
+        $updateData['last_edited_by'] = auth()->id();
+        $updateData['last_edited_at'] = now();
+        $updateData['is_locked'] = true;
+
+        Deal::where('id', $deal->id)->update($updateData);
+        $this->showModal = false;
+        $this->resetForm();
+        session()->flash('deal_success', 'Deal saved and locked. Only Master Admin can edit now.');
+    }
+
+    public function reopenDeal($id): void
+    {
+        $user = auth()->user();
+        if (!$user || !$user->hasRole('master_admin')) return;
+
+        Deal::where('id', $id)->update([
+            'is_locked' => false,
+            'last_edited_by' => $user->id,
+            'last_edited_at' => now(),
+        ]);
+        session()->flash('deal_success', 'Deal reopened for Admin editing.');
+    }
+
     public function editDeal($id)
     {
         $d = Deal::find($id);
-        if ($d) { $this->dealForm = $d->toArray(); $this->showModal = true; }
+        if (!$d) return;
+
+        $user = auth()->user();
+        // Admin can only edit if not locked
+        if ($d->is_locked && !$user?->hasRole('master_admin')) {
+            session()->flash('deal_error', 'This deal is locked. Only Master Admin can edit.');
+            return;
+        }
+
+        $this->dealForm = $d->toArray();
+        $this->showModal = true;
     }
 
     public function setDealDisposition($id, $disposition, $callbackDate = null, $chargedDate = null): void
@@ -93,8 +146,9 @@ class Deals extends Component
     public function unlockDeal($id): void
     {
         $user = auth()->user();
-        if (!$user || !$user->hasRole('master_admin', 'admin')) return;
+        if (!$user || !$user->hasRole('master_admin')) return;
         Deal::where('id', $id)->update(['is_locked' => false, 'last_edited_by' => $user->id, 'last_edited_at' => now()]);
+        session()->flash('deal_success', 'Deal unlocked for Admin editing.');
     }
 
     public function updateStatus($id, $status, $extra = [])

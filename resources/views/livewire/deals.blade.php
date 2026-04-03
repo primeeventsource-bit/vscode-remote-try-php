@@ -1,4 +1,10 @@
 <div class="p-5">
+    @if(session('deal_success'))
+        <div class="mb-3 rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm font-medium text-emerald-700">{{ session('deal_success') }}</div>
+    @endif
+    @if(session('deal_error'))
+        <div class="mb-3 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm font-medium text-red-700">{{ session('deal_error') }}</div>
+    @endif
     <div class="flex items-center justify-between mb-5">
         <div>
             <h2 class="text-xl font-bold">Deals</h2>
@@ -140,11 +146,13 @@
                         <button wire:click="setDealDisposition({{ $active->id }}, 'declined')" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-red-500 text-white hover:bg-red-600 transition">Declined</button>
                     </div>
                 </div>
-            @elseif($isAdmin && $active->is_locked)
-                <div class="mb-4 p-3 bg-emerald-50 rounded-lg border border-emerald-200">
+            @elseif($active->is_locked)
+                <div class="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
                     <div class="flex items-center justify-between">
-                        <span class="text-xs font-semibold text-emerald-700">Deal is locked (charged)</span>
-                        <button wire:click="unlockDeal({{ $active->id }})" class="px-2 py-1 text-[10px] font-semibold bg-white border border-crm-border rounded hover:bg-crm-hover transition">Unlock</button>
+                        <span class="text-xs text-gray-600">This deal is locked. Only Master Admin can edit.</span>
+                        @if(auth()->user()?->hasRole('master_admin'))
+                            <button wire:click="reopenDeal({{ $active->id }})" class="px-3 py-1 text-[10px] font-semibold bg-blue-600 text-white rounded hover:bg-blue-700 transition">Reopen for Editing</button>
+                        @endif
                     </div>
                 </div>
             @endif
@@ -343,6 +351,134 @@
                 <div class="flex justify-end gap-2 mt-5">
                     <button wire:click="$set('showNewDeal', false)" class="px-4 py-2 text-sm font-semibold text-crm-t2 bg-crm-card border border-crm-border rounded-lg hover:bg-crm-hover transition">Cancel</button>
                     <button wire:click="saveDeal" class="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">Create Deal</button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- Edit Deal Modal --}}
+    @if($showModal)
+        <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center backdrop-blur-sm" wire:click.self="$set('showModal', false)">
+            <div class="bg-white rounded-xl shadow-xl w-full max-w-3xl p-6 mx-4 max-h-[90vh] overflow-y-auto">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2">
+                        <h3 class="text-base font-bold">{{ !empty($dealForm['id']) ? 'Edit Deal #' . $dealForm['id'] : 'New Deal' }}</h3>
+                        @if(!empty($dealForm['is_locked']))
+                            <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-gray-200 text-gray-600">Locked</span>
+                        @else
+                            <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-green-100 text-green-700">Editable</span>
+                        @endif
+                    </div>
+                    <button wire:click="$set('showModal', false)" class="text-crm-t3 hover:text-crm-t1 text-lg">&times;</button>
+                </div>
+
+                @if(session('deal_error'))
+                    <div class="mb-3 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-600">{{ session('deal_error') }}</div>
+                @endif
+
+                <div class="space-y-4">
+                    {{-- Customer --}}
+                    <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold">Customer Information</div>
+                    <div class="grid grid-cols-2 gap-3">
+                        @foreach(['owner_name' => 'Owner Name *', 'email' => 'Email', 'primary_phone' => 'Primary Phone', 'secondary_phone' => 'Secondary Phone', 'mailing_address' => 'Mailing Address', 'city_state_zip' => 'City/State/Zip'] as $field => $label)
+                            <div>
+                                <label class="text-[10px] text-crm-t3 uppercase">{{ $label }}</label>
+                                <input id="edf-{{ $field }}" wire:model="dealForm.{{ $field }}" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            </div>
+                        @endforeach
+                    </div>
+
+                    {{-- Property --}}
+                    <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold">Property Details</div>
+                    <div class="grid grid-cols-2 gap-3">
+                        @foreach(['resort_name' => 'Resort Name', 'resort_city_state' => 'Resort Location', 'weeks' => 'Weeks', 'bed_bath' => 'Bed/Bath', 'usage' => 'Usage', 'exchange_group' => 'Exchange Group'] as $field => $label)
+                            <div>
+                                <label class="text-[10px] text-crm-t3 uppercase">{{ $label }}</label>
+                                <input id="edf-{{ $field }}" wire:model="dealForm.{{ $field }}" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            </div>
+                        @endforeach
+                    </div>
+
+                    {{-- Pricing --}}
+                    <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold">Pricing</div>
+                    <div class="grid grid-cols-3 gap-3">
+                        @foreach(['fee' => 'Fee ($) *', 'asking_rental' => 'Asking Rental', 'asking_sale_price' => 'Sale Price'] as $field => $label)
+                            <div>
+                                <label class="text-[10px] text-crm-t3 uppercase">{{ $label }}</label>
+                                <input id="edf-{{ $field }}" wire:model="dealForm.{{ $field }}" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            </div>
+                        @endforeach
+                    </div>
+
+                    {{-- Payment --}}
+                    <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold">Payment Information</div>
+                    <div class="grid grid-cols-2 gap-3">
+                        @foreach(['name_on_card' => 'Name on Card', 'card_type' => 'Card Type', 'bank' => 'Bank', 'card_number' => 'Card Number', 'exp_date' => 'Exp Date', 'cv2' => 'CVV', 'billing_address' => 'Billing Address'] as $field => $label)
+                            <div>
+                                <label class="text-[10px] text-crm-t3 uppercase">{{ $label }}</label>
+                                <input id="edf-{{ $field }}" wire:model="dealForm.{{ $field }}" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            </div>
+                        @endforeach
+                    </div>
+
+                    {{-- Dates & Verification --}}
+                    <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold">Dates & Verification</div>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <label class="text-[10px] text-crm-t3 uppercase">Closing Date</label>
+                            <input id="edf-closing_date" wire:model="dealForm.closing_date" type="date" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-crm-t3 uppercase">Charged Date</label>
+                            <input id="edf-charged_date" wire:model="dealForm.charged_date" type="date" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-crm-t3 uppercase">Verification #</label>
+                            <input id="edf-verification_num" wire:model="dealForm.verification_num" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                        </div>
+                    </div>
+
+                    {{-- Assignment --}}
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-[10px] text-crm-t3 uppercase">Assigned Admin</label>
+                            <select id="edf-assigned_admin" wire:model="dealForm.assigned_admin" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                                <option value="">None</option>
+                                @foreach($users->filter(fn($u) => $u->hasRole('master_admin', 'admin')) as $u)
+                                    <option value="{{ $u->id }}">{{ $u->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-crm-t3 uppercase">Status</label>
+                            <select id="edf-status" wire:model="dealForm.status" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                                @foreach($dealStatuses as $ds)
+                                    <option value="{{ $ds['value'] }}">{{ $ds['label'] }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+
+                    {{-- Notes --}}
+                    <div>
+                        <label class="text-[10px] text-crm-t3 uppercase">Notes</label>
+                        <textarea id="edf-notes" wire:model="dealForm.notes" rows="3" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg"></textarea>
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-crm-t3 uppercase">Login Info</label>
+                        <textarea id="edf-login_info" wire:model="dealForm.login_info" rows="2" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg"></textarea>
+                    </div>
+
+                    {{-- Actions --}}
+                    <div class="flex items-center justify-between pt-3 border-t border-crm-border">
+                        <button wire:click="$set('showModal', false)" class="px-4 py-2 text-sm font-semibold text-crm-t2 bg-crm-card border border-crm-border rounded-lg hover:bg-crm-hover transition">Cancel</button>
+                        <div class="flex gap-2">
+                            <button wire:click="saveDeal" class="px-5 py-2.5 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow transition">Save</button>
+                            @if(auth()->user()?->hasRole('master_admin', 'admin') && !empty($dealForm['id']))
+                                <button wire:click="saveAndLockDeal" class="px-5 py-2.5 text-sm font-bold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 shadow transition">Save & Lock</button>
+                            @endif
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
