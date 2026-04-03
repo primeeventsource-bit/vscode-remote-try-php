@@ -34,7 +34,12 @@
                 <div class="text-sm font-semibold">User Payroll Inputs</div>
                 <button wire:click="saveAllUserPayrollInfo" class="px-3 py-1 text-[10px] font-semibold bg-blue-600 text-white rounded hover:bg-blue-700 transition">Save All</button>
             </div>
-            <div class="text-[10px] text-crm-t3 mb-3">Master admin can set commission %, SNR %, and hourly rate per user.</div>
+            <div class="text-[10px] text-crm-t3 mb-2">Master admin can set commission %, SNR %, and hourly rate per user.</div>
+            @if($payrollMessage)
+                <div class="mb-3 px-3 py-2 rounded-lg text-xs font-semibold {{ str_starts_with($payrollMessage, '✓') ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200' }}">
+                    {{ $payrollMessage }}
+                </div>
+            @endif
             <div class="overflow-x-auto">
                 <table class="w-full text-xs">
                     <thead>

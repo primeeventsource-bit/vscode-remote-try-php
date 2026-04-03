@@ -66,9 +66,10 @@ class Payroll extends Component
             }
 
             $this->resetErrorBag("userPayrollInputs.$userId");
-            session()->flash('deal_success', 'Payroll rate saved for user #' . $userId);
+            $userName = User::find($userId)?->name ?? "User #{$userId}";
+            $this->payrollMessage = "✓ Payroll saved for {$userName}";
         } catch (\Throwable $e) {
-            session()->flash('deal_error', 'Failed to save payroll rate: ' . $e->getMessage());
+            $this->payrollMessage = "✕ Failed to save: " . $e->getMessage();
         }
     }
 
@@ -79,7 +80,7 @@ class Payroll extends Component
             $this->saveUserPayrollInfo((int) $uid);
             $count++;
         }
-        session()->flash('deal_success', "Payroll rates saved for {$count} users.");
+        $this->payrollMessage = "✓ Payroll rates saved for {$count} users.";
     }
 
     public function generateWeeklyReport(): void
