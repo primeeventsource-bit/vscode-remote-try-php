@@ -317,7 +317,7 @@
     {{-- New Deal Modal --}}
     @if(isset($showNewDeal) && $showNewDeal)
         <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center backdrop-blur-sm" wire:click.self="$set('showNewDeal', false)">
-            <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl p-6 mx-4 max-h-[80vh] overflow-y-auto">
+            <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl p-6 mx-4 overflow-y-auto" style="max-height:80vh">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-base font-bold">New Deal</h3>
                     <button wire:click="$set('showNewDeal', false)" class="text-crm-t3 hover:text-crm-t1 text-lg">&times;</button>
@@ -359,7 +359,7 @@
     {{-- Edit Deal Modal --}}
     @if($showModal)
         <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center backdrop-blur-sm" wire:click.self="$set('showModal', false)">
-            <div class="bg-white rounded-xl shadow-xl w-full max-w-3xl mx-4 max-h-[90vh] flex flex-col">
+            <div class="bg-white rounded-xl shadow-xl w-full max-w-3xl mx-4 flex flex-col" style="max-height:90vh">
                 {{-- Header (fixed) --}}
                 <div class="flex items-center justify-between p-5 pb-3 border-b border-crm-border flex-shrink-0">
                     <div class="flex items-center gap-2">
@@ -378,7 +378,7 @@
                 @endif
 
                 {{-- Scrollable body --}}
-                <div class="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+                <div class="px-5 py-4 space-y-4" style="flex:1;overflow-y:auto;min-height:0">
                     {{-- Customer --}}
                     <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold">Customer Information</div>
                     <div class="grid grid-cols-2 gap-3">
