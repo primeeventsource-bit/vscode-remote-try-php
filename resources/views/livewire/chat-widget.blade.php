@@ -46,7 +46,7 @@
         x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
         x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95"
         :style="`position:fixed;left:${px}px;top:${py}px;width:380px;height:500px;z-index:9999;`"
-        class="flex flex-col rounded-xl border border-crm-border bg-white shadow-2xl"
+        class="flex flex-col overflow-hidden rounded-xl border border-crm-border bg-white shadow-2xl">
 
         {{-- Header --}}
         <div class="flex flex-shrink-0 cursor-grab items-center gap-2 border-b border-crm-border bg-crm-surface px-4 py-3 active:cursor-grabbing select-none" @mousedown="startDrag($event)">
