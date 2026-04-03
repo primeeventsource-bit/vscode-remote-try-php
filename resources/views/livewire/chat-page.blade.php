@@ -111,8 +111,8 @@
                     @endif
 
                     <div>
-                        <label class="block text-xs text-crm-t3 uppercase font-semibold mb-1">Chat Type</label>
-                        <select id="cp-chat-type" name="newChatType" wire:model.live="newChatType" class="w-full rounded-lg border border-crm-border bg-white px-3 py-2 text-sm focus:border-blue-400 focus:outline-none">
+                        <label for="cp-chat-type" class="block text-xs text-crm-t3 uppercase font-semibold mb-1">Chat Type</label>
+                                <select id="cp-chat-type" name="newChatType" wire:model.live="newChatType" class="w-full rounded-lg border border-crm-border bg-white px-3 py-2 text-sm focus:border-blue-400 focus:outline-none">
                             <option value="dm">Direct Message</option>
                             <option value="group">Group Chat</option>
                         </select>
@@ -120,8 +120,8 @@
 
                     @if($newChatType === 'group')
                     <div>
-                        <label class="block text-xs text-crm-t3 uppercase font-semibold mb-1">Group Name</label>
-                        <input id="cp-chat-name" name="newChatName" wire:model="newChatName" type="text" placeholder="E.g., Sales Team"
+                        <label for="cp-chat-name" class="block text-xs text-crm-t3 uppercase font-semibold mb-1">Group Name</label>
+                                <input id="cp-chat-name" name="newChatName" wire:model="newChatName" type="text" placeholder="E.g., Sales Team"
                                class="w-full rounded-lg border border-crm-border bg-white px-3 py-2 text-sm focus:border-blue-400 focus:outline-none">
                     </div>
                     @endif

@@ -148,8 +148,8 @@
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
                 <h3 class="text-sm font-bold mb-4">Share Sheet</h3>
                 <div class="mb-3">
-                    <label class="text-xs text-crm-t3 uppercase font-semibold">Permission</label>
-                    <select id="fld-sharePermission" wire:model="sharePermission" class="w-full mt-1 rounded-lg border border-crm-border px-3 py-2 text-sm">
+                    <label for="fld-sharePermission" class="text-xs text-crm-t3 uppercase font-semibold">Permission</label>
+                                <select id="fld-sharePermission" wire:model="sharePermission" class="w-full mt-1 rounded-lg border border-crm-border px-3 py-2 text-sm">
                         <option value="view">View Only</option>
                         <option value="edit">Can Edit</option>
                     </select>

@@ -12,13 +12,13 @@
 
         <form wire:submit="authenticate" class="text-left space-y-3">
             <div>
-                <label class="block text-[10px] text-crm-t3 uppercase tracking-wide font-medium mb-1">Username</label>
-                <input id="fld-username" type="text" wire:model="username" placeholder="Enter username" autofocus
+                <label for="fld-username" class="block text-[10px] text-crm-t3 uppercase tracking-wide font-medium mb-1">Username</label>
+                                <input id="fld-username" type="text" wire:model="username" placeholder="Enter username" autofocus
                        class="w-full bg-crm-card border border-crm-border rounded-md px-3 py-2.5 text-sm text-crm-t1 outline-none focus:border-blue-500 font-sans">
             </div>
             <div>
-                <label class="block text-[10px] text-crm-t3 uppercase tracking-wide font-medium mb-1">Password (8 digit)</label>
-                <input id="fld-password" type="password" wire:model="password" placeholder="Enter password"
+                <label for="fld-password" class="block text-[10px] text-crm-t3 uppercase tracking-wide font-medium mb-1">Password (8 digit)</label>
+                                <input id="fld-password" type="password" wire:model="password" placeholder="Enter password"
                        class="w-full bg-crm-card border border-crm-border rounded-md px-3 py-2.5 text-sm text-crm-t1 outline-none focus:border-blue-500 font-sans">
             </div>
 

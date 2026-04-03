@@ -92,28 +92,28 @@
                 <div class="space-y-3">
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Name</label>
-                            <input id="fld-newUser-name" wire:model="newUser.name" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                            <label for="fld-newUser-name" class="text-[10px] text-crm-t3 uppercase tracking-wider">Name</label>
+                                <input id="fld-newUser-name" wire:model="newUser.name" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                         </div>
                         <div>
-                            <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Username</label>
-                            <input id="fld-newUser-username" wire:model="newUser.username" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                            <label for="fld-newUser-username" class="text-[10px] text-crm-t3 uppercase tracking-wider">Username</label>
+                                <input id="fld-newUser-username" wire:model="newUser.username" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                         </div>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Password</label>
-                            <input id="fld-newUser-password" wire:model="newUser.password" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400 font-mono">
+                            <label for="fld-newUser-password" class="text-[10px] text-crm-t3 uppercase tracking-wider">Password</label>
+                                <input id="fld-newUser-password" wire:model="newUser.password" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400 font-mono">
                         </div>
                         <div>
-                            <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Email</label>
-                            <input id="fld-newUser-email" wire:model="newUser.email" type="email" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                            <label for="fld-newUser-email" class="text-[10px] text-crm-t3 uppercase tracking-wider">Email</label>
+                                <input id="fld-newUser-email" wire:model="newUser.email" type="email" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                         </div>
                     </div>
                     <div class="grid grid-cols-3 gap-3">
                         <div>
-                            <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Role</label>
-                            <select id="fld-newUser-role" wire:model="newUser.role" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none">
+                            <label for="fld-newUser-role" class="text-[10px] text-crm-t3 uppercase tracking-wider">Role</label>
+                                <select id="fld-newUser-role" wire:model="newUser.role" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none">
                                 <option value="fronter">Fronter</option>
                                 <option value="closer">Closer</option>
                                 <option value="admin">Admin</option>
@@ -121,12 +121,12 @@
                             </select>
                         </div>
                         <div>
-                            <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Avatar (2 chars)</label>
-                            <input id="fld-newUser-avatar" wire:model="newUser.avatar" type="text" maxlength="2" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400 font-mono text-center">
+                            <label for="fld-newUser-avatar" class="text-[10px] text-crm-t3 uppercase tracking-wider">Avatar (2 chars)</label>
+                                <input id="fld-newUser-avatar" wire:model="newUser.avatar" type="text" maxlength="2" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400 font-mono text-center">
                         </div>
                         <div>
-                            <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Color</label>
-                            <input id="fld-newUser-color" wire:model="newUser.color" type="color" class="w-full h-[38px] bg-crm-surface border border-crm-border rounded-lg cursor-pointer">
+                            <label for="fld-newUser-color" class="text-[10px] text-crm-t3 uppercase tracking-wider">Color</label>
+                                <input id="fld-newUser-color" wire:model="newUser.color" type="color" class="w-full h-[38px] bg-crm-surface border border-crm-border rounded-lg cursor-pointer">
                         </div>
                     </div>
                 </div>
@@ -151,31 +151,31 @@
                     <div class="space-y-3">
                         <div class="grid grid-cols-2 gap-3">
                             <div>
-                                <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Name</label>
+                                <label for="fld-editData-name" class="text-[10px] text-crm-t3 uppercase tracking-wider">Name</label>
                                 <input id="fld-editData-name" wire:model="editData.name" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                             </div>
                             <div>
-                                <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Username</label>
+                                <label for="fld-editData-username" class="text-[10px] text-crm-t3 uppercase tracking-wider">Username</label>
                                 <input id="fld-editData-username" wire:model="editData.username" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                             </div>
                         </div>
                         <div class="grid grid-cols-2 gap-3">
                             <div>
-                                <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Password</label>
+                                <label for="fld-editData-password" class="text-[10px] text-crm-t3 uppercase tracking-wider">Password</label>
                                 <input id="fld-editData-password" wire:model="editData.password" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400 font-mono">
                             </div>
                             <div>
-                                <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Email</label>
+                                <label for="fld-editData-email" class="text-[10px] text-crm-t3 uppercase tracking-wider">Email</label>
                                 <input id="fld-editData-email" wire:model="editData.email" type="email" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                             </div>
                         </div>
                         <div class="grid grid-cols-2 gap-3">
                             <div>
-                                <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Avatar</label>
+                                <label for="fld-editData-avatar" class="text-[10px] text-crm-t3 uppercase tracking-wider">Avatar</label>
                                 <input id="fld-editData-avatar" wire:model="editData.avatar" type="text" maxlength="2" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400 font-mono text-center">
                             </div>
                             <div>
-                                <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Color</label>
+                                <label for="fld-editData-color" class="text-[10px] text-crm-t3 uppercase tracking-wider">Color</label>
                                 <input id="fld-editData-color" wire:model="editData.color" type="color" class="w-full h-[38px] bg-crm-surface border border-crm-border rounded-lg cursor-pointer">
                             </div>
                         </div>

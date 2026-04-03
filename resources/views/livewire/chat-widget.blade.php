@@ -323,11 +323,11 @@
                         <div class="text-[9px] text-crm-t3 uppercase font-semibold mt-2">Closing & Verification</div>
                         <div class="grid grid-cols-2 gap-1.5">
                             <div>
-                                <label class="text-[8px] text-crm-t3">Closing Date *</label>
+                                <label for="df-closing" class="text-[8px] text-crm-t3">Closing Date *</label>
                                 <input id="df-closing" wire:model="dealForm.closing_date" type="date" class="w-full px-2 py-1 text-xs border border-crm-border rounded">
                             </div>
                             <div>
-                                <label class="text-[8px] text-crm-t3">Verification #</label>
+                                <label for="df-vernum" class="text-[8px] text-crm-t3">Verification #</label>
                                 <input id="df-vernum" wire:model="dealForm.verification_num" type="text" placeholder="Verification #" class="w-full px-2 py-1 text-xs border border-crm-border rounded">
                             </div>
                         </div>

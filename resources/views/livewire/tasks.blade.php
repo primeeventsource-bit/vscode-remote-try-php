@@ -14,12 +14,12 @@
         <div class="text-sm font-semibold mb-3">Create Task</div>
         <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
             <div class="col-span-2 md:col-span-3">
-                <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Title</label>
-                <input id="fld-newTitle" wire:model="newTitle" type="text" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400" placeholder="Task title...">
+                <label for="fld-newTitle" class="text-[10px] text-crm-t3 uppercase tracking-wider">Title</label>
+                                <input id="fld-newTitle" wire:model="newTitle" type="text" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400" placeholder="Task title...">
             </div>
             <div>
-                <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Assign To</label>
-                <select id="fld-newAssignTo" wire:model="newAssignTo" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
+                <label for="fld-newAssignTo" class="text-[10px] text-crm-t3 uppercase tracking-wider">Assign To</label>
+                                <select id="fld-newAssignTo" wire:model="newAssignTo" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
                     <option value="">Select user...</option>
                     @foreach($users as $u)
                         <option value="{{ $u->id }}">{{ $u->name }}</option>
@@ -27,8 +27,8 @@
                 </select>
             </div>
             <div>
-                <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Type</label>
-                <select id="fld-newType" wire:model="newType" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
+                <label for="fld-newType" class="text-[10px] text-crm-t3 uppercase tracking-wider">Type</label>
+                                <select id="fld-newType" wire:model="newType" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
                     <option value="general">General</option>
                     <option value="call">Call</option>
                     <option value="follow_up">Follow Up</option>
@@ -37,8 +37,8 @@
                 </select>
             </div>
             <div>
-                <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Priority</label>
-                <select id="fld-newPriority" wire:model="newPriority" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
+                <label for="fld-newPriority" class="text-[10px] text-crm-t3 uppercase tracking-wider">Priority</label>
+                                <select id="fld-newPriority" wire:model="newPriority" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
                     <option value="high">High</option>
@@ -46,12 +46,12 @@
                 </select>
             </div>
             <div>
-                <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Due Date</label>
-                <input id="fld-newDueDate" wire:model="newDueDate" type="datetime-local" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                <label for="fld-newDueDate" class="text-[10px] text-crm-t3 uppercase tracking-wider">Due Date</label>
+                                <input id="fld-newDueDate" wire:model="newDueDate" type="datetime-local" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
             </div>
             <div>
-                <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Description</label>
-                <input id="fld-newDescription" wire:model="newDescription" type="text" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400" placeholder="Optional description...">
+                <label for="fld-newDescription" class="text-[10px] text-crm-t3 uppercase tracking-wider">Description</label>
+                                <input id="fld-newDescription" wire:model="newDescription" type="text" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400" placeholder="Optional description...">
             </div>
         </div>
         <div class="flex justify-end mt-3">

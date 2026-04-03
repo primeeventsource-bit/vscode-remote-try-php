@@ -92,8 +92,8 @@
                 <h3 class="text-sm font-semibold mb-3">Lead Settings</h3>
                 <div class="space-y-3">
                     <label class="flex items-center gap-2 text-sm"><input type="checkbox" wire:model="leadAutoAssign"> Auto-assign rules enabled</label>
-                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" wire:model="leadRoundRobin"> Round-robin assignment</label>
-                    <textarea id="fld-leadCsvMapping" wire:model.defer="leadCsvMapping" rows="4" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg" placeholder="CSV column mapping"></textarea>
+                    <label for="fld-leadCsvMapping" class="flex items-center gap-2 text-sm"><input type="checkbox" wire:model="leadRoundRobin"> Round-robin assignment</label>
+                                <textarea id="fld-leadCsvMapping" wire:model.defer="leadCsvMapping" rows="4" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg" placeholder="CSV column mapping"></textarea>
                 </div>
                 <div class="mt-3 text-right"><button wire:click="saveLeadSettings" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg">Save Lead Settings</button></div>
             @endif
@@ -140,20 +140,20 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                     <div>
-                        <label class="text-[10px] text-crm-t3">Max File Upload Size (MB)</label>
-                        <input id="fld-chatModuleSettings-max_upload_size" wire:model.defer="chatModuleSettings.max_upload_size" type="number" min="1" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                        <label for="fld-chatModuleSettings-max_upload_size" class="text-[10px] text-crm-t3">Max File Upload Size (MB)</label>
+                                <input id="fld-chatModuleSettings-max_upload_size" wire:model.defer="chatModuleSettings.max_upload_size" type="number" min="1" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                     </div>
                     <div>
-                        <label class="text-[10px] text-crm-t3">Message Retention (days)</label>
-                        <input id="fld-chatModuleSettings-retention_days" wire:model.defer="chatModuleSettings.retention_days" type="number" min="1" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                        <label for="fld-chatModuleSettings-retention_days" class="text-[10px] text-crm-t3">Message Retention (days)</label>
+                                <input id="fld-chatModuleSettings-retention_days" wire:model.defer="chatModuleSettings.retention_days" type="number" min="1" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                     </div>
                     <div class="md:col-span-2">
-                        <label class="text-[10px] text-crm-t3">Allowed File Types (comma-separated)</label>
-                        <input id="fld-chatModuleSettings-allowed_file_types" wire:model.defer="chatModuleSettings.allowed_file_types" type="text" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                        <label for="fld-chatModuleSettings-allowed_file_types" class="text-[10px] text-crm-t3">Allowed File Types (comma-separated)</label>
+                                <input id="fld-chatModuleSettings-allowed_file_types" wire:model.defer="chatModuleSettings.allowed_file_types" type="text" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                     </div>
                     <div>
-                        <label class="text-[10px] text-crm-t3">Default Chat Permission Level</label>
-                        <select id="fld-chatModuleSettings-default_permission" wire:model.defer="chatModuleSettings.default_permission" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                        <label for="fld-chatModuleSettings-default_permission" class="text-[10px] text-crm-t3">Default Chat Permission Level</label>
+                                <select id="fld-chatModuleSettings-default_permission" wire:model.defer="chatModuleSettings.default_permission" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                             <option value="private">Private</option>
                             <option value="team">Team</option>
                             <option value="organization">Organization</option>
@@ -198,20 +198,20 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
                     <div>
-                        <label class="text-[10px] text-crm-t3">Auto Save Interval (seconds)</label>
-                        <input id="fld-documentModuleSettings-autosave_interval_seconds" wire:model.defer="documentModuleSettings.autosave_interval_seconds" type="number" min="3" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                        <label for="fld-documentModuleSettings-autosave_interval_seconds" class="text-[10px] text-crm-t3">Auto Save Interval (seconds)</label>
+                                <input id="fld-documentModuleSettings-autosave_interval_seconds" wire:model.defer="documentModuleSettings.autosave_interval_seconds" type="number" min="3" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                     </div>
                     <div>
-                        <label class="text-[10px] text-crm-t3">Default Document Permission</label>
-                        <select id="fld-documentModuleSettings-default_permission" wire:model.defer="documentModuleSettings.default_permission" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                        <label for="fld-documentModuleSettings-default_permission" class="text-[10px] text-crm-t3">Default Document Permission</label>
+                                <select id="fld-documentModuleSettings-default_permission" wire:model.defer="documentModuleSettings.default_permission" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                             <option value="private">Private</option>
                             <option value="team">Team</option>
                             <option value="organization">Organization</option>
                         </select>
                     </div>
                     <div>
-                        <label class="text-[10px] text-crm-t3">Max Document Size (MB)</label>
-                        <input id="fld-documentModuleSettings-max_document_size" wire:model.defer="documentModuleSettings.max_document_size" type="number" min="1" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                        <label for="fld-documentModuleSettings-max_document_size" class="text-[10px] text-crm-t3">Max Document Size (MB)</label>
+                                <input id="fld-documentModuleSettings-max_document_size" wire:model.defer="documentModuleSettings.max_document_size" type="number" min="1" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                     </div>
                 </div>
                 @error('documentModuleSettings.autosave_interval_seconds')<div class="text-xs text-red-600 mb-1">{{ $message }}</div>@enderror
@@ -248,24 +248,24 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
                     <div>
-                        <label class="text-[10px] text-crm-t3">Auto Save Interval (seconds)</label>
-                        <input id="fld-spreadsheetModuleSettings-autosave_interval_seconds" wire:model.defer="spreadsheetModuleSettings.autosave_interval_seconds" type="number" min="3" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                        <label for="fld-spreadsheetModuleSettings-autosave_interval_seconds" class="text-[10px] text-crm-t3">Auto Save Interval (seconds)</label>
+                                <input id="fld-spreadsheetModuleSettings-autosave_interval_seconds" wire:model.defer="spreadsheetModuleSettings.autosave_interval_seconds" type="number" min="3" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                     </div>
                     <div>
-                        <label class="text-[10px] text-crm-t3">Default Spreadsheet Permission</label>
-                        <select id="fld-spreadsheetModuleSettings-default_permission" wire:model.defer="spreadsheetModuleSettings.default_permission" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                        <label for="fld-spreadsheetModuleSettings-default_permission" class="text-[10px] text-crm-t3">Default Spreadsheet Permission</label>
+                                <select id="fld-spreadsheetModuleSettings-default_permission" wire:model.defer="spreadsheetModuleSettings.default_permission" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                             <option value="private">Private</option>
                             <option value="team">Team</option>
                             <option value="organization">Organization</option>
                         </select>
                     </div>
                     <div>
-                        <label class="text-[10px] text-crm-t3">Max Rows</label>
-                        <input id="fld-spreadsheetModuleSettings-max_rows" wire:model.defer="spreadsheetModuleSettings.max_rows" type="number" min="100" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                        <label for="fld-spreadsheetModuleSettings-max_rows" class="text-[10px] text-crm-t3">Max Rows</label>
+                                <input id="fld-spreadsheetModuleSettings-max_rows" wire:model.defer="spreadsheetModuleSettings.max_rows" type="number" min="100" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                     </div>
                     <div>
-                        <label class="text-[10px] text-crm-t3">Max Columns</label>
-                        <input id="fld-spreadsheetModuleSettings-max_columns" wire:model.defer="spreadsheetModuleSettings.max_columns" type="number" min="10" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                        <label for="fld-spreadsheetModuleSettings-max_columns" class="text-[10px] text-crm-t3">Max Columns</label>
+                                <input id="fld-spreadsheetModuleSettings-max_columns" wire:model.defer="spreadsheetModuleSettings.max_columns" type="number" min="10" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                     </div>
                 </div>
                 @error('spreadsheetModuleSettings.autosave_interval_seconds')<div class="text-xs text-red-600 mb-1">{{ $message }}</div>@enderror

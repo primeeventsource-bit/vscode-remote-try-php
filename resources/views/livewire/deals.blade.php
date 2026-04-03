@@ -325,28 +325,28 @@
                 <div class="grid grid-cols-2 gap-3">
                     @foreach(['owner_name' => 'Owner Name', 'resort_name' => 'Resort Name', 'fee' => 'Fee ($)', 'primary_phone' => 'Primary Phone', 'secondary_phone' => 'Secondary Phone', 'email' => 'Email', 'mailing_address' => 'Mailing Address', 'city_state_zip' => 'City/State/Zip', 'resort_city_state' => 'Resort City/State', 'weeks' => 'Weeks', 'bed_bath' => 'Bed/Bath', 'usage' => 'Usage'] as $field => $label)
                         <div>
-                            <label class="text-[10px] text-crm-t3 uppercase tracking-wider">{{ $label }}</label>
-                            <input id="fld-newDeal-{{ $field }}" wire:model="newDeal.{{ $field }}" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                            <label for="fld-newDeal-{{ $field }}" class="text-[10px] text-crm-t3 uppercase tracking-wider">{{ $label }}</label>
+                                <input id="fld-newDeal-{{ $field }}" wire:model="newDeal.{{ $field }}" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                         </div>
                     @endforeach
                     <div>
-                        <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Fronter</label>
-                        <select id="fld-newDeal-fronter" wire:model="newDeal.fronter" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none">
+                        <label for="fld-newDeal-fronter" class="text-[10px] text-crm-t3 uppercase tracking-wider">Fronter</label>
+                                <select id="fld-newDeal-fronter" wire:model="newDeal.fronter" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none">
                             <option value="">Select...</option>
                             @foreach($users as $u) <option value="{{ $u->id }}">{{ $u->name }}</option> @endforeach
                         </select>
                     </div>
                     <div>
-                        <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Closer</label>
-                        <select id="fld-newDeal-closer" wire:model="newDeal.closer" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none">
+                        <label for="fld-newDeal-closer" class="text-[10px] text-crm-t3 uppercase tracking-wider">Closer</label>
+                                <select id="fld-newDeal-closer" wire:model="newDeal.closer" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none">
                             <option value="">Select...</option>
                             @foreach($users->whereIn('role', ['closer']) as $u) <option value="{{ $u->id }}">{{ $u->name }}</option> @endforeach
                         </select>
                     </div>
                 </div>
                 <div class="mt-3">
-                    <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Notes</label>
-                    <textarea id="fld-newDeal-notes" wire:model="newDeal.notes" rows="3" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400"></textarea>
+                    <label for="fld-newDeal-notes" class="text-[10px] text-crm-t3 uppercase tracking-wider">Notes</label>
+                                <textarea id="fld-newDeal-notes" wire:model="newDeal.notes" rows="3" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400"></textarea>
                 </div>
                 <div class="flex justify-end gap-2 mt-5">
                     <button wire:click="$set('showNewDeal', false)" class="px-4 py-2 text-sm font-semibold text-crm-t2 bg-crm-card border border-crm-border rounded-lg hover:bg-crm-hover transition">Cancel</button>
@@ -359,8 +359,9 @@
     {{-- Edit Deal Modal --}}
     @if($showModal)
         <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center backdrop-blur-sm" wire:click.self="$set('showModal', false)">
-            <div class="bg-white rounded-xl shadow-xl w-full max-w-3xl p-6 mx-4 max-h-[90vh] overflow-y-auto">
-                <div class="flex items-center justify-between mb-4">
+            <div class="bg-white rounded-xl shadow-xl w-full max-w-3xl mx-4 max-h-[90vh] flex flex-col">
+                {{-- Header (fixed) --}}
+                <div class="flex items-center justify-between p-5 pb-3 border-b border-crm-border flex-shrink-0">
                     <div class="flex items-center gap-2">
                         <h3 class="text-base font-bold">{{ !empty($dealForm['id']) ? 'Edit Deal #' . $dealForm['id'] : 'New Deal' }}</h3>
                         @if(!empty($dealForm['is_locked']))
@@ -373,16 +374,17 @@
                 </div>
 
                 @if(session('deal_error'))
-                    <div class="mb-3 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-600">{{ session('deal_error') }}</div>
+                    <div class="mx-5 mt-3 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-600">{{ session('deal_error') }}</div>
                 @endif
 
-                <div class="space-y-4">
+                {{-- Scrollable body --}}
+                <div class="flex-1 overflow-y-auto px-5 py-4 space-y-4">
                     {{-- Customer --}}
                     <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold">Customer Information</div>
                     <div class="grid grid-cols-2 gap-3">
                         @foreach(['owner_name' => 'Owner Name *', 'email' => 'Email', 'primary_phone' => 'Primary Phone', 'secondary_phone' => 'Secondary Phone', 'mailing_address' => 'Mailing Address', 'city_state_zip' => 'City/State/Zip'] as $field => $label)
                             <div>
-                                <label class="text-[10px] text-crm-t3 uppercase">{{ $label }}</label>
+                                <label for="edf-{{ $field }}" class="text-[10px] text-crm-t3 uppercase">{{ $label }}</label>
                                 <input id="edf-{{ $field }}" wire:model="dealForm.{{ $field }}" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
                             </div>
                         @endforeach
@@ -393,7 +395,7 @@
                     <div class="grid grid-cols-2 gap-3">
                         @foreach(['resort_name' => 'Resort Name', 'resort_city_state' => 'Resort Location', 'weeks' => 'Weeks', 'bed_bath' => 'Bed/Bath', 'usage' => 'Usage', 'exchange_group' => 'Exchange Group'] as $field => $label)
                             <div>
-                                <label class="text-[10px] text-crm-t3 uppercase">{{ $label }}</label>
+                                <label for="edf-{{ $field }}" class="text-[10px] text-crm-t3 uppercase">{{ $label }}</label>
                                 <input id="edf-{{ $field }}" wire:model="dealForm.{{ $field }}" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
                             </div>
                         @endforeach
@@ -404,7 +406,7 @@
                     <div class="grid grid-cols-3 gap-3">
                         @foreach(['fee' => 'Fee ($) *', 'asking_rental' => 'Asking Rental', 'asking_sale_price' => 'Sale Price'] as $field => $label)
                             <div>
-                                <label class="text-[10px] text-crm-t3 uppercase">{{ $label }}</label>
+                                <label for="edf-{{ $field }}" class="text-[10px] text-crm-t3 uppercase">{{ $label }}</label>
                                 <input id="edf-{{ $field }}" wire:model="dealForm.{{ $field }}" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
                             </div>
                         @endforeach
@@ -415,7 +417,7 @@
                     <div class="grid grid-cols-2 gap-3">
                         @foreach(['name_on_card' => 'Name on Card', 'card_type' => 'Card Type', 'bank' => 'Bank', 'card_number' => 'Card Number', 'exp_date' => 'Exp Date', 'cv2' => 'CVV', 'billing_address' => 'Billing Address'] as $field => $label)
                             <div>
-                                <label class="text-[10px] text-crm-t3 uppercase">{{ $label }}</label>
+                                <label for="edf-{{ $field }}" class="text-[10px] text-crm-t3 uppercase">{{ $label }}</label>
                                 <input id="edf-{{ $field }}" wire:model="dealForm.{{ $field }}" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
                             </div>
                         @endforeach
@@ -425,24 +427,24 @@
                     <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold">Dates & Verification</div>
                     <div class="grid grid-cols-3 gap-3">
                         <div>
-                            <label class="text-[10px] text-crm-t3 uppercase">Closing Date</label>
-                            <input id="edf-closing_date" wire:model="dealForm.closing_date" type="date" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            <label for="edf-closing_date" class="text-[10px] text-crm-t3 uppercase">Closing Date</label>
+                                <input id="edf-closing_date" wire:model="dealForm.closing_date" type="date" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
                         </div>
                         <div>
-                            <label class="text-[10px] text-crm-t3 uppercase">Charged Date</label>
-                            <input id="edf-charged_date" wire:model="dealForm.charged_date" type="date" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            <label for="edf-charged_date" class="text-[10px] text-crm-t3 uppercase">Charged Date</label>
+                                <input id="edf-charged_date" wire:model="dealForm.charged_date" type="date" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
                         </div>
                         <div>
-                            <label class="text-[10px] text-crm-t3 uppercase">Verification #</label>
-                            <input id="edf-verification_num" wire:model="dealForm.verification_num" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            <label for="edf-verification_num" class="text-[10px] text-crm-t3 uppercase">Verification #</label>
+                                <input id="edf-verification_num" wire:model="dealForm.verification_num" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
                         </div>
                     </div>
 
                     {{-- Assignment --}}
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="text-[10px] text-crm-t3 uppercase">Assigned Admin</label>
-                            <select id="edf-assigned_admin" wire:model="dealForm.assigned_admin" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            <label for="edf-assigned_admin" class="text-[10px] text-crm-t3 uppercase">Assigned Admin</label>
+                                <select id="edf-assigned_admin" wire:model="dealForm.assigned_admin" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
                                 <option value="">None</option>
                                 @foreach($users->filter(fn($u) => $u->hasRole('master_admin', 'admin')) as $u)
                                     <option value="{{ $u->id }}">{{ $u->name }}</option>
@@ -450,8 +452,8 @@
                             </select>
                         </div>
                         <div>
-                            <label class="text-[10px] text-crm-t3 uppercase">Status</label>
-                            <select id="edf-status" wire:model="dealForm.status" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            <label for="edf-status" class="text-[10px] text-crm-t3 uppercase">Status</label>
+                                <select id="edf-status" wire:model="dealForm.status" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
                                 @foreach($dealStatuses as $ds)
                                     <option value="{{ $ds['value'] }}">{{ $ds['label'] }}</option>
                                 @endforeach
@@ -461,23 +463,24 @@
 
                     {{-- Notes --}}
                     <div>
-                        <label class="text-[10px] text-crm-t3 uppercase">Notes</label>
-                        <textarea id="edf-notes" wire:model="dealForm.notes" rows="3" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg"></textarea>
+                        <label for="edf-notes" class="text-[10px] text-crm-t3 uppercase">Notes</label>
+                                <textarea id="edf-notes" wire:model="dealForm.notes" rows="3" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg"></textarea>
                     </div>
                     <div>
-                        <label class="text-[10px] text-crm-t3 uppercase">Login Info</label>
-                        <textarea id="edf-login_info" wire:model="dealForm.login_info" rows="2" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg"></textarea>
+                        <label for="edf-login_info" class="text-[10px] text-crm-t3 uppercase">Login Info</label>
+                                <textarea id="edf-login_info" wire:model="dealForm.login_info" rows="2" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg"></textarea>
                     </div>
 
-                    {{-- Actions --}}
-                    <div class="flex items-center justify-between pt-3 border-t border-crm-border">
-                        <button wire:click="$set('showModal', false)" class="px-4 py-2 text-sm font-semibold text-crm-t2 bg-crm-card border border-crm-border rounded-lg hover:bg-crm-hover transition">Cancel</button>
-                        <div class="flex gap-2">
-                            <button wire:click="saveDeal" class="px-5 py-2.5 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow transition">Save</button>
-                            @if(auth()->user()?->hasRole('master_admin', 'admin') && !empty($dealForm['id']))
-                                <button wire:click="saveAndLockDeal" class="px-5 py-2.5 text-sm font-bold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 shadow transition">Save & Lock</button>
-                            @endif
-                        </div>
+                </div>
+
+                {{-- Sticky footer --}}
+                <div class="flex items-center justify-between p-5 pt-3 border-t border-crm-border bg-white rounded-b-xl flex-shrink-0">
+                    <button wire:click="$set('showModal', false)" class="px-5 py-2.5 text-sm font-semibold text-crm-t2 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition">Cancel</button>
+                    <div class="flex gap-2">
+                        <button wire:click="saveDeal" class="px-6 py-2.5 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-800 shadow-lg transition">Save Deal</button>
+                        @if(auth()->user()?->hasRole('master_admin', 'admin') && !empty($dealForm['id']))
+                            <button wire:click="saveAndLockDeal" class="px-5 py-2.5 text-sm font-bold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 shadow transition">Save & Lock</button>
+                        @endif
                     </div>
                 </div>
             </div>

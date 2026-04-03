@@ -352,41 +352,41 @@
                 <div class="space-y-3">
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Owner Name</label>
-                            <input id="fld-newLead-owner_name" wire:model="newLead.owner_name" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                            <label for="fld-newLead-owner_name" class="text-[10px] text-crm-t3 uppercase tracking-wider">Owner Name</label>
+                                <input id="fld-newLead-owner_name" wire:model="newLead.owner_name" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                         </div>
                         <div>
-                            <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Resort</label>
-                            <input id="fld-newLead-resort" wire:model="newLead.resort" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                            <label for="fld-newLead-resort" class="text-[10px] text-crm-t3 uppercase tracking-wider">Resort</label>
+                                <input id="fld-newLead-resort" wire:model="newLead.resort" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                         </div>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Phone 1</label>
-                            <input id="fld-newLead-phone1" wire:model="newLead.phone1" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                            <label for="fld-newLead-phone1" class="text-[10px] text-crm-t3 uppercase tracking-wider">Phone 1</label>
+                                <input id="fld-newLead-phone1" wire:model="newLead.phone1" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                         </div>
                         <div>
-                            <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Phone 2</label>
-                            <input id="fld-newLead-phone2" wire:model="newLead.phone2" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                            <label for="fld-newLead-phone2" class="text-[10px] text-crm-t3 uppercase tracking-wider">Phone 2</label>
+                                <input id="fld-newLead-phone2" wire:model="newLead.phone2" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                         </div>
                     </div>
                     <div class="grid grid-cols-3 gap-3">
                         <div>
-                            <label class="text-[10px] text-crm-t3 uppercase tracking-wider">City</label>
-                            <input id="fld-newLead-city" wire:model="newLead.city" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                            <label for="fld-newLead-city" class="text-[10px] text-crm-t3 uppercase tracking-wider">City</label>
+                                <input id="fld-newLead-city" wire:model="newLead.city" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                         </div>
                         <div>
-                            <label class="text-[10px] text-crm-t3 uppercase tracking-wider">State</label>
-                            <input id="fld-newLead-st" wire:model="newLead.st" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                            <label for="fld-newLead-st" class="text-[10px] text-crm-t3 uppercase tracking-wider">State</label>
+                                <input id="fld-newLead-st" wire:model="newLead.st" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                         </div>
                         <div>
-                            <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Zip</label>
-                            <input id="fld-newLead-zip" wire:model="newLead.zip" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                            <label for="fld-newLead-zip" class="text-[10px] text-crm-t3 uppercase tracking-wider">Zip</label>
+                                <input id="fld-newLead-zip" wire:model="newLead.zip" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                         </div>
                     </div>
                     <div>
-                        <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Resort Location</label>
-                        <input id="fld-newLead-resort_location" wire:model="newLead.resort_location" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                        <label for="fld-newLead-resort_location" class="text-[10px] text-crm-t3 uppercase tracking-wider">Resort Location</label>
+                                <input id="fld-newLead-resort_location" wire:model="newLead.resort_location" type="text" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                     </div>
                 </div>
                 <div class="flex justify-end gap-2 mt-5">
@@ -468,28 +468,28 @@
                     <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold">Customer Information</div>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="text-[10px] text-crm-t3">Owner Name</label>
-                            <input id="cv-owner" wire:model="convertForm.owner_name" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            <label for="cv-owner" class="text-[10px] text-crm-t3">Owner Name</label>
+                                <input id="cv-owner" wire:model="convertForm.owner_name" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
                         </div>
                         <div>
-                            <label class="text-[10px] text-crm-t3">Email</label>
-                            <input id="cv-email" wire:model="convertForm.email" type="email" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            <label for="cv-email" class="text-[10px] text-crm-t3">Email</label>
+                                <input id="cv-email" wire:model="convertForm.email" type="email" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
                         </div>
                         <div>
-                            <label class="text-[10px] text-crm-t3">Primary Phone</label>
-                            <input id="cv-phone1" wire:model="convertForm.primary_phone" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            <label for="cv-phone1" class="text-[10px] text-crm-t3">Primary Phone</label>
+                                <input id="cv-phone1" wire:model="convertForm.primary_phone" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
                         </div>
                         <div>
-                            <label class="text-[10px] text-crm-t3">Secondary Phone</label>
-                            <input id="cv-phone2" wire:model="convertForm.secondary_phone" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            <label for="cv-phone2" class="text-[10px] text-crm-t3">Secondary Phone</label>
+                                <input id="cv-phone2" wire:model="convertForm.secondary_phone" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
                         </div>
                         <div>
-                            <label class="text-[10px] text-crm-t3">Mailing Address</label>
-                            <input id="cv-address" wire:model="convertForm.mailing_address" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            <label for="cv-address" class="text-[10px] text-crm-t3">Mailing Address</label>
+                                <input id="cv-address" wire:model="convertForm.mailing_address" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
                         </div>
                         <div>
-                            <label class="text-[10px] text-crm-t3">City / State / Zip</label>
-                            <input id="cv-csz" wire:model="convertForm.city_state_zip" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            <label for="cv-csz" class="text-[10px] text-crm-t3">City / State / Zip</label>
+                                <input id="cv-csz" wire:model="convertForm.city_state_zip" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
                         </div>
                     </div>
 
@@ -497,28 +497,28 @@
                     <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mt-4">Property Details</div>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="text-[10px] text-crm-t3">Resort Name</label>
-                            <input id="cv-resort" wire:model="convertForm.resort_name" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            <label for="cv-resort" class="text-[10px] text-crm-t3">Resort Name</label>
+                                <input id="cv-resort" wire:model="convertForm.resort_name" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
                         </div>
                         <div>
-                            <label class="text-[10px] text-crm-t3">Resort City/State</label>
-                            <input id="cv-resort-loc" wire:model="convertForm.resort_city_state" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            <label for="cv-resort-loc" class="text-[10px] text-crm-t3">Resort City/State</label>
+                                <input id="cv-resort-loc" wire:model="convertForm.resort_city_state" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
                         </div>
                         <div>
-                            <label class="text-[10px] text-crm-t3">Weeks</label>
-                            <input id="cv-weeks" wire:model="convertForm.weeks" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            <label for="cv-weeks" class="text-[10px] text-crm-t3">Weeks</label>
+                                <input id="cv-weeks" wire:model="convertForm.weeks" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
                         </div>
                         <div>
-                            <label class="text-[10px] text-crm-t3">Bed/Bath</label>
-                            <input id="cv-bedbath" wire:model="convertForm.bed_bath" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            <label for="cv-bedbath" class="text-[10px] text-crm-t3">Bed/Bath</label>
+                                <input id="cv-bedbath" wire:model="convertForm.bed_bath" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
                         </div>
                         <div>
-                            <label class="text-[10px] text-crm-t3">Usage</label>
-                            <input id="cv-usage" wire:model="convertForm.usage" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            <label for="cv-usage" class="text-[10px] text-crm-t3">Usage</label>
+                                <input id="cv-usage" wire:model="convertForm.usage" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
                         </div>
                         <div>
-                            <label class="text-[10px] text-crm-t3">Exchange Group</label>
-                            <input id="cv-exchange" wire:model="convertForm.exchange_group" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            <label for="cv-exchange" class="text-[10px] text-crm-t3">Exchange Group</label>
+                                <input id="cv-exchange" wire:model="convertForm.exchange_group" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
                         </div>
                     </div>
 
@@ -526,16 +526,16 @@
                     <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mt-4">Pricing</div>
                     <div class="grid grid-cols-3 gap-3">
                         <div>
-                            <label class="text-[10px] text-crm-t3">Fee</label>
-                            <input id="cv-fee" wire:model="convertForm.fee" type="number" step="0.01" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            <label for="cv-fee" class="text-[10px] text-crm-t3">Fee</label>
+                                <input id="cv-fee" wire:model="convertForm.fee" type="number" step="0.01" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
                         </div>
                         <div>
-                            <label class="text-[10px] text-crm-t3">Asking Rental</label>
-                            <input id="cv-rental" wire:model="convertForm.asking_rental" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            <label for="cv-rental" class="text-[10px] text-crm-t3">Asking Rental</label>
+                                <input id="cv-rental" wire:model="convertForm.asking_rental" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
                         </div>
                         <div>
-                            <label class="text-[10px] text-crm-t3">Asking Sale Price</label>
-                            <input id="cv-sale" wire:model="convertForm.asking_sale_price" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            <label for="cv-sale" class="text-[10px] text-crm-t3">Asking Sale Price</label>
+                                <input id="cv-sale" wire:model="convertForm.asking_sale_price" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
                         </div>
                     </div>
 
@@ -543,32 +543,32 @@
                     <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mt-4">Payment Information</div>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="text-[10px] text-crm-t3">Name on Card</label>
-                            <input id="cv-cardholder" wire:model="convertForm.name_on_card" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            <label for="cv-cardholder" class="text-[10px] text-crm-t3">Name on Card</label>
+                                <input id="cv-cardholder" wire:model="convertForm.name_on_card" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
                         </div>
                         <div>
-                            <label class="text-[10px] text-crm-t3">Card Type</label>
-                            <input id="cv-cardtype" wire:model="convertForm.card_type" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            <label for="cv-cardtype" class="text-[10px] text-crm-t3">Card Type</label>
+                                <input id="cv-cardtype" wire:model="convertForm.card_type" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
                         </div>
                         <div>
-                            <label class="text-[10px] text-crm-t3">Bank</label>
-                            <input id="cv-bank" wire:model="convertForm.bank" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            <label for="cv-bank" class="text-[10px] text-crm-t3">Bank</label>
+                                <input id="cv-bank" wire:model="convertForm.bank" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
                         </div>
                         <div>
-                            <label class="text-[10px] text-crm-t3">Card Number</label>
-                            <input id="cv-cardnum" wire:model="convertForm.card_number" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            <label for="cv-cardnum" class="text-[10px] text-crm-t3">Card Number</label>
+                                <input id="cv-cardnum" wire:model="convertForm.card_number" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
                         </div>
                         <div>
-                            <label class="text-[10px] text-crm-t3">Exp Date</label>
-                            <input id="cv-exp" wire:model="convertForm.exp_date" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            <label for="cv-exp" class="text-[10px] text-crm-t3">Exp Date</label>
+                                <input id="cv-exp" wire:model="convertForm.exp_date" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
                         </div>
                         <div>
-                            <label class="text-[10px] text-crm-t3">CV2</label>
-                            <input id="cv-cv2" wire:model="convertForm.cv2" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            <label for="cv-cv2" class="text-[10px] text-crm-t3">CV2</label>
+                                <input id="cv-cv2" wire:model="convertForm.cv2" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
                         </div>
                         <div class="col-span-2">
-                            <label class="text-[10px] text-crm-t3">Billing Address</label>
-                            <input id="cv-billing" wire:model="convertForm.billing_address" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            <label for="cv-billing" class="text-[10px] text-crm-t3">Billing Address</label>
+                                <input id="cv-billing" wire:model="convertForm.billing_address" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
                         </div>
                     </div>
 
@@ -576,17 +576,17 @@
                     <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mt-4">Additional</div>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="text-[10px] text-crm-t3">Verification #</label>
-                            <input id="cv-vernum" wire:model="convertForm.verification_num" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            <label for="cv-vernum" class="text-[10px] text-crm-t3">Verification #</label>
+                                <input id="cv-vernum" wire:model="convertForm.verification_num" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
                         </div>
                         <div>
-                            <label class="text-[10px] text-crm-t3">Login Info</label>
-                            <input id="cv-login" wire:model="convertForm.login_info" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            <label for="cv-login" class="text-[10px] text-crm-t3">Login Info</label>
+                                <input id="cv-login" wire:model="convertForm.login_info" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
                         </div>
                     </div>
                     <div>
-                        <label class="text-[10px] text-crm-t3">Notes</label>
-                        <textarea id="cv-notes" wire:model="convertForm.notes" rows="3" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg"></textarea>
+                        <label for="cv-notes" class="text-[10px] text-crm-t3">Notes</label>
+                                <textarea id="cv-notes" wire:model="convertForm.notes" rows="3" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg"></textarea>
                     </div>
 
                     <div class="flex justify-end gap-2 pt-3 border-t border-crm-border">
