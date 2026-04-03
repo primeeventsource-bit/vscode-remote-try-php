@@ -75,7 +75,7 @@
                         <tbody>
                             @foreach($callbackLeads as $lead)
                                 @php
-                                    $isPast = $lead->callback_date && $lead->callback_date->isPast();
+                                    $isPast = $lead->callback_date ?? null && $lead->callback_date ?? null->isPast();
                                 @endphp
                                 <tr class="border-b border-crm-border hover:bg-crm-hover transition {{ $isPast ? 'bg-red-50/50' : '' }}">
                                     <td class="px-4 py-2.5 font-semibold">{{ $lead->owner_name }}</td>

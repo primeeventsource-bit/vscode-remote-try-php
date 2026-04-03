@@ -21,7 +21,7 @@
                         <th class="text-left px-3 py-2 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold min-w-[120px]">Agent</th>
                         @foreach($days as $day)
                             <th class="text-center px-2 py-2 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold min-w-[90px]">
-                                {{ is_object($day) ? $day->format('D n/j') : ($day['label'] ?? $day) }}
+                                {{ is_object($day) ? $day?->format('D n/j') : ($day['label'] ?? $day) }}
                             </th>
                         @endforeach
                         <th class="text-center px-2 py-2 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold bg-blue-50/50 min-w-[80px]">Week Total</th>

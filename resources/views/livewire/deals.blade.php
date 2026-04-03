@@ -122,14 +122,14 @@
 
             {{-- Closing Date / Charged Date --}}
             <div class="flex gap-4 mb-3 text-xs">
-                @if(!empty($active->closing_date))
-                    <div><span class="text-crm-t3">Closing Date:</span> <span class="font-semibold">{{ $active->closing_date instanceof \Carbon\Carbon ? $active->closing_date->format('M j, Y') : $active->closing_date }}</span></div>
+                @if(!empty($active->closing_date ?? null))
+                    <div><span class="text-crm-t3">Closing Date:</span> <span class="font-semibold">{{ $active->closing_date ?? null instanceof \Carbon\Carbon ? $active->closing_date?->format('M j, Y') : $active->closing_date ?? null }}</span></div>
                 @endif
-                @if(!empty($active->charged_date))
-                    <div><span class="text-crm-t3">Charged Date:</span> <span class="font-semibold text-emerald-600">{{ $active->charged_date instanceof \Carbon\Carbon ? $active->charged_date->format('M j, Y') : $active->charged_date }}</span></div>
+                @if(!empty($active->charged_date ?? null))
+                    <div><span class="text-crm-t3">Charged Date:</span> <span class="font-semibold text-emerald-600">{{ $active->charged_date ?? null instanceof \Carbon\Carbon ? $active->charged_date?->format('M j, Y') : $active->charged_date ?? null }}</span></div>
                 @endif
-                @if(!empty($active->last_edited_by))
-                    <div><span class="text-crm-t3">Last edit:</span> <span class="font-semibold">{{ $users->get($active->last_edited_by)?->name ?? '?' }} {{ $active->last_edited_at?->diffForHumans() }}</span></div>
+                @if(!empty($active->last_edited_by ?? null))
+                    <div><span class="text-crm-t3">Last edit:</span> <span class="font-semibold">{{ $users->get($active->last_edited_by ?? null)?->name ?? '?' }} {{ $active->last_edited_at?->diffForHumans() }}</span></div>
                 @endif
             </div>
 

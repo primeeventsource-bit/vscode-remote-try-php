@@ -274,10 +274,10 @@
                     <div class="text-[10px] text-crm-t3 uppercase tracking-wider">Disposition</div>
                     <div class="text-sm font-semibold mt-0.5">{{ $active->disposition ?? 'Undisposed' }}</div>
                 </div>
-                @if($active->callback_date)
+                @if($active->callback_date ?? null)
                 <div>
                     <div class="text-[10px] text-crm-t3 uppercase tracking-wider">Callback Date</div>
-                    <div class="text-sm font-semibold mt-0.5">{{ $active->callback_date->format('n/j/Y g:i A') }}</div>
+                    <div class="text-sm font-semibold mt-0.5">{{ $active->callback_date?->format('n/j/Y g:i A') }}</div>
                 </div>
                 @endif
                 <div>
