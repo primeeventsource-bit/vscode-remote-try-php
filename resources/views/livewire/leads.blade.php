@@ -227,18 +227,63 @@
 
     {{-- Detail Panel --}}
     @if($active)
-        <div class="bg-crm-card border border-crm-border rounded-lg p-4 mb-4">
+        <div class="bg-crm-card border border-crm-border rounded-lg p-4 mb-4" x-data="{ editing: false }" x-init="editing = false">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-base font-bold">{{ $active->owner_name }}</h3>
                 <div class="flex items-center gap-2">
-                    @if(auth()->user()?->hasRole('master_admin', 'admin'))
-                        <button wire:click="editLead({{ $active->id }})" class="px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">Edit Lead</button>
-                    @endif
+                    <button @click="editing = !editing; if(editing) $wire.editLead({{ $active->id }})" class="px-3 py-1.5 text-xs font-semibold rounded-lg transition" :class="editing ? 'bg-gray-200 text-gray-700' : 'bg-blue-600 text-white hover:bg-blue-700'" x-text="editing ? 'Cancel Edit' : 'Edit Lead'"></button>
                     <button wire:click="selectLead({{ $active->id }})" class="text-crm-t3 hover:text-crm-t1 text-lg">&times;</button>
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+            {{-- Save confirmation --}}
+            @if($leadSaveMessage)
+                <div class="mb-3 px-3 py-2 rounded-lg text-xs font-semibold {{ str_starts_with($leadSaveMessage, '✓') ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200' }}">
+                    {{ $leadSaveMessage }}
+                </div>
+            @endif
+
+            {{-- Editable fields (shown when editing) --}}
+            <div x-show="editing" x-cloak class="mb-4">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                    <div>
+                        <label for="el-name" class="text-[10px] text-crm-t3 uppercase">Owner Name</label>
+                        <input id="el-name" wire:model="editForm.owner_name" type="text" class="w-full px-3 py-1.5 text-sm border border-crm-border rounded-lg">
+                    </div>
+                    <div>
+                        <label for="el-resort" class="text-[10px] text-crm-t3 uppercase">Resort</label>
+                        <input id="el-resort" wire:model="editForm.resort" type="text" class="w-full px-3 py-1.5 text-sm border border-crm-border rounded-lg">
+                    </div>
+                    <div>
+                        <label for="el-phone1" class="text-[10px] text-crm-t3 uppercase">Phone 1</label>
+                        <input id="el-phone1" wire:model="editForm.phone1" type="text" class="w-full px-3 py-1.5 text-sm border border-crm-border rounded-lg">
+                    </div>
+                    <div>
+                        <label for="el-phone2" class="text-[10px] text-crm-t3 uppercase">Phone 2</label>
+                        <input id="el-phone2" wire:model="editForm.phone2" type="text" class="w-full px-3 py-1.5 text-sm border border-crm-border rounded-lg">
+                    </div>
+                    <div>
+                        <label for="el-city" class="text-[10px] text-crm-t3 uppercase">City</label>
+                        <input id="el-city" wire:model="editForm.city" type="text" class="w-full px-3 py-1.5 text-sm border border-crm-border rounded-lg">
+                    </div>
+                    <div>
+                        <label for="el-st" class="text-[10px] text-crm-t3 uppercase">State</label>
+                        <input id="el-st" wire:model="editForm.st" type="text" class="w-full px-3 py-1.5 text-sm border border-crm-border rounded-lg">
+                    </div>
+                    <div>
+                        <label for="el-zip" class="text-[10px] text-crm-t3 uppercase">Zip</label>
+                        <input id="el-zip" wire:model="editForm.zip" type="text" class="w-full px-3 py-1.5 text-sm border border-crm-border rounded-lg">
+                    </div>
+                    <div>
+                        <label for="el-rloc" class="text-[10px] text-crm-t3 uppercase">Resort Location</label>
+                        <input id="el-rloc" wire:model="editForm.resort_location" type="text" class="w-full px-3 py-1.5 text-sm border border-crm-border rounded-lg">
+                    </div>
+                </div>
+                <button wire:click="updateLead" class="px-5 py-2 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow transition">Save Lead</button>
+            </div>
+
+            {{-- Read-only fields (shown when not editing) --}}
+            <div x-show="!editing" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
                 <div>
                     <div class="text-[10px] text-crm-t3 uppercase tracking-wider">Resort</div>
                     <div class="text-sm font-semibold mt-0.5">{{ $active->resort }}</div>

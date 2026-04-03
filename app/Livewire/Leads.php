@@ -202,11 +202,10 @@ class Leads extends Component
         $this->selectedLead = null;
     }
 
+    public string $leadSaveMessage = '';
+
     public function editLead($id): void
     {
-        $user = auth()->user();
-        if (!$user?->hasRole('master_admin', 'admin')) return;
-
         $lead = Lead::find($id);
         if (!$lead) return;
 
@@ -222,12 +221,11 @@ class Leads extends Component
             'resort_location' => $lead->resort_location ?? '',
         ];
         $this->showEditModal = true;
+        $this->leadSaveMessage = '';
     }
 
     public function updateLead(): void
     {
-        $user = auth()->user();
-        if (!$user?->hasRole('master_admin', 'admin')) return;
         if (empty($this->editForm['id'])) return;
 
         $lead = Lead::find($this->editForm['id']);
@@ -244,11 +242,10 @@ class Leads extends Component
                 'zip' => $this->editForm['zip'],
                 'resort_location' => $this->editForm['resort_location'],
             ]);
-            $this->showEditModal = false;
-            $this->editForm = [];
-            session()->flash('deal_success', 'Lead updated successfully.');
+            $this->leadSaveMessage = '✓ Lead saved successfully!';
         } catch (\Throwable $e) {
             Log::error('Lead update failed', ['error' => $e->getMessage()]);
+            $this->leadSaveMessage = '✕ Failed to save lead.';
         }
     }
 
