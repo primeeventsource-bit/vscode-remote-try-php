@@ -8,8 +8,11 @@ use App\Models\User;
 
 class CommissionCalculator
 {
-    public const SNR_PCT = 3;
-    public const VD_PCT = 5;
+    // SNR: single closer = 3% of deal amount
+    // SNR: multi closer = 1% × num_closers, applied to each closer's PAY
+    public const SNR_SINGLE_PCT = 3;       // 3% of deal amount
+    public const SNR_MULTI_PER_CLOSER = 1; // 1% per closer, of closer's pay
+    public const VD_PCT = 3;               // 3% of deal amount (changed from 5%)
     public const DEFAULT_CLOSER_PCT = 40;
     public const PANAMA_CLOSER_PCT = 25;
     public const MULTI_CLOSER_PCT = 10;
@@ -24,43 +27,48 @@ class CommissionCalculator
         $fronter = $deal->fronter ? User::find($deal->fronter) : null;
         $isPanama = ($fronter?->role === 'fronter_panama') || ($deal->fronter_role === 'fronter_panama');
         $deal->fronter_role = $fronter?->role ?? $deal->fronter_role;
+        $isVd = $deal->is_vd_deal || $deal->was_vd === 'Yes';
 
-        // Count closers on the deal
+        // Count closers
+        $closerCount = 1;
         try {
-            $closerCount = DealCloser::where('deal_id', $deal->id)->count();
-        } catch (\Throwable $e) {
-            $closerCount = 0;
-        }
+            $dbCount = DealCloser::where('deal_id', $deal->id)->count();
+            if ($dbCount > 0) $closerCount = $dbCount;
+        } catch (\Throwable $e) {}
+
         $isMulti = $closerCount > 1;
 
-        // SNR and VD (always based on total deal, same for all)
-        $isVd = $deal->is_vd_deal || $deal->was_vd === 'Yes';
-        $snrPerCloser = $fee * (self::SNR_PCT / 100);
-        $vdPerCloser = $isVd ? $fee * (self::VD_PCT / 100) : 0;
+        // VD deduction: always 3% of total deal amount
+        $vdDeduction = $isVd ? $fee * (self::VD_PCT / 100) : 0;
 
         if ($isMulti) {
-            // Multi-closer: each closer gets 10% minus deductions
-            $closerPct = self::MULTI_CLOSER_PCT;
-            $closerGross = $fee * ($closerPct / 100);
-            $closerNet = $closerGross - $snrPerCloser - $vdPerCloser;
+            // Multi-closer: each gets 10%
+            $closerBase = $fee * (self::MULTI_CLOSER_PCT / 100);
+
+            // SNR: 1% × num_closers, applied to each closer's PAY
+            $snrPct = self::SNR_MULTI_PER_CLOSER * $closerCount; // e.g. 2 closers = 2%, 3 = 3%, 4 = 4%
+            $snrDeduction = $closerBase * ($snrPct / 100);
+
+            $closerNet = $closerBase - $snrDeduction - $vdDeduction;
 
             // Update each closer record
             try {
                 DealCloser::where('deal_id', $deal->id)->update([
-                    'comm_pct' => $closerPct,
-                    'comm_amount' => $closerGross,
-                    'snr_deduction' => $snrPerCloser,
-                    'vd_deduction' => $vdPerCloser,
+                    'comm_pct' => self::MULTI_CLOSER_PCT,
+                    'comm_amount' => $closerBase,
+                    'snr_deduction' => $snrDeduction,
+                    'vd_deduction' => $vdDeduction,
                     'net_pay' => $closerNet,
                 ]);
             } catch (\Throwable $e) {}
 
-            // Store on deal for the original closer
-            $deal->closer_comm_pct = $closerPct;
-            $deal->closer_comm_amount = $closerGross;
+            $deal->closer_comm_pct = self::MULTI_CLOSER_PCT;
+            $deal->closer_comm_amount = $closerBase;
+            $deal->snr_deduction = $snrDeduction;
+            $deal->vd_deduction = $vdDeduction;
             $deal->closer_net_pay = $closerNet;
         } else {
-            // Single closer: normal rules
+            // Single closer
             if ($isPanama) {
                 $closerPct = (float) ($deal->closer_comm_pct ?? self::PANAMA_CLOSER_PCT);
                 if ($closerPct > self::PANAMA_CLOSER_PCT) $closerPct = self::PANAMA_CLOSER_PCT;
@@ -69,24 +77,26 @@ class CommissionCalculator
                 if ($closerPct > self::DEFAULT_CLOSER_PCT) $closerPct = self::DEFAULT_CLOSER_PCT;
             }
 
-            $closerGross = $fee * ($closerPct / 100);
-            $closerNet = $closerGross - $snrPerCloser - $vdPerCloser;
+            $closerBase = $fee * ($closerPct / 100);
+
+            // SNR: 3% of total deal amount for single closer
+            $snrDeduction = $fee * (self::SNR_SINGLE_PCT / 100);
+
+            $closerNet = $closerBase - $snrDeduction - $vdDeduction;
 
             $deal->closer_comm_pct = $closerPct;
-            $deal->closer_comm_amount = $closerGross;
+            $deal->closer_comm_amount = $closerBase;
+            $deal->snr_deduction = $snrDeduction;
+            $deal->vd_deduction = $vdDeduction;
             $deal->closer_net_pay = $closerNet;
 
-            // Update original closer record if exists
             try {
                 DealCloser::where('deal_id', $deal->id)->where('is_original', true)->update([
-                    'comm_pct' => $closerPct, 'comm_amount' => $closerGross,
-                    'snr_deduction' => $snrPerCloser, 'vd_deduction' => $vdPerCloser, 'net_pay' => $closerNet,
+                    'comm_pct' => $closerPct, 'comm_amount' => $closerBase,
+                    'snr_deduction' => $snrDeduction, 'vd_deduction' => $vdDeduction, 'net_pay' => $closerNet,
                 ]);
             } catch (\Throwable $e) {}
         }
-
-        $deal->snr_deduction = $snrPerCloser;
-        $deal->vd_deduction = $vdPerCloser;
 
         // Fronter commission
         if ($isPanama) {
