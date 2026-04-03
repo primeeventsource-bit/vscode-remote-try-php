@@ -157,6 +157,47 @@
                 </div>
             @endif
 
+            {{-- Multi-Closer (Admin only, charged deals only) --}}
+            @if($isAdmin && $active->charged === 'yes')
+                @php
+                    try { $dealClosers = \App\Models\DealCloser::where('deal_id', $active->id)->get(); } catch (\Throwable $e) { $dealClosers = collect(); }
+                @endphp
+                <div class="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <div class="text-[10px] text-blue-700 uppercase tracking-wider font-semibold mb-2">Closers on Deal ({{ $dealClosers->count() ?: 1 }} / {{ \App\Services\CommissionCalculator::MAX_CLOSERS }})</div>
+                    <div class="space-y-1.5 mb-2">
+                        @if($dealClosers->isEmpty())
+                            <div class="flex items-center justify-between text-xs bg-white rounded p-2 border border-blue-100">
+                                <span class="font-semibold">{{ $users->get($active->closer)?->name ?? 'Original Closer' }}</span>
+                                <span class="text-[9px] text-blue-500">Original · ${{ number_format($active->closer_net_pay ?? 0, 2) }}</span>
+                            </div>
+                        @else
+                            @foreach($dealClosers as $dc)
+                                <div class="flex items-center justify-between text-xs bg-white rounded p-2 border border-blue-100">
+                                    <span class="font-semibold">{{ $users->get($dc->user_id)?->name ?? 'Closer' }}</span>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-[9px] text-blue-500">{{ $dc->is_original ? 'Original' : 'Added' }} · {{ $dc->comm_pct }}% · ${{ number_format($dc->net_pay, 2) }}</span>
+                                        @if(!$dc->is_original)
+                                            <button wire:click="removeCloserFromDeal({{ $active->id }}, {{ $dc->user_id }})" class="text-[9px] text-red-500 hover:text-red-600 font-semibold">Remove</button>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endforeach
+                        @endif
+                    </div>
+                    @if(($dealClosers->count() ?: 1) < \App\Services\CommissionCalculator::MAX_CLOSERS)
+                        <div class="flex items-center gap-2">
+                            <select id="add-closer-{{ $active->id }}" wire:model="addCloserId" class="flex-1 px-2 py-1 text-xs border border-blue-200 rounded">
+                                <option value="">Add Closer...</option>
+                                @foreach($users->filter(fn($u) => $u->role === 'closer' && $u->id !== $active->closer && !$dealClosers->contains('user_id', $u->id)) as $c)
+                                    <option value="{{ $c->id }}">{{ $c->name }}</option>
+                                @endforeach
+                            </select>
+                            <button wire:click="addCloserToDeal({{ $active->id }})" class="px-3 py-1 text-[10px] font-semibold bg-blue-600 text-white rounded hover:bg-blue-700 transition">Add</button>
+                        </div>
+                    @endif
+                </div>
+            @endif
+
             {{-- Owner & Contact --}}
             <div class="mb-4">
                 <div class="text-[10px] text-crm-t3 uppercase tracking-wider mb-2 font-semibold">Owner & Contact Info</div>

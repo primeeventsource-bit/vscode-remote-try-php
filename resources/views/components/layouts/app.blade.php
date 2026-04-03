@@ -140,13 +140,30 @@
     </nav>
 
     {{-- Main Content --}}
-    <main class="pt-12">
-        @if (session('error'))
-            <div class="mx-4 mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                {{ session('error') }}
+    {{-- Global Toast Notifications --}}
+    <div x-data="{ toasts: [] }"
+         x-init="
+            @if(session('deal_success') || session('message') || session('success'))
+                toasts.push({ msg: '{{ session('deal_success') ?: session('message') ?: session('success') }}', type: 'success' });
+                setTimeout(() => toasts.shift(), 4000);
+            @endif
+            @if(session('deal_error') || session('error'))
+                toasts.push({ msg: '{{ session('deal_error') ?: session('error') }}', type: 'error' });
+                setTimeout(() => toasts.shift(), 4000);
+            @endif
+         "
+         class="fixed top-14 right-4 z-[99998] space-y-2" style="pointer-events:none">
+        <template x-for="(t, i) in toasts" :key="i">
+            <div x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-x-4" x-transition:enter-end="opacity-100 translate-x-0"
+                 :class="t.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'"
+                 class="flex items-center gap-2 px-5 py-3 rounded-xl shadow-lg text-white text-sm font-semibold" style="pointer-events:auto; min-width:280px">
+                <span x-text="t.type === 'success' ? '✓' : '✕'" class="text-lg"></span>
+                <span x-text="t.msg"></span>
             </div>
-        @endif
+        </template>
+    </div>
 
+    <main class="pt-12">
         {{ $slot }}
     </main>
 

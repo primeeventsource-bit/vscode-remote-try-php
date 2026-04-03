@@ -3,6 +3,7 @@ namespace App\Livewire;
 
 use App\Livewire\Concerns\SendsTransferDm;
 use App\Models\Deal;
+use App\Models\DealCloser;
 use App\Models\User;
 use App\Services\CommissionCalculator;
 use Livewire\Attributes\Layout;
@@ -22,6 +23,7 @@ class Deals extends Component
     public array $newDeal = [];
     public string $dispoCallbackDate = '';
     public string $dispoChargedDate = '';
+    public string $addCloserId = '';
 
     public function mount() { $this->resetForm(); }
 
@@ -154,6 +156,56 @@ class Deals extends Component
         if (!$user || !$user->hasRole('master_admin')) return;
         Deal::where('id', $id)->update(['is_locked' => false, 'last_edited_by' => $user->id, 'last_edited_at' => now()]);
         session()->flash('deal_success', 'Deal unlocked for Admin editing.');
+    }
+
+    public function addCloserToDeal($dealId): void
+    {
+        $user = auth()->user();
+        if (!$user?->hasRole('master_admin', 'admin') || !$this->addCloserId) return;
+
+        $deal = Deal::find($dealId);
+        if (!$deal || $deal->charged !== 'yes') return;
+
+        try {
+            $count = DealCloser::where('deal_id', $dealId)->count();
+            if ($count >= CommissionCalculator::MAX_CLOSERS) {
+                session()->flash('deal_error', 'Maximum ' . CommissionCalculator::MAX_CLOSERS . ' closers per deal.');
+                return;
+            }
+
+            // Ensure original closer is tracked
+            if ($count === 0 && $deal->closer) {
+                DealCloser::firstOrCreate(
+                    ['deal_id' => $dealId, 'user_id' => $deal->closer],
+                    ['is_original' => true]
+                );
+            }
+
+            DealCloser::firstOrCreate(
+                ['deal_id' => $dealId, 'user_id' => (int) $this->addCloserId],
+                ['is_original' => false]
+            );
+
+            CommissionCalculator::calculate($deal);
+            $this->addCloserId = '';
+            session()->flash('deal_success', 'Closer added — commissions recalculated.');
+        } catch (\Throwable $e) {
+            session()->flash('deal_error', 'Failed to add closer.');
+        }
+    }
+
+    public function removeCloserFromDeal($dealId, $userId): void
+    {
+        $user = auth()->user();
+        if (!$user?->hasRole('master_admin', 'admin')) return;
+
+        $closer = DealCloser::where('deal_id', $dealId)->where('user_id', $userId)->first();
+        if (!$closer || $closer->is_original) return;
+
+        $closer->delete();
+        $deal = Deal::find($dealId);
+        if ($deal) CommissionCalculator::calculate($deal);
+        session()->flash('deal_success', 'Closer removed — commissions recalculated.');
     }
 
     public function updateStatus($id, $status, $extra = [])
