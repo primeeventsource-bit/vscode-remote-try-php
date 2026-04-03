@@ -41,6 +41,51 @@ class Verification extends Component
         }
     }
 
+    public function startVerification($id): void
+    {
+        $this->updateStatus($id, 'in_verification');
+        session()->flash('deal_success', 'Deal moved to verification.');
+    }
+
+    public function chargeDeal($id): void
+    {
+        $deal = Deal::find($id);
+        if (!$deal) return;
+        $deal->update(['status' => 'charged', 'charged' => 'yes', 'charged_date' => now()->format('Y-m-d')]);
+        try { \App\Services\CommissionCalculator::calculate($deal); } catch (\Throwable $e) {}
+        session()->flash('deal_success', 'Deal charged successfully.');
+    }
+
+    public function cancelDeal($id): void
+    {
+        $this->updateStatus($id, 'cancelled');
+        session()->flash('deal_success', 'Deal cancelled.');
+    }
+
+    public function markCallback($id): void
+    {
+        $this->updateStatus($id, 'in_verification', ['disposition_status' => 'callback']);
+        session()->flash('deal_success', 'Deal marked for callback.');
+    }
+
+    public function markChargeback($id): void
+    {
+        Deal::where('id', $id)->update(['status' => 'chargeback', 'charged_back' => 'yes']);
+        session()->flash('deal_success', 'Deal marked as chargeback.');
+    }
+
+    public function reverseChargeback($id): void
+    {
+        Deal::where('id', $id)->update(['status' => 'charged', 'charged_back' => 'no']);
+        session()->flash('deal_success', 'Chargeback reversed.');
+    }
+
+    public function reactivateDeal($id): void
+    {
+        $this->updateStatus($id, 'pending_admin');
+        session()->flash('deal_success', 'Deal reactivated.');
+    }
+
     public function addNote()
     {
         if (!$this->noteInput || !$this->selectedDeal) return;

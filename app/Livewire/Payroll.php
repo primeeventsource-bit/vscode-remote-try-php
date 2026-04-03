@@ -35,6 +35,12 @@ class Payroll extends Component
     public function nextWeek(): void { $this->weekOffset++; }
     public function thisWeek(): void { $this->weekOffset = 0; }
 
+    public function addBonus($userId): void { $this->payrollMessage = 'Bonus feature coming soon.'; }
+    public function addDeduction($userId): void { $this->payrollMessage = 'Deduction feature coming soon.'; }
+    public function addManualDeal($userId): void { $this->payrollMessage = 'Manual deal feature coming soon.'; }
+    public function addPayNote($userId): void { $this->payrollMessage = 'Pay note feature coming soon.'; }
+    public function sendPaysheet($userId): void { $this->payrollMessage = 'Paysheet sent feature coming soon.'; }
+
     public function saveUserPayrollInfo(int $userId): void
     {
         $row = $this->userPayrollInputs[$userId] ?? [];
