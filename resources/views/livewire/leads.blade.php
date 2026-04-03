@@ -230,7 +230,12 @@
         <div class="bg-crm-card border border-crm-border rounded-lg p-4 mb-4">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-base font-bold">{{ $active->owner_name }}</h3>
-                <button wire:click="selectLead({{ $active->id }})" class="text-crm-t3 hover:text-crm-t1 text-lg">&times;</button>
+                <div class="flex items-center gap-2">
+                    @if(auth()->user()?->hasRole('master_admin', 'admin'))
+                        <button wire:click="editLead({{ $active->id }})" class="px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">Edit Lead</button>
+                    @endif
+                    <button wire:click="selectLead({{ $active->id }})" class="text-crm-t3 hover:text-crm-t1 text-lg">&times;</button>
+                </div>
             </div>
 
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
@@ -593,6 +598,56 @@
                         <button wire:click="$set('showConvertModal', false)" class="px-4 py-2 text-sm font-semibold text-crm-t2 bg-crm-card border border-crm-border rounded-lg hover:bg-crm-hover transition">Cancel</button>
                         <button wire:click="convertToDeal" class="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition">Create Deal</button>
                     </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- Edit Lead Modal (Admin/Master Admin only) --}}
+    @if($showEditModal && !empty($editForm))
+        <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center backdrop-blur-sm" wire:click.self="$set('showEditModal', false)">
+            <div class="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 mx-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-base font-bold">Edit Lead</h3>
+                    <button wire:click="$set('showEditModal', false)" class="text-crm-t3 hover:text-crm-t1 text-lg">&times;</button>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label for="el-name" class="text-[10px] text-crm-t3 uppercase">Owner Name</label>
+                        <input id="el-name" wire:model="editForm.owner_name" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                    </div>
+                    <div>
+                        <label for="el-resort" class="text-[10px] text-crm-t3 uppercase">Resort</label>
+                        <input id="el-resort" wire:model="editForm.resort" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                    </div>
+                    <div>
+                        <label for="el-phone1" class="text-[10px] text-crm-t3 uppercase">Phone 1</label>
+                        <input id="el-phone1" wire:model="editForm.phone1" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                    </div>
+                    <div>
+                        <label for="el-phone2" class="text-[10px] text-crm-t3 uppercase">Phone 2</label>
+                        <input id="el-phone2" wire:model="editForm.phone2" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                    </div>
+                    <div>
+                        <label for="el-city" class="text-[10px] text-crm-t3 uppercase">City</label>
+                        <input id="el-city" wire:model="editForm.city" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                    </div>
+                    <div>
+                        <label for="el-st" class="text-[10px] text-crm-t3 uppercase">State</label>
+                        <input id="el-st" wire:model="editForm.st" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                    </div>
+                    <div>
+                        <label for="el-zip" class="text-[10px] text-crm-t3 uppercase">Zip</label>
+                        <input id="el-zip" wire:model="editForm.zip" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                    </div>
+                    <div>
+                        <label for="el-rloc" class="text-[10px] text-crm-t3 uppercase">Resort Location</label>
+                        <input id="el-rloc" wire:model="editForm.resort_location" type="text" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 mt-5">
+                    <button wire:click="$set('showEditModal', false)" class="px-4 py-2 text-sm font-semibold text-crm-t2 bg-crm-card border border-crm-border rounded-lg hover:bg-crm-hover transition">Cancel</button>
+                    <button wire:click="updateLead" class="px-5 py-2.5 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow transition">Save Changes</button>
                 </div>
             </div>
         </div>

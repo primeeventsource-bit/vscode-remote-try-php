@@ -40,8 +40,8 @@
 
     <div x-show="open" x-cloak @click.outside="close()" @click.stop
         x-transition.opacity.duration.100ms
-        class="absolute bottom-full right-0 mb-2 z-[99999] flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-[0_12px_40px_rgba(0,0,0,0.18)]"
-        style="width:360px; height:400px;">
+        class="absolute bottom-12 right-0 z-[99999] flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-[0_12px_40px_rgba(0,0,0,0.18)]"
+        style="width:340px; height:380px;">
 
         <div class="flex-shrink-0 border-b border-gray-100 bg-gray-50/80 px-3 py-2">
             <div class="flex items-center justify-between mb-1.5">

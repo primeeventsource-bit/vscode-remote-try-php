@@ -37,6 +37,8 @@ class Leads extends Component
     public $leadFile = null;
     public string $importStatus = '';
     public string $importError = '';
+    public bool $showEditModal = false;
+    public array $editForm = [];
     public bool $showConvertModal = false;
     public array $convertForm = [];
     public string $transferAdmin = '';
@@ -198,6 +200,56 @@ class Leads extends Component
         $this->sendTransferDm($adminId, 'Deal', $deal->id, $deal->owner_name ?? 'Unknown', 'Verification');
         $this->transferAdmin = '';
         $this->selectedLead = null;
+    }
+
+    public function editLead($id): void
+    {
+        $user = auth()->user();
+        if (!$user?->hasRole('master_admin', 'admin')) return;
+
+        $lead = Lead::find($id);
+        if (!$lead) return;
+
+        $this->editForm = [
+            'id' => $lead->id,
+            'owner_name' => $lead->owner_name ?? '',
+            'resort' => $lead->resort ?? '',
+            'phone1' => $lead->phone1 ?? '',
+            'phone2' => $lead->phone2 ?? '',
+            'city' => $lead->city ?? '',
+            'st' => $lead->st ?? '',
+            'zip' => $lead->zip ?? '',
+            'resort_location' => $lead->resort_location ?? '',
+        ];
+        $this->showEditModal = true;
+    }
+
+    public function updateLead(): void
+    {
+        $user = auth()->user();
+        if (!$user?->hasRole('master_admin', 'admin')) return;
+        if (empty($this->editForm['id'])) return;
+
+        $lead = Lead::find($this->editForm['id']);
+        if (!$lead) return;
+
+        try {
+            $lead->update([
+                'owner_name' => $this->editForm['owner_name'],
+                'resort' => $this->editForm['resort'],
+                'phone1' => $this->editForm['phone1'],
+                'phone2' => $this->editForm['phone2'],
+                'city' => $this->editForm['city'],
+                'st' => $this->editForm['st'],
+                'zip' => $this->editForm['zip'],
+                'resort_location' => $this->editForm['resort_location'],
+            ]);
+            $this->showEditModal = false;
+            $this->editForm = [];
+            session()->flash('deal_success', 'Lead updated successfully.');
+        } catch (\Throwable $e) {
+            Log::error('Lead update failed', ['error' => $e->getMessage()]);
+        }
     }
 
     public function saveLead()
