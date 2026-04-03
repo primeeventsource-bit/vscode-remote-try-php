@@ -67,6 +67,16 @@ class ChatWidget extends Component
         }
     }
 
+    /**
+     * Called by wire:poll.15s.keep-alive to refresh unread counts
+     * without re-rendering the full component (preserves Alpine state)
+     */
+    public function refreshUnreadCounts(): void
+    {
+        // This method just needs to exist — Livewire will re-render
+        // the component which recalculates $unreadCounts in render()
+    }
+
     public function clearChat(): void
     {
         $this->selectedChat = null;

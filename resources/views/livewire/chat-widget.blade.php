@@ -26,6 +26,9 @@
         .wdg-msg-unread { background:rgba(239,68,68,0.08); border-left:2px solid #ef4444; }
     </style>
 
+    {{-- Poll for unread counts every 15s (targets method, preserves Alpine state) --}}
+    <div wire:poll.15s="refreshUnreadCounts" class="hidden"></div>
+
     {{-- Floating Bubble Button --}}
     <button @click="open = !open; if(open) $wire.$refresh()" title="Toggle Chat"
         class="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full {{ $totalUnread > 0 ? 'unread' : 'bg-blue-600' }} text-white shadow-lg shadow-blue-600/30 transition hover:scale-105 hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-200">
