@@ -117,15 +117,21 @@
                     @endif
 
                     @if(isset($selectedTransfer->phone1) && $selectedTransfer->phone1)
-                        <div class="flex justify-between text-xs items-center">
+                        <div class="flex justify-between text-xs items-center" x-data="{ copied: false }">
                             <span class="text-crm-t3">Phone</span>
-                            <a href="sip:{{ $selectedTransfer->phone1 }}" class="text-blue-600 font-semibold font-mono">{{ $selectedTransfer->phone1 }}</a>
+                            <span class="inline-flex items-center gap-1">
+                                <button type="button" @click="navigator.clipboard.writeText('{{ preg_replace('/[^0-9+]/', '', $selectedTransfer->phone1) }}'); copied = true; setTimeout(() => copied = false, 2000)" class="text-blue-600 font-semibold font-mono hover:underline cursor-pointer" title="Click to copy">📞 {{ $selectedTransfer->phone1 }}</button>
+                                <span x-show="copied" x-cloak x-transition class="text-[9px] text-emerald-600 font-semibold">Copied!</span>
+                            </span>
                         </div>
                     @endif
                     @if(isset($selectedTransfer->primary_phone) && $selectedTransfer->primary_phone)
-                        <div class="flex justify-between text-xs items-center">
+                        <div class="flex justify-between text-xs items-center" x-data="{ copied: false }">
                             <span class="text-crm-t3">Phone</span>
-                            <a href="sip:{{ $selectedTransfer->primary_phone }}" class="text-blue-600 font-semibold font-mono">{{ $selectedTransfer->primary_phone }}</a>
+                            <span class="inline-flex items-center gap-1">
+                                <button type="button" @click="navigator.clipboard.writeText('{{ preg_replace('/[^0-9+]/', '', $selectedTransfer->primary_phone) }}'); copied = true; setTimeout(() => copied = false, 2000)" class="text-blue-600 font-semibold font-mono hover:underline cursor-pointer" title="Click to copy">📞 {{ $selectedTransfer->primary_phone }}</button>
+                                <span x-show="copied" x-cloak x-transition class="text-[9px] text-emerald-600 font-semibold">Copied!</span>
+                            </span>
                         </div>
                     @endif
 

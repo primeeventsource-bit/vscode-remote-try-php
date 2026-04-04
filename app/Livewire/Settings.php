@@ -138,6 +138,7 @@ class Settings extends Component
 
     public array $dialerSettings = [
         'enabled' => true,
+        'click_action' => 'copy',
         'mode' => 'sip',
         'sip_domain' => '',
         'trunk_prefix' => '',

@@ -217,7 +217,10 @@
                         <div class="text-[10px] text-crm-t3 uppercase tracking-wider">Primary Phone</div>
                         <div class="mt-0.5">
                             @if($active->primary_phone)
-                                <a href="sip:{{ $active->primary_phone }}" class="text-blue-600 font-semibold font-mono text-sm">{{ $active->primary_phone }}</a>
+                                <span x-data="{ copied: false }" class="inline-flex items-center gap-1">
+                                    <button type="button" @click="navigator.clipboard.writeText('{{ preg_replace('/[^0-9+]/', '', $active->primary_phone) }}'); copied = true; setTimeout(() => copied = false, 2000)" class="text-blue-600 font-semibold font-mono text-sm hover:underline cursor-pointer" title="Click to copy">📞 {{ $active->primary_phone }}</button>
+                                    <span x-show="copied" x-cloak x-transition class="text-[9px] text-emerald-600 font-semibold">Copied!</span>
+                                </span>
                             @else <span class="text-sm text-crm-t3">--</span> @endif
                         </div>
                     </div>
@@ -225,7 +228,10 @@
                         <div class="text-[10px] text-crm-t3 uppercase tracking-wider">Secondary Phone</div>
                         <div class="mt-0.5">
                             @if($active->secondary_phone)
-                                <a href="sip:{{ $active->secondary_phone }}" class="text-blue-600 font-semibold font-mono text-sm">{{ $active->secondary_phone }}</a>
+                                <span x-data="{ copied: false }" class="inline-flex items-center gap-1">
+                                    <button type="button" @click="navigator.clipboard.writeText('{{ preg_replace('/[^0-9+]/', '', $active->secondary_phone) }}'); copied = true; setTimeout(() => copied = false, 2000)" class="text-blue-600 font-semibold font-mono text-sm hover:underline cursor-pointer" title="Click to copy">📞 {{ $active->secondary_phone }}</button>
+                                    <span x-show="copied" x-cloak x-transition class="text-[9px] text-emerald-600 font-semibold">Copied!</span>
+                                </span>
                             @else <span class="text-sm text-crm-t3">--</span> @endif
                         </div>
                     </div>

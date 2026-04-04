@@ -383,9 +383,24 @@
                         </div>
                     </div>
 
+                    {{-- Click Action --}}
+                    <div class="bg-crm-card border border-crm-border rounded-lg p-4">
+                        <div class="text-sm font-semibold mb-3">Click Action</div>
+                        <div>
+                            <label for="ds-action" class="text-[10px] text-crm-t3 uppercase">What happens when a phone number is clicked</label>
+                            <select id="ds-action" wire:model="dialerSettings.click_action" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                                <option value="copy">Copy to Clipboard (temporary — no dialing)</option>
+                                <option value="tel">Launch TEL: Protocol (MicroSIP/softphone)</option>
+                                <option value="sip">Launch SIP: Protocol</option>
+                                <option value="sip_with_domain">Launch SIP: with Domain</option>
+                            </select>
+                            <p class="text-[10px] text-crm-t3 mt-1">Set to "Copy to Clipboard" until MicroSIP is configured on all workstations.</p>
+                        </div>
+                    </div>
+
                     {{-- Dialer Mode --}}
                     <div class="bg-crm-card border border-crm-border rounded-lg p-4">
-                        <div class="text-sm font-semibold mb-3">Dialer Protocol</div>
+                        <div class="text-sm font-semibold mb-3">Dialer Protocol (when using TEL/SIP mode)</div>
                         <div class="space-y-3">
                             <div>
                                 <label for="ds-mode" class="text-[10px] text-crm-t3 uppercase">Dial Mode</label>

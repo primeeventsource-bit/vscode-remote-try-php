@@ -179,14 +179,20 @@
                             <td class="px-4 py-2.5 font-semibold">{{ $lead->owner_name }}</td>
                             <td class="px-4 py-2.5">
                                 @if($lead->phone1)
-                                    <a href="sip:{{ $lead->phone1 }}" class="text-blue-600 font-semibold font-mono hover:underline" wire:click.stop title="Click to call">📞 {{ $lead->phone1 }}</a>
+                                    <span x-data="{ copied: false }" class="inline-flex items-center gap-1">
+                                        <button type="button" @click.stop="navigator.clipboard.writeText('{{ preg_replace('/[^0-9+]/', '', $lead->phone1) }}'); copied = true; setTimeout(() => copied = false, 2000)" class="text-blue-600 font-semibold font-mono text-xs hover:underline cursor-pointer" title="Click to copy">📞 {{ $lead->phone1 }}</button>
+                                        <span x-show="copied" x-cloak x-transition class="text-[9px] text-emerald-600 font-semibold">Copied!</span>
+                                    </span>
                                 @else
                                     <span class="text-crm-t3">--</span>
                                 @endif
                             </td>
                             <td class="px-4 py-2.5">
                                 @if($lead->phone2)
-                                    <a href="sip:{{ $lead->phone2 }}" class="text-blue-600 font-semibold font-mono hover:underline" wire:click.stop title="Click to call">📞 {{ $lead->phone2 }}</a>
+                                    <span x-data="{ copied: false }" class="inline-flex items-center gap-1">
+                                        <button type="button" @click.stop="navigator.clipboard.writeText('{{ preg_replace('/[^0-9+]/', '', $lead->phone2) }}'); copied = true; setTimeout(() => copied = false, 2000)" class="text-blue-600 font-semibold font-mono text-xs hover:underline cursor-pointer" title="Click to copy">📞 {{ $lead->phone2 }}</button>
+                                        <span x-show="copied" x-cloak x-transition class="text-[9px] text-emerald-600 font-semibold">Copied!</span>
+                                    </span>
                                 @else
                                     <span class="text-crm-t3">--</span>
                                 @endif
@@ -297,7 +303,10 @@
                     <div class="text-[10px] text-crm-t3 uppercase tracking-wider">Phone 1</div>
                     <div class="mt-0.5">
                         @if($active->phone1)
-                            <a href="sip:{{ $active->phone1 }}" class="text-blue-600 font-semibold font-mono text-sm hover:underline" title="Click to call">📞 {{ $active->phone1 }}</a>
+                            <span x-data="{ copied: false }" class="inline-flex items-center gap-1">
+                                <button type="button" @click="navigator.clipboard.writeText('{{ preg_replace('/[^0-9+]/', '', $active->phone1) }}'); copied = true; setTimeout(() => copied = false, 2000)" class="text-blue-600 font-semibold font-mono text-sm hover:underline cursor-pointer" title="Click to copy">📞 {{ $active->phone1 }}</button>
+                                <span x-show="copied" x-cloak x-transition class="text-[9px] text-emerald-600 font-semibold">Copied!</span>
+                            </span>
                         @else <span class="text-crm-t3 text-sm">--</span> @endif
                     </div>
                 </div>
@@ -305,7 +314,10 @@
                     <div class="text-[10px] text-crm-t3 uppercase tracking-wider">Phone 2</div>
                     <div class="mt-0.5">
                         @if($active->phone2)
-                            <a href="sip:{{ $active->phone2 }}" class="text-blue-600 font-semibold font-mono text-sm">{{ $active->phone2 }}</a>
+                            <span x-data="{ copied: false }" class="inline-flex items-center gap-1">
+                                <button type="button" @click="navigator.clipboard.writeText('{{ preg_replace('/[^0-9+]/', '', $active->phone2) }}'); copied = true; setTimeout(() => copied = false, 2000)" class="text-blue-600 font-semibold font-mono text-sm hover:underline cursor-pointer" title="Click to copy">📞 {{ $active->phone2 }}</button>
+                                <span x-show="copied" x-cloak x-transition class="text-[9px] text-emerald-600 font-semibold">Copied!</span>
+                            </span>
                         @else <span class="text-crm-t3 text-sm">--</span> @endif
                     </div>
                 </div>

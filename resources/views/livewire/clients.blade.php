@@ -125,10 +125,18 @@
                 <div class="border-t border-crm-border pt-3 mb-4">
                     <div class="text-[10px] text-crm-t3 uppercase tracking-wider mb-2 font-semibold">Phone Numbers</div>
                     @if($active->primary_phone)
-                        <div class="mb-1"><a href="sip:{{ $active->primary_phone }}" class="text-blue-600 font-semibold font-mono text-sm">{{ $active->primary_phone }}</a> <span class="text-[10px] text-crm-t3">Primary</span></div>
+                        <div class="mb-1" x-data="{ copied: false }">
+                            <button type="button" @click="navigator.clipboard.writeText('{{ preg_replace('/[^0-9+]/', '', $active->primary_phone) }}'); copied = true; setTimeout(() => copied = false, 2000)" class="text-blue-600 font-semibold font-mono text-sm hover:underline cursor-pointer" title="Click to copy">📞 {{ $active->primary_phone }}</button>
+                            <span class="text-[10px] text-crm-t3">Primary</span>
+                            <span x-show="copied" x-cloak x-transition class="text-[9px] text-emerald-600 font-semibold">Copied!</span>
+                        </div>
                     @endif
                     @if($active->secondary_phone)
-                        <div><a href="sip:{{ $active->secondary_phone }}" class="text-blue-600 font-semibold font-mono text-sm">{{ $active->secondary_phone }}</a> <span class="text-[10px] text-crm-t3">Secondary</span></div>
+                        <div x-data="{ copied: false }">
+                            <button type="button" @click="navigator.clipboard.writeText('{{ preg_replace('/[^0-9+]/', '', $active->secondary_phone) }}'); copied = true; setTimeout(() => copied = false, 2000)" class="text-blue-600 font-semibold font-mono text-sm hover:underline cursor-pointer" title="Click to copy">📞 {{ $active->secondary_phone }}</button>
+                            <span class="text-[10px] text-crm-t3">Secondary</span>
+                            <span x-show="copied" x-cloak x-transition class="text-[9px] text-emerald-600 font-semibold">Copied!</span>
+                        </div>
                     @endif
                 </div>
 

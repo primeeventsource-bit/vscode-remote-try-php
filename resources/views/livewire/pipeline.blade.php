@@ -82,7 +82,10 @@
                                     <td class="px-4 py-2.5 text-crm-t2">{{ $lead->resort }}</td>
                                     <td class="px-4 py-2.5">
                                         @if($lead->phone1)
-                                            <a href="sip:{{ $lead->phone1 }}" class="text-blue-600 font-semibold font-mono">{{ $lead->phone1 }}</a>
+                                            <span x-data="{ copied: false }" class="inline-flex items-center gap-1">
+                                                <button type="button" @click.stop="navigator.clipboard.writeText('{{ preg_replace('/[^0-9+]/', '', $lead->phone1) }}'); copied = true; setTimeout(() => copied = false, 2000)" class="text-blue-600 font-semibold font-mono hover:underline cursor-pointer" title="Click to copy">📞 {{ $lead->phone1 }}</button>
+                                                <span x-show="copied" x-cloak x-transition class="text-[9px] text-emerald-600 font-semibold">Copied!</span>
+                                            </span>
                                         @else
                                             <span class="text-crm-t3">--</span>
                                         @endif
