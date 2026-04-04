@@ -63,7 +63,7 @@
                             };
                         @endphp
                         @forelse($filtered as $deal)
-                            <tr wire:click="selectDeal({{ $deal->id }})" class="border-b border-crm-border cursor-pointer transition {{ (isset($selectedDeal) && $selectedDeal && $selectedDeal->id === $deal->id) ? 'bg-blue-50' : 'hover:bg-crm-hover' }}">
+                            <tr wire:click="selectDeal({{ $deal->id }})" class="border-b border-crm-border cursor-pointer transition {{ ($selectedDeal && $selectedDeal === $deal->id) ? 'bg-blue-50' : 'hover:bg-crm-hover' }}">
                                 <td class="px-3 py-2.5">
                                     @php
                                         $sColor = match(true) {
@@ -88,7 +88,7 @@
                                 <td class="px-3 py-2.5 font-mono font-bold text-emerald-500">${{ number_format($deal->fee, 2) }}</td>
                                 @if($isAdmin)
                                     <td class="px-3 py-2.5 font-mono text-xs text-crm-t2">
-                                        {{ $deal->card_type ?? '--' }} {{ $deal->card_number ? '****'.substr($deal->card_number, -4) : '' }}
+                                        {{ $deal->masked_card }}
                                     </td>
                                 @endif
                                 <td class="px-3 py-2.5 text-crm-t2">{{ $users->firstWhere('id', $deal->closer)?->name ?? '--' }}</td>
@@ -128,23 +128,23 @@
         </div>
 
         {{-- Detail Panel (right side) --}}
-        @if($selectedDeal)
+        @if($activeDeal)
             <div class="w-80 flex-shrink-0 bg-crm-card border border-crm-border rounded-lg p-4 max-h-[70vh] overflow-y-auto">
                 <div class="flex items-center justify-between mb-3">
-                    <h4 class="text-sm font-bold">{{ $selectedDeal->owner_name }}</h4>
+                    <h4 class="text-sm font-bold">{{ $activeDeal->owner_name }}</h4>
                     <button wire:click="$set('selectedDeal', null)" class="text-crm-t3 hover:text-crm-t1">&times;</button>
                 </div>
 
                 <div class="space-y-2 mb-4">
                     @foreach([
-                        'Resort' => $selectedDeal->resort_name,
-                        'Fee' => '$'.number_format($selectedDeal->fee, 2),
-                        'Closer' => $users->firstWhere('id', $selectedDeal->closer)?->name ?? '--',
-                        'Fronter' => $users->firstWhere('id', $selectedDeal->fronter)?->name ?? '--',
-                        'Status' => ucfirst(str_replace('_', ' ', $selectedDeal->status ?? 'pending')),
-                        'Phone' => $selectedDeal->primary_phone,
-                        'Email' => $selectedDeal->email,
-                        'Date' => $selectedDeal->timestamp?->format('n/j/Y'),
+                        'Resort' => $activeDeal->resort_name,
+                        'Fee' => '$'.number_format($activeDeal->fee, 2),
+                        'Closer' => $users->firstWhere('id', $activeDeal->closer)?->name ?? '--',
+                        'Fronter' => $users->firstWhere('id', $activeDeal->fronter)?->name ?? '--',
+                        'Status' => ucfirst(str_replace('_', ' ', $activeDeal->status ?? 'pending')),
+                        'Phone' => $activeDeal->primary_phone,
+                        'Email' => $activeDeal->email,
+                        'Date' => $activeDeal->timestamp?->format('n/j/Y'),
                     ] as $lbl => $val)
                         <div class="flex justify-between text-xs">
                             <span class="text-crm-t3">{{ $lbl }}</span>
@@ -156,14 +156,14 @@
                 {{-- Notes --}}
                 <div class="border-t border-crm-border pt-3">
                     <div class="text-[10px] text-crm-t3 uppercase tracking-wider mb-2 font-semibold">Notes</div>
-                    @if($selectedDeal->notes)
-                        <div class="text-xs whitespace-pre-wrap bg-white border border-crm-border rounded p-2 mb-2 max-h-40 overflow-y-auto">{{ $selectedDeal->notes }}</div>
+                    @if($activeDeal->notes)
+                        <div class="text-xs whitespace-pre-wrap bg-white border border-crm-border rounded p-2 mb-2 max-h-40 overflow-y-auto">{{ $activeDeal->notes }}</div>
                     @else
                         <p class="text-xs text-crm-t3 mb-2">No notes yet</p>
                     @endif
                     <div class="flex gap-1">
                         <input id="fld-noteInput" wire:model="noteInput" type="text" placeholder="Add a note..." class="flex-1 px-2 py-1.5 text-xs bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
-                        <button wire:click="addNote({{ $selectedDeal->id }})" class="px-2 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">Add</button>
+                        <button wire:click="addNote({{ $activeDeal->id }})" class="px-2 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">Add</button>
                     </div>
                 </div>
             </div>

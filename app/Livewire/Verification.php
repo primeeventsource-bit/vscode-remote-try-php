@@ -4,6 +4,8 @@ namespace App\Livewire;
 use App\Livewire\Concerns\SendsTransferDm;
 use App\Models\Deal;
 use App\Models\User;
+use App\Services\PipelineEventService;
+use App\Services\PipelineStateService;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -51,14 +53,27 @@ class Verification extends Component
     {
         $deal = Deal::find($id);
         if (!$deal) return;
-        $deal->update(['status' => 'charged', 'charged' => 'yes', 'charged_date' => now()->format('Y-m-d')]);
-        try { \App\Services\CommissionCalculator::calculate($deal); } catch (\Throwable $e) {}
+
+        $admin = auth()->user();
+        if (!$admin) return;
+
+        // PipelineStateService handles: deal update + lead update + commission calc + event log + transaction
+        PipelineStateService::markChargedGreen($deal, $admin);
+
         session()->flash('deal_success', 'Deal charged successfully.');
     }
 
     public function cancelDeal($id): void
     {
-        $this->updateStatus($id, 'cancelled');
+        $deal = Deal::find($id);
+        if (!$deal) return;
+
+        $admin = auth()->user();
+        if (!$admin) return;
+
+        // PipelineStateService handles: deal update + lead update + event log + transaction
+        PipelineStateService::markNotCharged($deal, $admin, 'Cancelled by admin');
+
         session()->flash('deal_success', 'Deal cancelled.');
     }
 

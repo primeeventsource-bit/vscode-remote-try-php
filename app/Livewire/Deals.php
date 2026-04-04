@@ -44,23 +44,57 @@ class Deals extends Component
     {
         if (!empty($this->dealForm['id'])) {
             $deal = Deal::find($this->dealForm['id']);
-            if (!$deal) return;
+            if (!$deal) {
+                session()->flash('deal_error', 'Deal not found.');
+                return;
+            }
 
             $user = auth()->user();
             // Locked deals: only master admin can edit
             if ($deal->is_locked && !$user?->hasRole('master_admin')) {
+                session()->flash('deal_error', 'This deal is locked. Only Master Admin can edit.');
                 return;
             }
 
-            $updateData = collect($this->dealForm)->except(['id', 'created_at', 'updated_at'])->toArray();
+            $updateData = collect($this->dealForm)
+                ->except([
+                    'id', 'created_at', 'updated_at',
+                    'cv2', 'cv2_2',             // CVV must never be saved
+                    'card_number', 'card_number2', // encrypted - managed via migration
+                    'card_last4', 'card_brand',    // derived fields
+                    'card_last4_2', 'card_brand2', // derived fields
+                    'updated_by',                  // managed by Clients component
+                ])
+                ->toArray();
             $updateData['last_edited_by'] = auth()->id();
             $updateData['last_edited_at'] = now();
 
-            Deal::where('id', $this->dealForm['id'])->update($updateData);
+            $affected = Deal::where('id', $this->dealForm['id'])->update($updateData);
+
+            if ($affected === 0) {
+                session()->flash('deal_error', 'Save failed — no rows were updated. Please try again.');
+                return;
+            }
+
+            // Verify persistence
+            $persisted = Deal::find($this->dealForm['id']);
+            if (!$persisted || $persisted->last_edited_by !== auth()->id()) {
+                session()->flash('deal_error', 'Save verification failed — changes may not have persisted.');
+                return;
+            }
 
             session()->flash('deal_success', 'Deal saved successfully.');
         } else {
-            Deal::create($this->newDeal ?: $this->dealForm);
+            $createData = collect($this->newDeal ?: $this->dealForm)
+                ->except(['cv2', 'cv2_2', 'card_number', 'card_number2'])
+                ->toArray();
+            $deal = Deal::create($createData);
+
+            if (!$deal || !$deal->exists) {
+                session()->flash('deal_error', 'Failed to create deal.');
+                return;
+            }
+
             session()->flash('deal_success', 'Deal created successfully.');
         }
         $this->showNewDeal = false;
@@ -71,19 +105,46 @@ class Deals extends Component
     public function saveAndLockDeal(): void
     {
         $user = auth()->user();
-        if (!$user || !$user->hasRole('master_admin', 'admin')) return;
-        if (empty($this->dealForm['id'])) return;
+        if (!$user || !$user->hasRole('master_admin', 'admin')) {
+            session()->flash('deal_error', 'Unauthorized.');
+            return;
+        }
+        if (empty($this->dealForm['id'])) {
+            session()->flash('deal_error', 'No deal selected.');
+            return;
+        }
 
         $deal = Deal::find($this->dealForm['id']);
-        if (!$deal) return;
-        if ($deal->is_locked && !$user->hasRole('master_admin')) return;
+        if (!$deal) {
+            session()->flash('deal_error', 'Deal not found.');
+            return;
+        }
+        if ($deal->is_locked && !$user->hasRole('master_admin')) {
+            session()->flash('deal_error', 'This deal is locked. Only Master Admin can edit.');
+            return;
+        }
 
-        $updateData = collect($this->dealForm)->except(['id', 'created_at', 'updated_at'])->toArray();
+        $updateData = collect($this->dealForm)
+            ->except([
+                'id', 'created_at', 'updated_at',
+                'cv2', 'cv2_2',
+                'card_number', 'card_number2',
+                'card_last4', 'card_brand',
+                'card_last4_2', 'card_brand2',
+                'updated_by',
+            ])
+            ->toArray();
         $updateData['last_edited_by'] = auth()->id();
         $updateData['last_edited_at'] = now();
         $updateData['is_locked'] = true;
 
-        Deal::where('id', $deal->id)->update($updateData);
+        $affected = Deal::where('id', $deal->id)->update($updateData);
+
+        if ($affected === 0) {
+            session()->flash('deal_error', 'Save failed — no rows were updated.');
+            return;
+        }
+
         $this->showModal = false;
         $this->resetForm();
         session()->flash('deal_success', 'Deal saved and locked. Only Master Admin can edit now.');

@@ -11,6 +11,15 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // ─── Role permission defaults ────────────────────────────────
+        $clientPerms = [
+            'clients.view', 'clients.edit',
+            'clients.view_deal_sheet', 'clients.edit_deal_sheet',
+            'clients.view_banking', 'clients.edit_banking',
+            'clients.view_sensitive_financial', 'clients.edit_sensitive_financial',
+            'clients.view_payment_profile', 'clients.edit_payment_profile',
+            'clients.view_audit_logs',
+        ];
+
         $allPerms = [
             'view_dashboard','view_stats','view_leads','view_pipeline','view_deals',
             'view_verification','view_chat','view_users','import_csv','add_leads',
@@ -18,6 +27,7 @@ class DatabaseSeeder extends Seeder
             'toggle_charged','toggle_chargeback','upload_files','view_login_info',
             'create_chats','view_payroll','edit_payroll','manage_payroll',
             'edit_users','delete_users','master_override',
+            ...$clientPerms,
         ];
 
         $adminPerms = array_values(array_filter($allPerms, fn($k) => $k !== 'master_override'));
@@ -27,12 +37,20 @@ class DatabaseSeeder extends Seeder
             'view_chat','view_all_leads','assign_leads','import_csv','add_leads',
             'toggle_charged','toggle_chargeback','view_login_info','create_deals',
             'create_chats','view_payroll',
+            // Admin limited gets client view + edit but NOT sensitive financial
+            'clients.view', 'clients.edit',
+            'clients.view_deal_sheet', 'clients.edit_deal_sheet',
+            'clients.view_banking', 'clients.edit_banking',
+            'clients.view_payment_profile', 'clients.edit_payment_profile',
         ];
 
-        $fronter = ['view_leads','view_pipeline','view_chat','disposition_leads','create_chats','view_payroll'];
+        $fronter = ['view_leads','view_pipeline','view_chat','disposition_leads','create_chats','view_payroll',
+            'clients.view', // fronters can view their own clients only (enforced in query)
+        ];
         $closer = [
             'view_dashboard','view_leads','view_pipeline','view_deals','view_verification',
             'view_chat','disposition_leads','create_deals','create_chats','view_login_info','view_payroll',
+            'clients.view', 'clients.view_deal_sheet', // closers can view their own client deal sheets
         ];
 
         // ─── Users ───────────────────────────────────────────────────

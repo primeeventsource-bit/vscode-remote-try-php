@@ -6,6 +6,8 @@ use App\Livewire\Concerns\SendsTransferDm;
 use App\Models\Deal;
 use App\Models\Lead;
 use App\Models\User;
+use App\Services\PipelineEventService;
+use App\Services\PipelineStateService;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -49,18 +51,20 @@ class Leads extends Component
     {
         $lead = Lead::find($id);
         if (!$lead) return;
-        $data = ['disposition' => $dispo];
-        if ($dispo === 'Transferred to Closer' && $closerId) {
-            $data['transferred_to'] = $closerId;
-            $data['assigned_to'] = $closerId;
-            if (!$lead->original_fronter) $data['original_fronter'] = $lead->assigned_to;
-        }
-        if ($dispo === 'Callback' && $callbackDate) $data['callback_date'] = $callbackDate;
-        $lead->update($data);
 
-        // Auto-DM on lead transfer to closer
         if ($dispo === 'Transferred to Closer' && $closerId) {
-            $this->sendTransferDm($closerId, 'Lead', $lead->id, $lead->owner_name ?? 'Unknown', 'Closer');
+            $fronter = User::find($lead->original_fronter ?? $lead->assigned_to);
+            $closer = User::find($closerId);
+
+            if ($fronter && $closer) {
+                // PipelineStateService handles: state update + event logging + transaction
+                PipelineStateService::transferLeadToCloser($lead, $fronter, $closer);
+                $this->sendTransferDm($closerId, 'Lead', $lead->id, $lead->owner_name ?? 'Unknown', 'Closer');
+            }
+        } else {
+            $data = ['disposition' => $dispo];
+            if ($dispo === 'Callback' && $callbackDate) $data['callback_date'] = $callbackDate;
+            $lead->update($data);
         }
 
         $this->selectedLead = null;
@@ -129,10 +133,8 @@ class Leads extends Component
         if (!$lead) return;
 
         try {
-            $deal = Deal::create([
+            $dealData = [
                 'timestamp' => now()->format('n/j/Y'),
-                'fronter' => $lead->original_fronter ?? $lead->assigned_to,
-                'closer' => $user->id,
                 'owner_name' => $this->convertForm['owner_name'],
                 'primary_phone' => $this->convertForm['primary_phone'],
                 'secondary_phone' => $this->convertForm['secondary_phone'],
@@ -153,18 +155,14 @@ class Leads extends Component
                 'bank' => $this->convertForm['bank'],
                 'card_number' => $this->convertForm['card_number'],
                 'exp_date' => $this->convertForm['exp_date'],
-                'cv2' => $this->convertForm['cv2'],
                 'billing_address' => $this->convertForm['billing_address'],
                 'notes' => $this->convertForm['notes'],
                 'login_info' => $this->convertForm['login_info'],
                 'verification_num' => $this->convertForm['verification_num'],
-                'status' => 'pending_admin',
-                'charged' => 'no',
-                'charged_back' => 'no',
-            ]);
+            ];
 
-            // Mark lead as converted
-            $lead->update(['disposition' => 'Converted to Deal']);
+            // PipelineStateService handles: deal creation + lead update + event log + transaction
+            $deal = PipelineStateService::closeLeadIntoDeal($lead, $user, $dealData);
 
             $this->showConvertModal = false;
             $this->convertForm = [];
@@ -192,12 +190,15 @@ class Leads extends Component
         if (!$deal) return;
 
         $adminId = (int) $this->transferAdmin;
-        $deal->update([
-            'assigned_admin' => $adminId,
-            'status' => 'in_verification',
-        ]);
+        $closer = auth()->user();
+        $admin = User::find($adminId);
 
-        $this->sendTransferDm($adminId, 'Deal', $deal->id, $deal->owner_name ?? 'Unknown', 'Verification');
+        if ($closer && $admin) {
+            // PipelineStateService handles: deal update + lead update + event log + transaction
+            PipelineStateService::sendToVerification($deal, $closer, $admin);
+            $this->sendTransferDm($adminId, 'Deal', $deal->id, $deal->owner_name ?? 'Unknown', 'Verification');
+        }
+
         $this->transferAdmin = '';
         $this->selectedLead = null;
     }

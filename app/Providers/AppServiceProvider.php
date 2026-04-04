@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Models\Deal;
+use App\Policies\ClientPolicy;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
 
@@ -14,6 +17,8 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Register the ClientPolicy for Deal model (clients are charged deals)
+        Gate::policy(Deal::class, ClientPolicy::class);
         $defaultConnection = config('database.default');
 
         // Prevent hard failures when DB_CONNECTION=sqlsrv but SQL Server drivers are not installed.
