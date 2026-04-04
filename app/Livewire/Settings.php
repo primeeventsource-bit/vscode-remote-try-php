@@ -136,6 +136,17 @@ class Settings extends Component
         'activity_log_enabled' => true,
     ];
 
+    public array $dialerSettings = [
+        'enabled' => true,
+        'mode' => 'sip',
+        'sip_domain' => '',
+        'trunk_prefix' => '',
+        'logging_enabled' => true,
+        'require_outcome' => false,
+        'show_call_buttons' => true,
+        'show_copy_button' => true,
+    ];
+
     public array $processors = [];
     public array $merchantAccounts = [];
 
@@ -202,6 +213,7 @@ class Settings extends Component
         $this->chatModuleSettings = $this->loadSettingsGroup('chat', $this->chatModuleSettings);
         $this->documentModuleSettings = $this->loadSettingsGroup('documents', $this->documentModuleSettings);
         $this->spreadsheetModuleSettings = $this->loadSettingsGroup('spreadsheets', $this->spreadsheetModuleSettings);
+        $this->dialerSettings = $this->loadSettingsGroup('dialer', $this->dialerSettings);
 
         $this->loadMerchantIntegrationData();
     }
@@ -362,6 +374,12 @@ class Settings extends Component
 
         $this->saveSettingsGroup('spreadsheets', $this->spreadsheetModuleSettings);
         session()->flash('success', 'Spreadsheet settings saved.');
+    }
+
+    public function saveDialerSettings(): void
+    {
+        $this->saveSettingsGroup('dialer', $this->dialerSettings);
+        session()->flash('success', 'Dialer settings saved.');
     }
 
     public function saveIntegrations(): void

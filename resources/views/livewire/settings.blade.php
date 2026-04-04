@@ -25,6 +25,7 @@
                 'documents' => 'Document Settings',
                 'spreadsheets' => 'Spreadsheet Settings',
                 'integrations' => 'Integrations',
+                'calling' => 'Calling / Dialer',
             ] as $key => $label)
                 <button wire:click="$set('section', '{{ $key }}')"
                     class="w-full text-left px-3 py-2 text-xs font-semibold rounded-md transition {{ $section === $key ? 'bg-blue-50 text-blue-600' : 'text-crm-t2 hover:bg-crm-hover' }}">
@@ -363,6 +364,72 @@
                             @endforelse
                         </div>
                     </div>
+                </div>
+            @endif
+
+            {{-- Calling / Dialer Settings --}}
+            @if($section === 'calling')
+                <div class="space-y-4">
+                    <h3 class="text-lg font-bold mb-2">Calling / Dialer Settings</h3>
+                    <p class="text-xs text-crm-t3 mb-4">Configure click-to-call behavior for MicroSIP integration. Phone numbers across the CRM will launch calls through your local softphone.</p>
+
+                    {{-- General --}}
+                    <div class="bg-crm-card border border-crm-border rounded-lg p-4">
+                        <div class="text-sm font-semibold mb-3">General</div>
+                        <div class="space-y-3">
+                            <label class="flex items-center gap-2 text-sm"><input type="checkbox" wire:model="dialerSettings.enabled"> Enable Click-to-Call</label>
+                            <label class="flex items-center gap-2 text-sm"><input type="checkbox" wire:model="dialerSettings.show_call_buttons"> Show Call Buttons on Phone Numbers</label>
+                            <label class="flex items-center gap-2 text-sm"><input type="checkbox" wire:model="dialerSettings.show_copy_button"> Show Copy Number Button</label>
+                        </div>
+                    </div>
+
+                    {{-- Dialer Mode --}}
+                    <div class="bg-crm-card border border-crm-border rounded-lg p-4">
+                        <div class="text-sm font-semibold mb-3">Dialer Protocol</div>
+                        <div class="space-y-3">
+                            <div>
+                                <label for="ds-mode" class="text-[10px] text-crm-t3 uppercase">Dial Mode</label>
+                                <select id="ds-mode" wire:model="dialerSettings.mode" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                                    <option value="tel">TEL (tel:+1234567890)</option>
+                                    <option value="sip">SIP (sip:1234567890)</option>
+                                    <option value="sip_with_domain">SIP with Domain (sip:1234567890@domain.com)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="ds-domain" class="text-[10px] text-crm-t3 uppercase">SIP Domain (for SIP with Domain mode)</label>
+                                <input id="ds-domain" wire:model="dialerSettings.sip_domain" type="text" placeholder="sip.yourprovider.com" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            </div>
+                            <div>
+                                <label for="ds-prefix" class="text-[10px] text-crm-t3 uppercase">Trunk Prefix (optional, e.g. 9 for outside line)</label>
+                                <input id="ds-prefix" wire:model="dialerSettings.trunk_prefix" type="text" placeholder="" class="w-full px-3 py-2 text-sm border border-crm-border rounded-lg">
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Logging --}}
+                    <div class="bg-crm-card border border-crm-border rounded-lg p-4">
+                        <div class="text-sm font-semibold mb-3">Call Logging</div>
+                        <div class="space-y-3">
+                            <label class="flex items-center gap-2 text-sm"><input type="checkbox" wire:model="dialerSettings.logging_enabled"> Log All Dial Attempts</label>
+                            <label class="flex items-center gap-2 text-sm"><input type="checkbox" wire:model="dialerSettings.require_outcome"> Require Call Outcome After Dial</label>
+                        </div>
+                    </div>
+
+                    {{-- Workstation Setup --}}
+                    <div class="bg-crm-card border border-crm-border rounded-lg p-4">
+                        <div class="text-sm font-semibold mb-3">Workstation Setup Instructions</div>
+                        <div class="text-xs text-crm-t2 space-y-2">
+                            <div class="flex items-start gap-2"><span class="font-bold text-blue-600">1.</span> Install MicroSIP on each Windows workstation</div>
+                            <div class="flex items-start gap-2"><span class="font-bold text-blue-600">2.</span> Configure your SIP account in MicroSIP (server, username, password)</div>
+                            <div class="flex items-start gap-2"><span class="font-bold text-blue-600">3.</span> Ensure the SIP account shows "Online" status in MicroSIP</div>
+                            <div class="flex items-start gap-2"><span class="font-bold text-blue-600">4.</span> Set MicroSIP as the default handler for TEL: protocol in Windows Settings → Default Apps</div>
+                            <div class="flex items-start gap-2"><span class="font-bold text-blue-600">5.</span> If using SIP mode, also set MicroSIP as the default SIP: handler</div>
+                            <div class="flex items-start gap-2"><span class="font-bold text-blue-600">6.</span> When the browser asks "Allow this site to open MicroSIP?", click Allow and check "Always allow"</div>
+                            <div class="flex items-start gap-2"><span class="font-bold text-blue-600">7.</span> Click any 📞 phone number in the CRM to test — MicroSIP should open and begin dialing</div>
+                        </div>
+                    </div>
+
+                    <button wire:click="saveDialerSettings" class="px-5 py-2.5 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow transition">Save Dialer Settings</button>
                 </div>
             @endif
         </div>
