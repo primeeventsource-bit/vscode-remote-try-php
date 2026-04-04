@@ -82,4 +82,8 @@ Route::middleware([])->group(function () {
     Route::get('/gifs/favorites', [GifController::class, 'favorites']);
     Route::post('/gifs/favorites', [GifController::class, 'storeFavorite']);
     Route::delete('/gifs/favorites/{id}', [GifController::class, 'destroyFavorite']);
+
+    // Dialer
+    Route::post('/dialer/prepare', [\App\Http\Controllers\DialerController::class, 'prepare']);
+    Route::post('/dialer/outcome', [\App\Http\Controllers\DialerController::class, 'saveOutcome']);
 });
