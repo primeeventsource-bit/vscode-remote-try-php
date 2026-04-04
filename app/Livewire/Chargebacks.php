@@ -32,6 +32,15 @@ class Chargebacks extends Component
     public ?int $selectedId = null;
     public string $newNote = '';
 
+    // Cached filter options — loaded once in mount(), not on every render
+    public $processors = [];
+    public $salesReps = [];
+    public $merchantAccounts = [];
+    public $statuses = [];
+    public $reasonCodes = [];
+    public $cardBrands = [];
+    public $paymentMethods = [];
+
     protected $queryString = [
         'search' => ['except' => ''],
         'startDate' => ['except' => ''],
@@ -44,6 +53,22 @@ class Chargebacks extends Component
         'cardBrand' => ['except' => ''],
         'paymentMethod' => ['except' => ''],
     ];
+
+    public function mount(): void
+    {
+        $this->loadFilterOptions();
+    }
+
+    public function loadFilterOptions(): void
+    {
+        $this->processors = Processor::query()->select('id', 'name')->orderBy('name')->get()->map(fn ($m) => ['id' => $m->id, 'name' => $m->name])->toArray();
+        $this->salesReps = User::query()->select('id', 'name')->whereIn('role', ['closer', 'fronter', 'admin', 'master_admin'])->orderBy('name')->get()->map(fn ($m) => ['id' => $m->id, 'name' => $m->name])->toArray();
+        $this->merchantAccounts = MerchantAccount::query()->select('id', 'name')->orderBy('name')->get()->map(fn ($m) => ['id' => $m->id, 'name' => $m->name])->toArray();
+        $this->statuses = Chargeback::query()->select('status')->distinct()->pluck('status')->filter()->values()->toArray();
+        $this->reasonCodes = Chargeback::query()->select('reason_code')->distinct()->pluck('reason_code')->filter()->values()->toArray();
+        $this->cardBrands = Chargeback::query()->select('card_brand')->distinct()->pluck('card_brand')->filter()->values()->toArray();
+        $this->paymentMethods = Chargeback::query()->select('payment_method')->distinct()->pluck('payment_method')->filter()->values()->toArray();
+    }
 
     public function updating($name): void
     {
@@ -121,6 +146,9 @@ class Chargebacks extends Component
             'performed_by' => auth()->id(),
             'notes' => 'Status changed from chargeback detail panel',
         ]);
+
+        // Refresh filter options in case new status was introduced
+        $this->statuses = Chargeback::query()->select('status')->distinct()->pluck('status')->filter()->values()->toArray();
     }
 
     public function render()
@@ -163,13 +191,6 @@ class Chargebacks extends Component
         return view('livewire.chargebacks', [
             'rows' => $rows,
             'selected' => $selected,
-            'processors' => Processor::query()->orderBy('name')->get(),
-            'salesReps' => User::query()->orderBy('name')->get(),
-            'merchantAccounts' => MerchantAccount::query()->orderBy('name')->get(),
-            'statuses' => Chargeback::query()->select('status')->distinct()->pluck('status')->filter()->values(),
-            'reasonCodes' => Chargeback::query()->select('reason_code')->distinct()->pluck('reason_code')->filter()->values(),
-            'cardBrands' => Chargeback::query()->select('card_brand')->distinct()->pluck('card_brand')->filter()->values(),
-            'paymentMethods' => Chargeback::query()->select('payment_method')->distinct()->pluck('payment_method')->filter()->values(),
         ]);
     }
 }

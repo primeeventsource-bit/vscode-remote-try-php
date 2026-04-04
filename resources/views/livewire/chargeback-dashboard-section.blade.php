@@ -10,7 +10,7 @@
     </div>
 
     <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-3 mb-4">
-        <select id="fld-period" wire:model.live="period" class="px-3 py-2 text-xs bg-white border border-crm-border rounded-lg">
+        <select id="fld-period" wire:model.live.debounce.200ms="period" class="px-3 py-2 text-xs bg-white border border-crm-border rounded-lg">
             <option value="today">Today</option>
             <option value="last_7_days">Last 7 Days</option>
             <option value="this_month">This Month</option>
@@ -20,52 +20,52 @@
             <option value="custom">Custom</option>
         </select>
 
-        <input id="fld-startDate" wire:model.live="startDate" type="date" class="px-3 py-2 text-xs bg-white border border-crm-border rounded-lg" />
-        <input id="fld-endDate" wire:model.live="endDate" type="date" class="px-3 py-2 text-xs bg-white border border-crm-border rounded-lg" />
+        <input id="fld-startDate" wire:model.live.debounce.500ms="startDate" type="date" class="px-3 py-2 text-xs bg-white border border-crm-border rounded-lg" />
+        <input id="fld-endDate" wire:model.live.debounce.500ms="endDate" type="date" class="px-3 py-2 text-xs bg-white border border-crm-border rounded-lg" />
 
-        <select id="fld-processorId" wire:model.live="processorId" class="px-3 py-2 text-xs bg-white border border-crm-border rounded-lg">
+        <select id="fld-processorId" wire:model.live.debounce.200ms="processorId" class="px-3 py-2 text-xs bg-white border border-crm-border rounded-lg">
             <option value="">All Processors</option>
             @foreach($options['processors'] as $opt)
-                <option value="{{ $opt->id }}">{{ $opt->name }}</option>
+                <option value="{{ $opt['id'] }}">{{ $opt['name'] }}</option>
             @endforeach
         </select>
 
-        <select id="fld-salesRepId" wire:model.live="salesRepId" class="px-3 py-2 text-xs bg-white border border-crm-border rounded-lg">
+        <select id="fld-salesRepId" wire:model.live.debounce.200ms="salesRepId" class="px-3 py-2 text-xs bg-white border border-crm-border rounded-lg">
             <option value="">All Reps</option>
             @foreach($options['sales_reps'] as $opt)
-                <option value="{{ $opt->id }}">{{ $opt->name }}</option>
+                <option value="{{ $opt['id'] }}">{{ $opt['name'] }}</option>
             @endforeach
         </select>
 
-        <select id="fld-merchantAccountId" wire:model.live="merchantAccountId" class="px-3 py-2 text-xs bg-white border border-crm-border rounded-lg">
+        <select id="fld-merchantAccountId" wire:model.live.debounce.200ms="merchantAccountId" class="px-3 py-2 text-xs bg-white border border-crm-border rounded-lg">
             <option value="">All MIDs</option>
             @foreach($options['merchant_accounts'] as $opt)
-                <option value="{{ $opt->id }}">{{ $opt->name }}</option>
+                <option value="{{ $opt['id'] }}">{{ $opt['name'] }}</option>
             @endforeach
         </select>
 
-        <select id="fld-status" wire:model.live="status" class="px-3 py-2 text-xs bg-white border border-crm-border rounded-lg">
+        <select id="fld-status" wire:model.live.debounce.200ms="status" class="px-3 py-2 text-xs bg-white border border-crm-border rounded-lg">
             <option value="">All Statuses</option>
             @foreach($options['statuses'] as $opt)
                 <option value="{{ $opt }}">{{ ucfirst($opt) }}</option>
             @endforeach
         </select>
 
-        <select id="fld-reasonCode" wire:model.live="reasonCode" class="px-3 py-2 text-xs bg-white border border-crm-border rounded-lg">
+        <select id="fld-reasonCode" wire:model.live.debounce.200ms="reasonCode" class="px-3 py-2 text-xs bg-white border border-crm-border rounded-lg">
             <option value="">All Reason Codes</option>
             @foreach($options['reason_codes'] as $opt)
                 <option value="{{ $opt }}">{{ $opt }}</option>
             @endforeach
         </select>
 
-        <select id="fld-cardBrand" wire:model.live="cardBrand" class="px-3 py-2 text-xs bg-white border border-crm-border rounded-lg">
+        <select id="fld-cardBrand" wire:model.live.debounce.200ms="cardBrand" class="px-3 py-2 text-xs bg-white border border-crm-border rounded-lg">
             <option value="">All Card Brands</option>
             @foreach($options['card_brands'] as $opt)
                 <option value="{{ $opt }}">{{ $opt }}</option>
             @endforeach
         </select>
 
-        <select id="fld-paymentMethod" wire:model.live="paymentMethod" class="px-3 py-2 text-xs bg-white border border-crm-border rounded-lg">
+        <select id="fld-paymentMethod" wire:model.live.debounce.200ms="paymentMethod" class="px-3 py-2 text-xs bg-white border border-crm-border rounded-lg">
             <option value="">All Payment Methods</option>
             @foreach($options['payment_methods'] as $opt)
                 <option value="{{ $opt }}">{{ $opt }}</option>

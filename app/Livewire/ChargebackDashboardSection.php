@@ -19,6 +19,9 @@ class ChargebackDashboardSection extends Component
     public string $productId = '';
     public string $paymentMethod = '';
 
+    // Cached filter options — loaded once in mount()
+    public array $cachedOptions = [];
+
     protected $queryString = [
         'period' => ['except' => 'last_7_days', 'as' => 'cb_period'],
         'startDate' => ['except' => '', 'as' => 'cb_start_date'],
@@ -32,6 +35,20 @@ class ChargebackDashboardSection extends Component
         'productId' => ['except' => '', 'as' => 'cb_product_id'],
         'paymentMethod' => ['except' => '', 'as' => 'cb_payment_method'],
     ];
+
+    public function mount(ChargebackAnalyticsService $analytics): void
+    {
+        $raw = $analytics->filterOptions();
+        // Convert all collections/models to plain arrays for Livewire serialization
+        $this->cachedOptions = [];
+        foreach ($raw as $key => $val) {
+            if ($val instanceof \Illuminate\Database\Eloquent\Collection || $val instanceof \Illuminate\Support\Collection) {
+                $this->cachedOptions[$key] = $val->map(fn ($item) => is_object($item) && method_exists($item, 'toArray') ? $item->toArray() : $item)->values()->toArray();
+            } else {
+                $this->cachedOptions[$key] = $val;
+            }
+        }
+    }
 
     public function resetFilters(): void
     {
@@ -67,7 +84,7 @@ class ChargebackDashboardSection extends Component
         $summary = $analytics->summary($filters, $start, $end, $prevStart, $prevEnd);
         $trends = $analytics->trends($filters, $start, $end);
         $breakdowns = $analytics->breakdowns($filters, $start, $end);
-        $options = $analytics->filterOptions();
+        $options = $this->cachedOptions;
 
         $managementQuery = array_filter([
             'startDate' => $start->toDateString(),
