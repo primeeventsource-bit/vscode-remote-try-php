@@ -44,11 +44,13 @@ class StatisticsRepository
      * - close_pct: deals_closed / transfers_sent * 100
      * - no_deal_pct: no_deals / transfers_sent * 100
      */
-    public static function getFronterStats($from = null, $to = null): array
+    public static function getFronterStats($from = null, $to = null, ?int $userId = null): array
     {
-        if (!self::tableReady()) return self::fronterStatsFallback($from, $to);
+        if (!self::tableReady()) return self::fronterStatsFallback($from, $to, $userId);
 
-        $fronters = User::whereIn('role', ['fronter', 'fronter_panama'])->orderBy('name')->get();
+        $query = User::whereIn('role', ['fronter', 'fronter_panama'])->orderBy('name');
+        if ($userId) $query->where('id', $userId);
+        $fronters = $query->get();
         $result = [];
 
         foreach ($fronters as $f) {
@@ -95,9 +97,11 @@ class StatisticsRepository
      * Fallback when pipeline_events table doesn't exist yet.
      * Uses existing leads/deals tables directly.
      */
-    private static function fronterStatsFallback($from, $to): array
+    private static function fronterStatsFallback($from, $to, ?int $userId = null): array
     {
-        $fronters = User::whereIn('role', ['fronter', 'fronter_panama'])->orderBy('name')->get();
+        $query = User::whereIn('role', ['fronter', 'fronter_panama'])->orderBy('name');
+        if ($userId) $query->where('id', $userId);
+        $fronters = $query->get();
         $result = [];
 
         foreach ($fronters as $f) {
@@ -147,11 +151,13 @@ class StatisticsRepository
      * - not_closed: received but not turned into deals
      * - close_pct, no_close_pct, verification_pct
      */
-    public static function getCloserStats($from = null, $to = null): array
+    public static function getCloserStats($from = null, $to = null, ?int $userId = null): array
     {
-        if (!self::tableReady()) return self::closerStatsFallback($from, $to);
+        if (!self::tableReady()) return self::closerStatsFallback($from, $to, $userId);
 
-        $closers = User::where('role', 'closer')->orderBy('name')->get();
+        $query = User::where('role', 'closer')->orderBy('name');
+        if ($userId) $query->where('id', $userId);
+        $closers = $query->get();
         $result = [];
 
         foreach ($closers as $c) {
@@ -190,9 +196,11 @@ class StatisticsRepository
         return $result;
     }
 
-    private static function closerStatsFallback($from, $to): array
+    private static function closerStatsFallback($from, $to, ?int $userId = null): array
     {
-        $closers = User::where('role', 'closer')->orderBy('name')->get();
+        $query = User::where('role', 'closer')->orderBy('name');
+        if ($userId) $query->where('id', $userId);
+        $closers = $query->get();
         $result = [];
 
         foreach ($closers as $c) {
@@ -247,11 +255,13 @@ class StatisticsRepository
      * - not_charged: not charged / cancelled / failed
      * - charge_pct, not_charged_pct
      */
-    public static function getAdminStats($from = null, $to = null): array
+    public static function getAdminStats($from = null, $to = null, ?int $userId = null): array
     {
-        if (!self::tableReady()) return self::adminStatsFallback($from, $to);
+        if (!self::tableReady()) return self::adminStatsFallback($from, $to, $userId);
 
-        $admins = User::whereIn('role', ['admin', 'master_admin', 'admin_limited'])->orderBy('name')->get();
+        $query = User::whereIn('role', ['admin', 'master_admin', 'admin_limited'])->orderBy('name');
+        if ($userId) $query->where('id', $userId);
+        $admins = $query->get();
         $result = [];
 
         foreach ($admins as $a) {
@@ -286,9 +296,11 @@ class StatisticsRepository
         return $result;
     }
 
-    private static function adminStatsFallback($from, $to): array
+    private static function adminStatsFallback($from, $to, ?int $userId = null): array
     {
-        $admins = User::whereIn('role', ['admin', 'master_admin', 'admin_limited'])->orderBy('name')->get();
+        $query = User::whereIn('role', ['admin', 'master_admin', 'admin_limited'])->orderBy('name');
+        if ($userId) $query->where('id', $userId);
+        $admins = $query->get();
         $result = [];
 
         foreach ($admins as $a) {
