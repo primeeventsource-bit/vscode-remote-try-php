@@ -44,6 +44,9 @@ class Clients extends Component
     public ?int $selectedCaseId = null;
     public $evidenceUpload = null; // file upload
     public string $uploadDocType = '';
+    public bool $showSendCaseToAdmin = false;
+    public string $sendCaseAdminRecipientId = '';
+    public string $sendCaseAdminMessage = '';
 
     // ── Permission cache (computed per-request) ─────────────────
     public bool $canEdit = false;
@@ -541,6 +544,106 @@ class Clients extends Component
 
         $case->update($data);
         $this->flash('Case status updated to ' . $status . '.');
+    }
+
+    // ── Send Case to Admin ─────────────────────────────────────
+
+    public function openSendCaseToAdmin(): void
+    {
+        $user = auth()->user();
+        $case = $this->selectedCaseId ? ChargebackCase::find($this->selectedCaseId) : null;
+        if (!$user || !$case || !Gate::allows('sendToChat', $case)) {
+            $this->flash('Unauthorized.', 'error'); return;
+        }
+        $this->showSendCaseToAdmin = true;
+        $this->sendCaseAdminRecipientId = '';
+        $this->sendCaseAdminMessage = '';
+    }
+
+    public function sendCaseToAdmin(): void
+    {
+        $user = auth()->user();
+        $case = $this->selectedCaseId ? ChargebackCase::with('evidence')->find($this->selectedCaseId) : null;
+        if (!$user || !$case || !Gate::allows('sendToChat', $case)) {
+            $this->flash('Unauthorized.', 'error'); return;
+        }
+
+        if (!$this->sendCaseAdminRecipientId) {
+            $this->flash('Select a recipient.', 'error'); return;
+        }
+
+        // HARD RULE: recipient must be admin or master_admin
+        $recipient = User::where('id', (int) $this->sendCaseAdminRecipientId)
+            ->whereIn('role', ['admin', 'master_admin'])
+            ->first();
+
+        if (!$recipient) {
+            $this->flash('Recipient must be an Admin or Master Admin.', 'error');
+            return;
+        }
+
+        try {
+            $client = $case->client;
+            $readiness = $case->readiness;
+
+            // Build chat message
+            $chat = \App\Models\Chat::where('type', 'dm')->get()->first(function ($c) use ($user, $recipient) {
+                $m = is_array($c->members) ? $c->members : json_decode($c->members ?? '[]', true);
+                $ids = array_map('intval', array_values($m));
+                sort($ids);
+                $t = [$user->id, $recipient->id];
+                sort($t);
+                return $ids === $t;
+            });
+
+            if (!$chat) {
+                $chat = \App\Models\Chat::create([
+                    'name' => $recipient->name ?? 'Direct Message',
+                    'type' => 'dm',
+                    'members' => [$user->id, $recipient->id],
+                    'created_by' => $user->id,
+                ]);
+            }
+
+            $text = "📋 Chargeback Case Sent\n";
+            $text .= "Case: {$case->case_number}\n";
+            $text .= "Client: " . ($client->owner_name ?? 'Unknown') . "\n";
+            $text .= "Amount: \${$case->disputed_amount}\n";
+            $text .= "Reason: {$case->reason_code} — {$case->reason_description}\n";
+            $text .= "Deadline: " . ($case->response_due_at?->format('M j, Y') ?? 'None') . "\n";
+            $text .= "Evidence: {$readiness['uploaded']}/{$readiness['total']} uploaded";
+            if ($readiness['missing'] > 0) {
+                $text .= " ({$readiness['missing']} missing)";
+            }
+            $text .= "\nSent by: {$user->name}";
+
+            if (trim($this->sendCaseAdminMessage)) {
+                $text .= "\n\nNote: " . trim($this->sendCaseAdminMessage);
+            }
+
+            \App\Models\Message::create([
+                'chat_id' => $chat->id,
+                'sender_id' => $user->id,
+                'message_type' => 'text',
+                'text' => $text,
+            ]);
+            $chat->update(['updated_at' => now()]);
+
+            $this->showSendCaseToAdmin = false;
+            $this->sendCaseAdminRecipientId = '';
+            $this->sendCaseAdminMessage = '';
+            $this->flash('Case sent to ' . $recipient->name . '.');
+        } catch (\Throwable $e) {
+            report($e);
+            $this->flash('Failed to send case.', 'error');
+        }
+    }
+
+    public function cancelSendCaseToAdmin(): void
+    {
+        $this->showSendCaseToAdmin = false;
+        $this->sendCaseAdminRecipientId = '';
+        $this->sendCaseAdminMessage = '';
     }
 
     // ── Note methods ──────────────────────────────────────────

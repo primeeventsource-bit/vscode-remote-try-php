@@ -704,7 +704,7 @@
                             </div>
 
                             {{-- Status actions --}}
-                            <div class="flex flex-wrap gap-1.5">
+                            <div class="flex flex-wrap gap-1.5 mb-3">
                                 @foreach(['open' => 'Open', 'submitted' => 'Submitted', 'won' => 'Won', 'lost' => 'Lost'] as $st => $stLabel)
                                     @if($selectedCase->status !== $st)
                                         <button wire:click="updateCaseStatus({{ $selectedCase->id }}, '{{ $st }}')"
@@ -717,6 +717,34 @@
                                     @endif
                                 @endforeach
                             </div>
+                        @endif
+
+                        {{-- Send Case to Admin --}}
+                        @if(auth()->user()?->hasRole('master_admin', 'admin'))
+                            @if(!$showSendCaseToAdmin)
+                                <button wire:click="openSendCaseToAdmin"
+                                    class="w-full py-2 text-xs font-semibold text-purple-700 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition">
+                                    Send Case to Admin
+                                </button>
+                            @else
+                                <div class="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                                    <div class="text-[10px] text-purple-700 uppercase tracking-wider font-semibold mb-2">Send Case to Admin</div>
+                                    <select id="fld-sendcase-recipient" wire:model="sendCaseAdminRecipientId" class="w-full px-2 py-1.5 text-xs bg-white border border-crm-border rounded-lg mb-2">
+                                        <option value="">Select Admin / Master Admin...</option>
+                                        @foreach($users->filter(fn($u) => in_array($u->role, ['admin', 'master_admin'])) as $u)
+                                            <option value="{{ $u->id }}">{{ $u->name }} ({{ ucfirst(str_replace('_', ' ', $u->role)) }})</option>
+                                        @endforeach
+                                    </select>
+                                    <input id="fld-sendcase-msg" wire:model="sendCaseAdminMessage" type="text" placeholder="Additional note (optional)..." class="w-full px-2 py-1.5 text-xs bg-white border border-crm-border rounded-lg mb-2">
+                                    <div class="flex gap-1.5">
+                                        <button wire:click="sendCaseToAdmin" class="px-4 py-1.5 text-xs font-semibold text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition">
+                                            <span wire:loading.remove wire:target="sendCaseToAdmin">Send to Admin</span>
+                                            <span wire:loading wire:target="sendCaseToAdmin">Sending...</span>
+                                        </button>
+                                        <button wire:click="cancelSendCaseToAdmin" class="px-3 py-1.5 text-xs text-crm-t2 bg-white border border-crm-border rounded-lg hover:bg-gray-50 transition">Cancel</button>
+                                    </div>
+                                </div>
+                            @endif
                         @endif
 
                     @else
