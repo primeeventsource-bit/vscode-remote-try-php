@@ -181,6 +181,19 @@ class Settings extends Component
         'master_admin_sees_all' => true,
     ];
 
+    // ── Task Settings ───────────────────────────────────────
+    public array $taskSettings = [
+        'task_list_enabled' => true,
+        'show_in_sidebar' => true,
+        'show_dashboard_widget' => true,
+        'auto_create_on_transfer' => true,
+        'auto_create_on_verification' => true,
+        'auto_create_on_chargeback' => true,
+        'auto_create_on_note_share' => true,
+        'default_due_days' => 1,
+        'allow_manual_create' => true,
+    ];
+
     public array $dialerSettings = [
         'enabled' => true,
         'click_action' => 'copy',
@@ -260,6 +273,7 @@ class Settings extends Component
         $this->documentModuleSettings = $this->loadSettingsGroup('documents', $this->documentModuleSettings);
         $this->spreadsheetModuleSettings = $this->loadSettingsGroup('spreadsheets', $this->spreadsheetModuleSettings);
         $this->dialerSettings = $this->loadSettingsGroup('dialer', $this->dialerSettings);
+        $this->taskSettings = $this->loadSettingsGroup('tasks', $this->taskSettings);
         $this->transferSettings = $this->loadSettingsGroup('transfer', $this->transferSettings);
         $this->notesSettings = $this->loadSettingsGroup('notes', $this->notesSettings);
         $this->chargebackSettings = $this->loadSettingsGroup('chargeback', $this->chargebackSettings);
@@ -549,6 +563,13 @@ class Settings extends Component
 
         $row->update(['active' => !$row->active]);
         $this->loadMerchantIntegrationData();
+    }
+
+    public function saveTaskSettings(): void
+    {
+        if (!auth()->user()?->hasRole('master_admin')) return;
+        $this->saveSettingsGroup('tasks', $this->taskSettings);
+        session()->flash('success', 'Task settings saved.');
     }
 
     public function saveTransferSettings(): void

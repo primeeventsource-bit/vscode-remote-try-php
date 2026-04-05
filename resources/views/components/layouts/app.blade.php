@@ -86,7 +86,7 @@
                     ['route' => 'deals',        'icon' => '📋', 'label' => 'Deals',           'perm' => 'view_deals'],
                     ['route' => 'verification', 'icon' => '✓',  'label' => 'Verification',    'perm' => 'view_verification'],
                     ['route' => 'clients',      'icon' => '💰', 'label' => 'Clients',         'perm' => 'view_all_leads'],
-                    ['route' => 'tasks',        'icon' => '☑',  'label' => 'Tasks',           'perm' => null],
+                    ['route' => 'tasks',        'icon' => '☑',  'label' => 'Automatic Task List', 'perm' => null],
                     ['route' => 'tracker',      'icon' => '📅', 'label' => 'Tracker',         'perm' => null],
                     ['route' => 'transfers',    'icon' => '♻️',  'label' => 'Transfers',       'perm' => null],
                     ['route' => 'payroll',      'icon' => '💵', 'label' => 'Payroll',         'perm' => 'view_payroll'],

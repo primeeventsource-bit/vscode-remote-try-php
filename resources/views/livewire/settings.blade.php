@@ -26,6 +26,7 @@
                 'spreadsheets' => 'Spreadsheet Settings',
                 'integrations' => 'Integrations',
                 'calling' => 'Calling / Dialer',
+                'task_settings' => 'Automatic Tasks',
                 'transfers' => 'Transfers',
                 'notes_settings' => 'Notes',
                 'chargebacks_settings' => 'Chargebacks',
@@ -450,6 +451,32 @@
 
                     <button wire:click="saveDialerSettings" class="px-5 py-2.5 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow transition">Save Dialer Settings</button>
                 </div>
+            @endif
+
+            {{-- ═══ AUTOMATIC TASK SETTINGS ═══ --}}
+            @if($section === 'task_settings' && $isMaster)
+                <h3 class="text-sm font-semibold mb-3">Automatic Task List Settings</h3>
+                <p class="text-xs text-crm-t3 mb-4">Control how automatic tasks are created from CRM workflow events.</p>
+                <div class="space-y-3">
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-task-enabled" type="checkbox" wire:model="taskSettings.task_list_enabled"> Enable Automatic Task List</label>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-task-sidebar" type="checkbox" wire:model="taskSettings.show_in_sidebar"> Show in Sidebar Navigation</label>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-task-widget" type="checkbox" wire:model="taskSettings.show_dashboard_widget"> Show Task Widget on Dashboard</label>
+                    <div class="border-t border-crm-border pt-3 mt-3">
+                        <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mb-2">Auto-Create Tasks When</div>
+                        <div class="space-y-2">
+                            <label class="flex items-center gap-2 text-sm"><input id="fld-task-transfer" type="checkbox" wire:model="taskSettings.auto_create_on_transfer"> Lead transferred to closer</label>
+                            <label class="flex items-center gap-2 text-sm"><input id="fld-task-verif" type="checkbox" wire:model="taskSettings.auto_create_on_verification"> Deal sent to verification</label>
+                            <label class="flex items-center gap-2 text-sm"><input id="fld-task-cb" type="checkbox" wire:model="taskSettings.auto_create_on_chargeback"> Chargeback case created</label>
+                            <label class="flex items-center gap-2 text-sm"><input id="fld-task-note" type="checkbox" wire:model="taskSettings.auto_create_on_note_share"> Note shared for urgent follow-up</label>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Default Due Date (days from now)</label>
+                        <input id="fld-task-duedays" type="number" wire:model="taskSettings.default_due_days" min="0" max="90" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                    </div>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-task-manual" type="checkbox" wire:model="taskSettings.allow_manual_create"> Allow Manual Task Creation</label>
+                </div>
+                <div class="mt-4 text-right"><button wire:click="saveTaskSettings" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">Save Task Settings</button></div>
             @endif
 
             {{-- ═══ TRANSFER SETTINGS ═══ --}}

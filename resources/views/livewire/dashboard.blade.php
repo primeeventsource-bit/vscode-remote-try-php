@@ -147,6 +147,30 @@
     @endif
 
     {{-- ══════════════════════════════════════════════
+         TASK WIDGET
+    ══════════════════════════════════════════════ --}}
+    @if(($taskWidget['open'] ?? 0) > 0 || ($taskWidget['overdue'] ?? 0) > 0)
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            <a href="{{ route('tasks') }}" class="bg-crm-card border border-crm-border rounded-lg p-3 border-l-[3px] border-l-red-500 hover:bg-crm-hover transition">
+                <div class="text-[10px] text-crm-t3 uppercase tracking-wider">Overdue Tasks</div>
+                <div class="text-xl font-extrabold text-red-500 mt-0.5">{{ $taskWidget['overdue'] ?? 0 }}</div>
+            </a>
+            <a href="{{ route('tasks') }}" class="bg-crm-card border border-crm-border rounded-lg p-3 border-l-[3px] border-l-amber-500 hover:bg-crm-hover transition">
+                <div class="text-[10px] text-crm-t3 uppercase tracking-wider">Due Today</div>
+                <div class="text-xl font-extrabold text-amber-500 mt-0.5">{{ $taskWidget['due_today'] ?? 0 }}</div>
+            </a>
+            <a href="{{ route('tasks') }}" class="bg-crm-card border border-crm-border rounded-lg p-3 border-l-[3px] border-l-blue-500 hover:bg-crm-hover transition">
+                <div class="text-[10px] text-crm-t3 uppercase tracking-wider">Open Tasks</div>
+                <div class="text-xl font-extrabold text-blue-500 mt-0.5">{{ $taskWidget['open'] ?? 0 }}</div>
+            </a>
+            <a href="{{ route('tasks') }}" class="bg-crm-card border border-crm-border rounded-lg p-3 border-l-[3px] border-l-purple-500 hover:bg-crm-hover transition">
+                <div class="text-[10px] text-crm-t3 uppercase tracking-wider">Urgent</div>
+                <div class="text-xl font-extrabold text-purple-500 mt-0.5">{{ $taskWidget['urgent'] ?? 0 }}</div>
+            </a>
+        </div>
+    @endif
+
+    {{-- ══════════════════════════════════════════════
          KPI CARDS (existing - scoped by role)
     ══════════════════════════════════════════════ --}}
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">

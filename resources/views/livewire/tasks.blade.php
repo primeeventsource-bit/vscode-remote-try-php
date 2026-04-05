@@ -1,8 +1,8 @@
 <div class="p-5" x-data="{ createOpen: $wire.entangle('showCreate') }">
     <div class="flex items-center justify-between mb-5">
         <div>
-            <h2 class="text-xl font-bold">Tasks</h2>
-            <p class="text-xs text-crm-t3 mt-1">{{ $tasks->count() }} tasks</p>
+            <h2 class="text-xl font-bold">Automatic Task List</h2>
+            <p class="text-xs text-crm-t3 mt-1">{{ $tasks->count() }} tasks — auto-generated and manual</p>
         </div>
         <button @click="createOpen = !createOpen" class="px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition">
             <span x-text="createOpen ? 'Cancel' : '+ New Task'"></span>
@@ -61,7 +61,7 @@
 
     {{-- Tabs --}}
     <div class="flex flex-wrap items-center gap-1 bg-crm-card border border-crm-border rounded-lg p-0.5 mb-4">
-        @foreach(['mine' => 'My Tasks', 'open' => 'All Open', 'completed' => 'Completed', 'all' => 'All'] as $key => $label)
+        @foreach(['my' => 'My Tasks', 'open' => 'All Open', 'completed' => 'Completed', 'all' => 'All'] as $key => $label)
             <button wire:click="$set('tab', '{{ $key }}')"
                 class="px-3 py-1.5 text-xs font-semibold rounded-md transition {{ $tab === $key ? 'bg-white text-blue-600 shadow-sm' : 'text-crm-t3 hover:text-crm-t1' }}">
                 {{ $label }}

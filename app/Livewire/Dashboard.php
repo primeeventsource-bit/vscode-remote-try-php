@@ -7,6 +7,7 @@ use App\Models\Lead;
 use App\Models\User;
 use App\Repositories\StatisticsRepository;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -124,12 +125,25 @@ class Dashboard extends Component
 
         $recentDeals = $deals->sortByDesc('id')->take(5);
 
+        // Task widget
+        $taskWidget = ['overdue' => 0, 'due_today' => 0, 'open' => 0, 'urgent' => 0];
+        try {
+            $tq = DB::table('tasks')->where('status', 'open');
+            if (!$isMaster) $tq->where('assigned_to', $user->id);
+
+            $openTasks = $tq->get();
+            $taskWidget['open'] = $openTasks->count();
+            $taskWidget['urgent'] = $openTasks->where('priority', 'urgent')->count();
+            $taskWidget['due_today'] = $openTasks->filter(fn($t) => $t->due_date && Carbon::parse($t->due_date)->isToday())->count();
+            $taskWidget['overdue'] = $openTasks->filter(fn($t) => $t->due_date && Carbon::parse($t->due_date)->isPast())->count();
+        } catch (\Throwable $e) {}
+
         return view('livewire.dashboard', compact(
             'totalLeads', 'assignedLeads', 'deals', 'charged', 'chargebacks',
             'pending', 'cancelled', 'totalRev', 'cbRev', 'pendRev',
             'weekDeals', 'weekCharged', 'weekRev', 'closers', 'recentDeals',
             'isFronter', 'isCloser', 'isAdmin', 'isMaster', 'userRole',
-            'monthlyData', 'monthlyChargebackData', 'pipelineStats'
+            'monthlyData', 'monthlyChargebackData', 'pipelineStats', 'taskWidget'
         ));
     }
 

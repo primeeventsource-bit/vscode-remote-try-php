@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Deal;
 use App\Models\Lead;
 use App\Models\User;
+use App\Services\AutomaticTaskService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -71,6 +72,7 @@ class PipelineStateService
 
             $lead->update($data);
             PipelineEventService::logTransferredToCloser($lead, $fronter, $closer);
+            AutomaticTaskService::onLeadTransferred($lead->id, $lead->owner_name ?? 'Lead', $closer->id, $fronter->id);
         });
     }
 
@@ -183,6 +185,7 @@ class PipelineStateService
             }
 
             PipelineEventService::logSentToVerification($deal, $closer, $admin);
+            AutomaticTaskService::onDealSentToVerification($deal->id, $deal->owner_name ?? 'Deal', $admin->id, $closer->id);
         });
     }
 

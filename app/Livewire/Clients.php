@@ -438,7 +438,7 @@ class Clients extends Component
         }
 
         try {
-            ChargebackCase::create([
+            $cbCase = ChargebackCase::create([
                 'client_id' => $active->id,
                 'deal_id' => $active->id,
                 'case_number' => $this->caseForm['case_number'],
@@ -459,6 +459,12 @@ class Clients extends Component
                 'status' => 'open',
                 'created_by_user_id' => $user->id,
             ]);
+
+            // Auto-create task for evidence gathering
+            \App\Services\AutomaticTaskService::onChargebackCaseCreated(
+                $cbCase->id, $cbCase->case_number, $active->id,
+                $active->owner_name ?? 'Client', $user->id
+            );
 
             $this->showCreateCase = false;
             $this->caseForm = [];
