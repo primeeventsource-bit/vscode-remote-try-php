@@ -91,6 +91,23 @@ class PipelineEventService
         ]);
     }
 
+    public static function logCloserTransferredToCloser(Deal $deal, User $fromCloser, User $toCloser, string $note): void
+    {
+        self::log([
+            'lead_id' => $deal->lead_id,
+            'deal_id' => $deal->id,
+            'event_type' => PipelineEvent::CLOSER_TRANSFERRED_TO_CLOSER,
+            'from_stage' => 'closer_working',
+            'to_stage' => 'closer_working',
+            'performed_by_user_id' => $fromCloser->id,
+            'source_user_id' => $fromCloser->id,
+            'target_user_id' => $toCloser->id,
+            'source_role' => $fromCloser->role,
+            'target_role' => $toCloser->role,
+            'notes' => $note,
+        ]);
+    }
+
     public static function logVerificationNotCharged(Deal $deal, User $admin, ?string $reason = null): void
     {
         self::log([

@@ -284,4 +284,36 @@ class PipelineStateService
             PipelineEventService::logVerificationNotCharged($deal, $admin, $reason);
         });
     }
+
+    /**
+     * Closer transfers deal to another closer.
+     */
+    public static function transferDealToCloser(Deal $deal, User $fromCloser, User $toCloser, string $note): void
+    {
+        DB::transaction(function () use ($deal, $fromCloser, $toCloser, $note) {
+            // Update deal ownership
+            $dealData = ['closer' => $toCloser->id];
+            if (self::dealsReady()) {
+                $dealData['closer_user_id'] = $toCloser->id;
+            }
+            $deal->update($dealData);
+
+            // Update linked lead if exists
+            if ($deal->lead_id) {
+                $leadData = [
+                    'assigned_to' => $toCloser->id,
+                    'transferred_to' => (string) $toCloser->id,
+                ];
+                if (self::leadsReady()) {
+                    $leadData['transferred_by_user_id'] = $fromCloser->id;
+                    $leadData['transferred_to_user_id'] = $toCloser->id;
+                    $leadData['transferred_at'] = now();
+                }
+                Lead::where('id', $deal->lead_id)->update($leadData);
+            }
+
+            // Log pipeline event
+            PipelineEventService::logCloserTransferredToCloser($deal, $fromCloser, $toCloser, $note);
+        });
+    }
 }

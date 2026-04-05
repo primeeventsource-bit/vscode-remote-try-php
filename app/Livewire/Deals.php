@@ -6,6 +6,7 @@ use App\Models\Deal;
 use App\Models\DealCloser;
 use App\Models\User;
 use App\Services\CommissionCalculator;
+use App\Services\PipelineStateService;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -24,6 +25,11 @@ class Deals extends Component
     public string $dispoCallbackDate = '';
     public string $dispoChargedDate = '';
     public string $addCloserId = '';
+
+    // Closer-to-closer transfer
+    public string $transferToCloserId = '';
+    public string $transferNote = '';
+    public bool $showTransferModal = false;
 
     public function mount() { $this->resetForm(); }
 
@@ -267,6 +273,83 @@ class Deals extends Component
         $deal = Deal::find($dealId);
         if ($deal) CommissionCalculator::calculate($deal);
         session()->flash('deal_success', 'Closer removed — commissions recalculated.');
+    }
+
+    // ── Closer-to-Closer Transfer ──────────────────────────────
+
+    public function openTransferModal(): void
+    {
+        $user = auth()->user();
+        if (!$user || !$user->hasRole('closer', 'master_admin', 'admin')) return;
+        if (!$this->selectedDeal) return;
+
+        $this->transferToCloserId = '';
+        $this->transferNote = '';
+        $this->showTransferModal = true;
+    }
+
+    public function transferDealToCloser(): void
+    {
+        $user = auth()->user();
+        if (!$user || !$user->hasRole('closer', 'master_admin', 'admin')) {
+            session()->flash('deal_error', 'Unauthorized.');
+            return;
+        }
+
+        $deal = Deal::find($this->selectedDeal);
+        if (!$deal) {
+            session()->flash('deal_error', 'Deal not found.');
+            return;
+        }
+
+        // Validate target closer
+        if (!$this->transferToCloserId) {
+            session()->flash('deal_error', 'Please select a closer.');
+            return;
+        }
+
+        $targetCloserId = (int) $this->transferToCloserId;
+
+        if ($targetCloserId === $user->id) {
+            session()->flash('deal_error', 'You cannot transfer to yourself.');
+            return;
+        }
+
+        $targetCloser = User::where('id', $targetCloserId)->where('role', 'closer')->first();
+        if (!$targetCloser) {
+            session()->flash('deal_error', 'Selected user is not a valid closer.');
+            return;
+        }
+
+        // Validate note
+        $note = trim($this->transferNote);
+        if ($note === '') {
+            session()->flash('deal_error', 'A transfer note is required.');
+            return;
+        }
+
+        try {
+            // 1. Update deal + lead + log pipeline event (atomic)
+            PipelineStateService::transferDealToCloser($deal, $user, $targetCloser, $note);
+
+            // 2. Send DM to target closer with transfer note
+            $this->sendTransferDm(
+                $targetCloser->id,
+                'Deal',
+                $deal->id,
+                ($deal->owner_name ?? 'Unknown') . "\nNote: " . $note,
+                'Closer'
+            );
+
+            $this->showTransferModal = false;
+            $this->transferToCloserId = '';
+            $this->transferNote = '';
+
+            session()->flash('deal_success', "Deal transferred to {$targetCloser->name}.");
+        } catch (\Throwable $e) {
+            report($e);
+            session()->flash('deal_error', 'Transfer failed: ' . $e->getMessage());
+        }
     }
 
     public function updateStatus($id, $status, $extra = [])

@@ -17,6 +17,7 @@ class PipelineEvent extends Model
     public const VERIFICATION_RECEIVED = 'verification_received';
     public const VERIFICATION_CHARGED_GREEN = 'verification_charged_green';
     public const VERIFICATION_NOT_CHARGED = 'verification_not_charged';
+    public const CLOSER_TRANSFERRED_TO_CLOSER = 'closer_transferred_to_closer';
 
     protected $fillable = [
         'lead_id',

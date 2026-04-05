@@ -157,6 +157,48 @@
                 </div>
             @endif
 
+            {{-- Closer-to-Closer Transfer --}}
+            @if(auth()->user()?->hasRole('closer', 'master_admin', 'admin') && !($active->is_locked ?? false) && $active->status !== 'charged')
+                <div class="mb-4 p-3 bg-indigo-50 rounded-lg border border-indigo-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="text-[10px] text-indigo-700 uppercase tracking-wider font-semibold">Transfer to Another Closer</div>
+                        @if(!$showTransferModal)
+                            <button wire:click="openTransferModal" class="px-3 py-1 text-[10px] font-semibold bg-indigo-600 text-white rounded hover:bg-indigo-700 transition">Transfer</button>
+                        @endif
+                    </div>
+                    @if($showTransferModal)
+                        <div class="space-y-2">
+                            <div>
+                                <label class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold">Target Closer</label>
+                                <select wire:model="transferToCloserId" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-indigo-400">
+                                    <option value="">Select closer...</option>
+                                    @foreach($users->filter(fn($u) => $u->role === 'closer' && $u->id !== auth()->id()) as $c)
+                                        <option value="{{ $c->id }}">{{ $c->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold">Transfer Note <span class="text-red-500">*</span></label>
+                                <textarea wire:model="transferNote" rows="2" placeholder="Why are you transferring this deal?" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-indigo-400"></textarea>
+                            </div>
+                            <div class="flex items-center gap-2" x-data="{ get canTransfer() { return $wire.transferToCloserId && $wire.transferNote.trim().length > 0 } }">
+                                <button
+                                    wire:click="transferDealToCloser"
+                                    wire:loading.attr="disabled"
+                                    wire:loading.class="opacity-50"
+                                    :disabled="!canTransfer"
+                                    :class="canTransfer ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gray-300 cursor-not-allowed'"
+                                    class="px-4 py-1.5 text-xs font-semibold text-white rounded-lg transition">
+                                    <span wire:loading.remove wire:target="transferDealToCloser">Transfer Deal</span>
+                                    <span wire:loading wire:target="transferDealToCloser">Transferring...</span>
+                                </button>
+                                <button wire:click="$set('showTransferModal', false)" class="px-3 py-1.5 text-xs font-semibold text-crm-t2 bg-white border border-crm-border rounded-lg hover:bg-crm-hover transition">Cancel</button>
+                            </div>
+                        </div>
+                    @endif
+                </div>
+            @endif
+
             {{-- Multi-Closer (Admin only, charged deals only) --}}
             @if($isAdmin && $active->charged === 'yes')
                 @php
