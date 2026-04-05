@@ -58,31 +58,61 @@
             @if($section === 'profile')
                 <h3 class="text-sm font-semibold mb-3">User Profile</h3>
 
-                {{-- Avatar Preview + Upload + Emoji --}}
-                <div class="mb-4 p-4 bg-crm-surface border border-crm-border rounded-lg">
+                {{-- Avatar Preview + Upload + Camera + Emoji --}}
+                <div class="mb-4 p-4 bg-crm-surface border border-crm-border rounded-lg" x-data="profileCamera()">
                     <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mb-3">Profile Avatar</div>
                     <div class="flex items-start gap-4">
                         {{-- Current avatar preview --}}
                         <div class="flex-shrink-0">
-                            @if(auth()->user()->avatar_path)
-                                <img src="{{ asset('storage/' . auth()->user()->avatar_path) }}" class="w-16 h-16 rounded-full object-cover border-2 border-crm-border">
-                            @elseif(auth()->user()->avatar_emoji)
-                                <div class="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center text-3xl border-2 border-crm-border">{{ auth()->user()->avatar_emoji }}</div>
-                            @else
-                                <div class="w-16 h-16 rounded-full flex items-center justify-center text-lg font-bold text-white border-2 border-crm-border" style="background: {{ auth()->user()->color ?? '#3b82f6' }}">{{ auth()->user()->avatar ?? substr(auth()->user()->name, 0, 2) }}</div>
-                            @endif
+                            <template x-if="capturedImage">
+                                <img :src="capturedImage" class="w-20 h-20 rounded-full object-cover border-2 border-blue-400">
+                            </template>
+                            <template x-if="!capturedImage">
+                                @if(auth()->user()->avatar_path)
+                                    <img src="{{ asset('storage/' . auth()->user()->avatar_path) }}?v={{ time() }}" class="w-20 h-20 rounded-full object-cover border-2 border-crm-border">
+                                @elseif(auth()->user()->avatar_emoji)
+                                    <div class="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center text-4xl border-2 border-crm-border">{{ auth()->user()->avatar_emoji }}</div>
+                                @else
+                                    <div class="w-20 h-20 rounded-full flex items-center justify-center text-xl font-bold text-white border-2 border-crm-border" style="background: {{ auth()->user()->color ?? '#3b82f6' }}">{{ auth()->user()->avatar ?? substr(auth()->user()->name, 0, 2) }}</div>
+                                @endif
+                            </template>
                         </div>
 
                         <div class="flex-1 space-y-2">
                             {{-- Upload photo --}}
                             <div>
-                                <label class="flex items-center gap-2 cursor-pointer text-xs text-blue-600 hover:text-blue-700 font-semibold">
-                                    <input id="fld-profilePhoto" type="file" wire:model="profilePhotoUpload" accept="image/jpeg,image/png,image/webp" class="hidden">
-                                    Upload Photo (JPG, PNG, WEBP)
+                                <label class="inline-flex items-center gap-1.5 cursor-pointer text-xs text-blue-600 hover:text-blue-700 font-semibold">
+                                    <input id="fld-profilePhoto" type="file" wire:model="profilePhotoUpload" accept="image/jpeg,image/png,image/gif,image/webp,image/bmp,image/tiff" class="hidden">
+                                    Upload Photo
                                 </label>
+                                <span class="text-[9px] text-crm-t3 ml-1">JPG, PNG, GIF, WEBP, BMP, TIFF</span>
                                 @if($profilePhotoUpload)
-                                    <span class="text-[10px] text-emerald-600 font-semibold">Photo selected — click Save Profile to apply</span>
+                                    <div class="text-[10px] text-emerald-600 font-semibold mt-0.5">Photo selected — click Save Profile to apply</div>
                                 @endif
+                            </div>
+
+                            {{-- Camera capture --}}
+                            <div>
+                                <button @click="openCamera()" type="button" class="text-xs text-indigo-600 hover:text-indigo-700 font-semibold" x-show="!cameraActive">
+                                    Use Camera
+                                </button>
+
+                                {{-- Camera preview --}}
+                                <div x-show="cameraActive" x-cloak class="mt-2 bg-gray-900 rounded-lg overflow-hidden" style="max-width: 280px;">
+                                    <video x-ref="cameraPreview" autoplay playsinline muted class="w-full rounded-t-lg" style="max-height: 200px; object-fit: cover;"></video>
+                                    <div class="flex items-center justify-center gap-2 p-2 bg-gray-800">
+                                        <button @click="capturePhoto()" type="button" class="px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">Capture</button>
+                                        <button @click="closeCamera()" type="button" class="px-3 py-1.5 text-xs font-semibold text-gray-300 bg-gray-700 rounded-lg hover:bg-gray-600 transition">Cancel</button>
+                                    </div>
+                                    <div x-show="cameraError" x-cloak class="p-2 text-xs text-red-400 text-center" x-text="cameraError"></div>
+                                </div>
+                                <canvas x-ref="captureCanvas" class="hidden"></canvas>
+
+                                {{-- Captured preview --}}
+                                <div x-show="capturedImage" x-cloak class="mt-1">
+                                    <span class="text-[10px] text-emerald-600 font-semibold">Photo captured — click Save Profile to apply</span>
+                                    <button @click="clearCapture()" type="button" class="text-[10px] text-red-500 hover:text-red-600 ml-2">Discard</button>
+                                </div>
                             </div>
 
                             {{-- Emoji avatar picker --}}
@@ -107,6 +137,68 @@
                         </div>
                     </div>
                 </div>
+
+                <script>
+                function profileCamera() {
+                    return {
+                        cameraActive: false,
+                        cameraError: '',
+                        capturedImage: null,
+                        stream: null,
+
+                        async openCamera() {
+                            this.cameraError = '';
+                            try {
+                                this.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 512, height: 512 }, audio: false });
+                                this.$refs.cameraPreview.srcObject = this.stream;
+                                this.cameraActive = true;
+                            } catch (e) {
+                                this.cameraError = e.name === 'NotAllowedError' ? 'Camera permission denied' : (e.name === 'NotFoundError' ? 'No camera found' : 'Camera error: ' + e.message);
+                                this.cameraActive = true; // show error area
+                            }
+                        },
+
+                        capturePhoto() {
+                            const video = this.$refs.cameraPreview;
+                            const canvas = this.$refs.captureCanvas;
+                            canvas.width = 512;
+                            canvas.height = 512;
+                            const ctx = canvas.getContext('2d');
+                            // Center crop to square
+                            const size = Math.min(video.videoWidth, video.videoHeight);
+                            const sx = (video.videoWidth - size) / 2;
+                            const sy = (video.videoHeight - size) / 2;
+                            ctx.drawImage(video, sx, sy, size, size, 0, 0, 512, 512);
+                            this.capturedImage = canvas.toDataURL('image/jpeg', 0.9);
+                            this.closeCamera();
+
+                            // Convert to blob and set on Livewire file input
+                            canvas.toBlob((blob) => {
+                                const file = new File([blob], 'camera-capture.jpg', { type: 'image/jpeg' });
+                                const dt = new DataTransfer();
+                                dt.items.add(file);
+                                const input = document.getElementById('fld-profilePhoto');
+                                if (input) {
+                                    input.files = dt.files;
+                                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                                }
+                            }, 'image/jpeg', 0.9);
+                        },
+
+                        closeCamera() {
+                            if (this.stream) {
+                                this.stream.getTracks().forEach(t => t.stop());
+                                this.stream = null;
+                            }
+                            this.cameraActive = false;
+                        },
+
+                        clearCapture() {
+                            this.capturedImage = null;
+                        }
+                    }
+                }
+                </script>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <input id="fld-profileName" wire:model.defer="profileName" type="text" placeholder="Name" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">

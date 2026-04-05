@@ -384,7 +384,7 @@ class Settings extends Component
 
         // Handle photo upload
         if ($this->profilePhotoUpload) {
-            $this->validate(['profilePhotoUpload' => 'image|max:2048|mimes:jpg,jpeg,png,webp']);
+            $this->validate(['profilePhotoUpload' => 'image|max:5120|mimes:jpg,jpeg,png,webp,gif,bmp,tiff,tif']);
             if ($user->avatar_path) Storage::disk('public')->delete($user->avatar_path);
             $path = $this->profilePhotoUpload->store('avatars', 'public');
             $updateData['avatar_path'] = $path;
