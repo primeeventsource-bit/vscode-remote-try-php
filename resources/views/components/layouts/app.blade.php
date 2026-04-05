@@ -80,49 +80,63 @@
                 $documentsEnabled = $moduleEnabled('documents.module_enabled');
                 $spreadsheetsEnabled = $moduleEnabled('spreadsheets.module_enabled');
 
-                $nav = collect([
-                    ['route' => 'dashboard',    'icon' => '◫',  'label' => 'Dashboard',      'perm' => 'view_dashboard'],
-                    ['route' => 'chargebacks',  'icon' => '⚠️',  'label' => 'Chargebacks',     'perm' => null],
-                    ['route' => 'stats',        'icon' => '📊', 'label' => 'Statistics',      'perm' => 'view_stats'],
-                    ['route' => 'leads',        'icon' => '✏️',  'label' => 'Leads',           'perm' => 'view_leads'],
-                    ['route' => 'pipeline',     'icon' => '📈', 'label' => 'Pipeline',        'perm' => 'view_pipeline'],
-                    ['route' => 'deals',        'icon' => '📋', 'label' => 'Deals',           'perm' => 'view_deals'],
-                    ['route' => 'verification', 'icon' => '✓',  'label' => 'Verification',    'perm' => 'view_verification'],
-                    ['route' => 'clients',      'icon' => '💰', 'label' => 'Clients',         'perm' => 'view_all_leads'],
-                    ['route' => 'tasks',        'icon' => '☑',  'label' => 'Automatic Task List', 'perm' => null],
-                    ['route' => 'video-call',   'icon' => '📹', 'label' => 'Video Calls',      'perm' => null],
-                    ['route' => 'sales-training','icon' => '🎯', 'label' => 'Sales Training',   'perm' => null],
-                    ['route' => 'training',     'icon' => '📚', 'label' => 'Training & Help',  'perm' => null],
-                    ['route' => 'tracker',      'icon' => '📅', 'label' => 'Tracker',         'perm' => null],
-                    ['route' => 'transfers',    'icon' => '♻️',  'label' => 'Transfers',       'perm' => null],
-                    ['route' => 'payroll',      'icon' => '💵', 'label' => 'Payroll',         'perm' => 'view_payroll'],
-                    ['route' => 'documents',    'icon' => '📄', 'label' => 'Documents',       'perm' => 'view_documents', 'enabled' => $documentsEnabled],
-                    ['route' => 'spreadsheets', 'icon' => '🧮', 'label' => 'Spreadsheets',    'perm' => 'view_spreadsheets', 'enabled' => $spreadsheetsEnabled],
-                    ['route' => 'users',        'icon' => '👥', 'label' => 'Users',           'perm' => 'view_users'],
-                ])->filter(function ($item) use ($user) {
-                    $enabled = $item['enabled'] ?? true;
-                    return $enabled && (!$item['perm'] || $user->hasPerm($item['perm']));
-                });
+                $sections = [
+                    ['title' => 'SALES', 'items' => [
+                        ['route' => 'dashboard',    'icon' => '◫',  'label' => 'Dashboard',      'perm' => 'view_dashboard'],
+                        ['route' => 'leads',        'icon' => '✏️',  'label' => 'Leads',           'perm' => 'view_leads'],
+                        ['route' => 'pipeline',     'icon' => '📈', 'label' => 'Pipeline',        'perm' => 'view_pipeline'],
+                        ['route' => 'deals',        'icon' => '📋', 'label' => 'Deals',           'perm' => 'view_deals'],
+                        ['route' => 'verification', 'icon' => '✓',  'label' => 'Verification',    'perm' => 'view_verification'],
+                        ['route' => 'clients',      'icon' => '💰', 'label' => 'Clients',         'perm' => 'view_all_leads'],
+                    ]],
+                    ['title' => 'PERFORMANCE', 'items' => [
+                        ['route' => 'stats',        'icon' => '📊', 'label' => 'Statistics',      'perm' => 'view_stats'],
+                        ['route' => 'tasks',        'icon' => '☑',  'label' => 'Task List',       'perm' => null],
+                        ['route' => 'payroll',      'icon' => '💵', 'label' => 'Payroll',         'perm' => 'view_payroll'],
+                        ['route' => 'chargebacks',  'icon' => '⚠️',  'label' => 'Chargebacks',     'perm' => null],
+                    ]],
+                    ['title' => 'TRAINING', 'items' => [
+                        ['route' => 'sales-training','icon' => '🎯', 'label' => 'Sales Training',   'perm' => null],
+                        ['route' => 'training',     'icon' => '📚', 'label' => 'Training & Help',  'perm' => null],
+                    ]],
+                    ['title' => 'COMMUNICATION', 'items' => [
+                        ['route' => 'chat',         'icon' => '💬', 'label' => 'Chat',            'perm' => null, 'enabled' => $chatEnabled],
+                        ['route' => 'video-call',   'icon' => '📹', 'label' => 'Video Calls',      'perm' => null],
+                    ]],
+                    ['title' => 'WORKSPACE', 'items' => [
+                        ['route' => 'documents',    'icon' => '📄', 'label' => 'Documents',       'perm' => 'view_documents', 'enabled' => $documentsEnabled],
+                        ['route' => 'spreadsheets', 'icon' => '🧮', 'label' => 'Spreadsheets',    'perm' => 'view_spreadsheets', 'enabled' => $spreadsheetsEnabled],
+                        ['route' => 'tracker',      'icon' => '📅', 'label' => 'Tracker',         'perm' => null],
+                        ['route' => 'transfers',    'icon' => '♻️',  'label' => 'Transfers',       'perm' => null],
+                    ]],
+                    ['title' => 'SYSTEM', 'items' => [
+                        ['route' => 'users',        'icon' => '👥', 'label' => 'Users',           'perm' => 'view_users'],
+                        ['route' => 'settings',     'icon' => '⚙️',  'label' => 'Settings',        'perm' => null],
+                    ]],
+                ];
             @endphp
 
-            @foreach($nav as $item)
-                <a href="{{ route($item['route']) }}" @click="drawerOpen = false"
-                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition
-                          {{ request()->routeIs($item['route']) ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'text-crm-t2 hover:bg-crm-hover' }}">
-                    <span class="w-5 text-center text-base">{{ $item['icon'] }}</span>
-                    {{ $item['label'] }}
-                </a>
+            @foreach($sections as $section)
+                @php
+                    $visibleItems = collect($section['items'])->filter(function ($item) use ($user) {
+                        $enabled = $item['enabled'] ?? true;
+                        return $enabled && (!$item['perm'] || $user->hasPerm($item['perm']));
+                    });
+                @endphp
+                @if($visibleItems->isNotEmpty())
+                    <div class="pt-3 pb-1 px-3">
+                        <span class="text-[9px] text-crm-t3 uppercase tracking-widest font-bold">{{ $section['title'] }}</span>
+                    </div>
+                    @foreach($visibleItems as $item)
+                        <a href="{{ route($item['route']) }}" @click="drawerOpen = false"
+                           class="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition
+                                  {{ request()->routeIs($item['route']) ? 'bg-blue-50 text-blue-600' : 'text-crm-t2 hover:bg-crm-hover' }}">
+                            <span class="w-5 text-center text-sm">{{ $item['icon'] }}</span>
+                            {{ $item['label'] }}
+                        </a>
+                    @endforeach
+                @endif
             @endforeach
-
-            @if($user->hasRole('master_admin'))
-                <div class="border-t border-crm-border my-2"></div>
-                <a href="{{ route('settings') }}" @click="drawerOpen = false"
-                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition
-                          {{ request()->routeIs('settings') ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'text-crm-t2 hover:bg-crm-hover' }}">
-                    <span class="w-5 text-center text-base">⚙️</span>
-                    Settings
-                </a>
-            @endif
         </div>
 
         {{-- Drawer Footer --}}
