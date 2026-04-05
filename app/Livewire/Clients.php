@@ -3,9 +3,11 @@
 namespace App\Livewire;
 
 use App\Models\ClientAuditLog;
+use App\Models\CrmNote;
 use App\Models\Deal;
 use App\Models\User;
 use App\Services\ClientAuditService;
+use App\Services\CrmNoteService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
@@ -42,6 +44,14 @@ class Clients extends Component
     public bool $canViewSensitiveFinancial = false;
     public bool $canEditSensitiveFinancial = false;
     public bool $canViewAudit = false;
+
+    // ── Notes ───────────────────────────────────────────────────
+    public string $clientNoteBody = '';
+    public ?int $clientEditingNoteId = null;
+    public string $clientEditingNoteBody = '';
+    public ?int $clientSendNoteId = null;
+    public string $clientSendNoteRecipientId = '';
+    public string $clientSendNoteMessage = '';
 
     // ── Success / error flash ───────────────────────────────────
     public string $flashMessage = '';
@@ -366,6 +376,98 @@ class Clients extends Component
         $this->canViewAudit = Gate::allows('viewAuditLogs', $deal);
     }
 
+    // ── Note methods ──────────────────────────────────────────
+
+    public function addClientNote(): void
+    {
+        $user = auth()->user();
+        if (!$user || !Gate::allows('create', CrmNote::class)) {
+            $this->flash('Only ChristianDior Master Admin can add notes.', 'error');
+            return;
+        }
+        $body = trim($this->clientNoteBody);
+        if ($body === '') { $this->flash('Note cannot be empty.', 'error'); return; }
+
+        $deal = $this->getActiveDeal();
+        if (!$deal) return;
+
+        CrmNoteService::createNote($deal, $user, $body);
+        $this->clientNoteBody = '';
+        $this->flash('Note added.');
+    }
+
+    public function startEditClientNote(int $noteId): void
+    {
+        $note = CrmNote::find($noteId);
+        if (!$note || !Gate::allows('update', $note)) return;
+        $this->clientEditingNoteId = $noteId;
+        $this->clientEditingNoteBody = $note->body;
+    }
+
+    public function saveEditClientNote(): void
+    {
+        $user = auth()->user();
+        $note = CrmNote::find($this->clientEditingNoteId);
+        if (!$note || !$user || !Gate::allows('update', $note)) {
+            $this->flash('Unauthorized.', 'error'); return;
+        }
+        $body = trim($this->clientEditingNoteBody);
+        if ($body === '') { $this->flash('Note cannot be empty.', 'error'); return; }
+
+        CrmNoteService::updateNote($note, $user, $body);
+        $this->clientEditingNoteId = null;
+        $this->clientEditingNoteBody = '';
+        $this->flash('Note updated.');
+    }
+
+    public function cancelEditClientNote(): void
+    {
+        $this->clientEditingNoteId = null;
+        $this->clientEditingNoteBody = '';
+    }
+
+    public function openSendClientNoteToChat(int $noteId): void
+    {
+        $note = CrmNote::find($noteId);
+        if (!$note || !Gate::allows('sendToChat', $note)) return;
+        $this->clientSendNoteId = $noteId;
+        $this->clientSendNoteRecipientId = '';
+        $this->clientSendNoteMessage = '';
+    }
+
+    public function sendClientNoteToChat(): void
+    {
+        $user = auth()->user();
+        $note = CrmNote::find($this->clientSendNoteId);
+        if (!$note || !$user || !Gate::allows('sendToChat', $note)) {
+            $this->flash('Unauthorized.', 'error'); return;
+        }
+        if (!$this->clientSendNoteRecipientId) {
+            $this->flash('Select a recipient.', 'error'); return;
+        }
+        $recipient = User::where('id', (int) $this->clientSendNoteRecipientId)
+            ->whereIn('role', ['admin', 'master_admin', 'closer'])->first();
+        if (!$recipient) { $this->flash('Invalid recipient.', 'error'); return; }
+
+        try {
+            CrmNoteService::sendNoteToDirectChat($note, $user, $recipient, trim($this->clientSendNoteMessage) ?: null);
+            $this->clientSendNoteId = null;
+            $this->clientSendNoteRecipientId = '';
+            $this->clientSendNoteMessage = '';
+            $this->flash('Note sent to chat.');
+        } catch (\Throwable $e) {
+            report($e);
+            $this->flash('Failed to send note to chat.', 'error');
+        }
+    }
+
+    public function cancelSendClientNoteToChat(): void
+    {
+        $this->clientSendNoteId = null;
+        $this->clientSendNoteRecipientId = '';
+        $this->clientSendNoteMessage = '';
+    }
+
     private function flash(string $message, string $type = 'success'): void
     {
         $this->flashMessage = $message;
@@ -428,8 +530,24 @@ class Clients extends Component
             }
         }
 
+        // Load notes for selected client
+        $clientNotes = collect();
+        $canAddNote = false;
+        $canSendNoteToChat = false;
+        if ($active) {
+            try {
+                $clientNotes = CrmNote::where('noteable_type', Deal::class)
+                    ->where('noteable_id', $active->id)
+                    ->orderByDesc('created_at')
+                    ->get();
+            } catch (\Throwable $e) {}
+            $canAddNote = Gate::allows('create', CrmNote::class);
+            $canSendNoteToChat = $user->hasRole('master_admin', 'admin');
+        }
+
         return view('livewire.clients', compact(
-            'clients', 'users', 'active', 'totalRev', 'cbRev', 'auditLogs'
+            'clients', 'users', 'active', 'totalRev', 'cbRev', 'auditLogs',
+            'clientNotes', 'canAddNote', 'canSendNoteToChat'
         ));
     }
 }

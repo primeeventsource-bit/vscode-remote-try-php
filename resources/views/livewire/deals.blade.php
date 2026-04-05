@@ -400,6 +400,97 @@
                     </div>
                 @endif
             </div>
+
+            {{-- ═══ NOTES SECTION ═══ --}}
+            <div class="border-t border-crm-border pt-4 mt-4">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold">Notes Timeline</div>
+                    <span class="text-[10px] text-crm-t3">{{ $dealNotes->count() }} {{ Str::plural('note', $dealNotes->count()) }}</span>
+                </div>
+
+                {{-- Add Note Form (ChristianDior only) --}}
+                @if($canAddNote)
+                    <div class="mb-3 p-3 bg-indigo-50 rounded-lg border border-indigo-200">
+                        <label for="fld-deal-noteBody" class="text-[10px] text-indigo-700 uppercase tracking-wider font-semibold">Add Note</label>
+                        <textarea id="fld-deal-noteBody" wire:model="noteBody" rows="2" placeholder="Type your note..." class="w-full mt-1 px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-indigo-400"></textarea>
+                        <div class="flex justify-end mt-1.5">
+                            <button wire:click="addDealNote" wire:loading.attr="disabled"
+                                class="px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition disabled:opacity-50">
+                                <span wire:loading.remove wire:target="addDealNote">Save Note</span>
+                                <span wire:loading wire:target="addDealNote">Saving...</span>
+                            </button>
+                        </div>
+                    </div>
+                @endif
+
+                {{-- Notes list --}}
+                @forelse($dealNotes as $note)
+                    <div class="mb-2 p-3 bg-white border border-crm-border rounded-lg">
+                        {{-- Note header --}}
+                        <div class="flex items-center justify-between mb-1.5">
+                            <div class="text-[10px] text-crm-t3">
+                                <span class="font-semibold text-crm-t1">{{ $users->get($note->created_by_user_id)?->name ?? 'Unknown' }}</span>
+                                &middot; {{ $note->created_at->format('M j, Y g:i A') }}
+                                @if($note->updated_by_user_id && $note->updated_at->gt($note->created_at->addSeconds(2)))
+                                    <span class="text-amber-600">&middot; Edited {{ $note->updated_at->format('M j, Y g:i A') }}</span>
+                                @endif
+                            </div>
+                            <div class="flex items-center gap-1">
+                                @if($canAddNote && $editingNoteId !== $note->id)
+                                    <button wire:click="startEditNote({{ $note->id }})" class="text-[9px] text-blue-600 hover:text-blue-700 font-semibold">Edit</button>
+                                @endif
+                                @if($canSendNoteToChat && $sendNoteToChatNoteId !== $note->id)
+                                    <button wire:click="openSendNoteToChat({{ $note->id }})" class="text-[9px] text-purple-600 hover:text-purple-700 font-semibold">Send to Chat</button>
+                                @endif
+                            </div>
+                        </div>
+
+                        {{-- Note body or edit form --}}
+                        @if($editingNoteId === $note->id)
+                            <textarea id="fld-edit-note-{{ $note->id }}" wire:model="editingNoteBody" rows="2" class="w-full px-3 py-1.5 text-sm bg-white border border-blue-300 rounded-lg focus:outline-none focus:border-blue-400"></textarea>
+                            <div class="flex gap-1 mt-1">
+                                <button wire:click="saveEditNote" class="px-3 py-1 text-[10px] font-semibold text-white bg-blue-600 rounded hover:bg-blue-700 transition">
+                                    <span wire:loading.remove wire:target="saveEditNote">Save</span>
+                                    <span wire:loading wire:target="saveEditNote">Saving...</span>
+                                </button>
+                                <button wire:click="cancelEditNote" class="px-3 py-1 text-[10px] font-semibold text-crm-t2 bg-gray-100 rounded hover:bg-gray-200 transition">Cancel</button>
+                            </div>
+                        @else
+                            <div class="text-sm whitespace-pre-wrap">{{ $note->body }}</div>
+                        @endif
+
+                        {{-- Send to Chat inline --}}
+                        @if($sendNoteToChatNoteId === $note->id)
+                            <div class="mt-2 p-2 bg-purple-50 rounded border border-purple-200">
+                                <div class="text-[10px] text-purple-700 uppercase tracking-wider font-semibold mb-1">Send to Chat</div>
+                                <select id="fld-sendNoteRecipient-{{ $note->id }}" wire:model="sendNoteToChatRecipientId" class="w-full px-2 py-1 text-xs bg-white border border-crm-border rounded-lg mb-1">
+                                    <option value="">Select recipient...</option>
+                                    @foreach($users->filter(fn($u) => in_array($u->role, ['admin', 'master_admin', 'closer'])) as $u)
+                                        <option value="{{ $u->id }}">{{ $u->name }} ({{ $u->role }})</option>
+                                    @endforeach
+                                </select>
+                                <input id="fld-sendNoteMsg-{{ $note->id }}" wire:model="sendNoteToChatMessage" type="text" placeholder="Additional context (optional)..." class="w-full px-2 py-1 text-xs bg-white border border-crm-border rounded-lg mb-1">
+                                <div class="flex gap-1">
+                                    <button wire:click="sendNoteToChat" class="px-3 py-1 text-[10px] font-semibold text-white bg-purple-600 rounded hover:bg-purple-700 transition">
+                                        <span wire:loading.remove wire:target="sendNoteToChat">Send</span>
+                                        <span wire:loading wire:target="sendNoteToChat">Sending...</span>
+                                    </button>
+                                    <button wire:click="cancelSendNoteToChat" class="px-3 py-1 text-[10px] font-semibold text-crm-t2 bg-gray-100 rounded hover:bg-gray-200 transition">Cancel</button>
+                                </div>
+                            </div>
+                        @endif
+
+                        {{-- Sent to chat indicator --}}
+                        @if($note->sent_to_chat_at)
+                            <div class="mt-1 text-[9px] text-purple-500">Sent to chat {{ $note->sent_to_chat_at->format('M j, g:i A') }} by {{ $users->get($note->sent_to_chat_by_user_id)?->name ?? '?' }}</div>
+                        @endif
+                    </div>
+                @empty
+                    <div class="text-center py-4">
+                        <p class="text-xs text-crm-t3">No notes yet</p>
+                    </div>
+                @endforelse
+            </div>
         </div>
     @endif
 

@@ -247,6 +247,11 @@ class Deal extends Model
         return $this->hasMany(PipelineEvent::class);
     }
 
+    public function crmNotes()
+    {
+        return $this->morphMany(CrmNote::class, 'noteable');
+    }
+
     // ── Pipeline scopes ─────────────────────────────────────
 
     public function scopeCharged($query)

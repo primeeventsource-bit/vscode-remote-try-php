@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
+use App\Models\CrmNote;
 use App\Models\Deal;
 use App\Policies\ClientPolicy;
+use App\Policies\CrmNotePolicy;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
@@ -17,8 +19,9 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // Register the ClientPolicy for Deal model (clients are charged deals)
+        // Register policies
         Gate::policy(Deal::class, ClientPolicy::class);
+        Gate::policy(CrmNote::class, CrmNotePolicy::class);
         $defaultConnection = config('database.default');
 
         // Prevent hard failures when DB_CONNECTION=sqlsrv but SQL Server drivers are not installed.
