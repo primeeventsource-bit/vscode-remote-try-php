@@ -26,6 +26,10 @@
                 'spreadsheets' => 'Spreadsheet Settings',
                 'integrations' => 'Integrations',
                 'calling' => 'Calling / Dialer',
+                'transfers' => 'Transfers',
+                'notes_settings' => 'Notes',
+                'chargebacks_settings' => 'Chargebacks',
+                'stats_settings' => 'Statistics & Dashboard',
             ] as $key => $label)
                 <button wire:click="$set('section', '{{ $key }}')"
                     class="w-full text-left px-3 py-2 text-xs font-semibold rounded-md transition {{ $section === $key ? 'bg-blue-50 text-blue-600' : 'text-crm-t2 hover:bg-crm-hover' }}">
@@ -446,6 +450,121 @@
 
                     <button wire:click="saveDialerSettings" class="px-5 py-2.5 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow transition">Save Dialer Settings</button>
                 </div>
+            @endif
+
+            {{-- ═══ TRANSFER SETTINGS ═══ --}}
+            @if($section === 'transfers' && $isMaster)
+                <h3 class="text-sm font-semibold mb-3">Transfer Settings</h3>
+                <p class="text-xs text-crm-t3 mb-4">Control closer-to-closer and lead transfer behavior.</p>
+                <div class="space-y-3">
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-tr-c2c" type="checkbox" wire:model="transferSettings.closer_to_closer_enabled"> Enable Closer-to-Closer Transfer</label>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-tr-reqnote" type="checkbox" wire:model="transferSettings.require_transfer_note"> Require Transfer Note</label>
+                    <div>
+                        <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Transfer Note Min Length</label>
+                        <input id="fld-tr-minlen" type="number" wire:model="transferSettings.transfer_note_min_length" min="0" max="500" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                    </div>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-tr-chat" type="checkbox" wire:model="transferSettings.send_transfer_to_chat"> Send Transfer Note to Chat</label>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-tr-log" type="checkbox" wire:model="transferSettings.log_transfer_history"> Log Transfer History</label>
+                </div>
+                <div class="mt-4 text-right"><button wire:click="saveTransferSettings" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">Save Transfer Settings</button></div>
+            @endif
+
+            {{-- ═══ NOTES SETTINGS ═══ --}}
+            @if($section === 'notes_settings' && $isMaster)
+                <h3 class="text-sm font-semibold mb-3">Notes Settings</h3>
+                <p class="text-xs text-crm-t3 mb-4">Control notes creation, editing, and sharing across Clients and Deals.</p>
+                <div class="space-y-3">
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-n-clients" type="checkbox" wire:model="notesSettings.notes_on_clients_enabled"> Enable Notes on Clients</label>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-n-deals" type="checkbox" wire:model="notesSettings.notes_on_deals_enabled"> Enable Notes on Deals</label>
+                    <div>
+                        <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Note Creator Username (only this master admin can add/edit notes)</label>
+                        <input id="fld-n-creator" type="text" wire:model="notesSettings.note_creator_username" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg" placeholder="e.g. christiandior">
+                    </div>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-n-chat" type="checkbox" wire:model="notesSettings.send_note_to_chat_enabled"> Allow Send Note to Chat</label>
+                    <div>
+                        <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Allowed Recipient Roles (comma-separated)</label>
+                        <input id="fld-n-roles" type="text" wire:model="notesSettings.note_recipient_roles" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg" placeholder="admin,master_admin">
+                    </div>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-n-edited" type="checkbox" wire:model="notesSettings.show_edited_badge"> Show Edited Badge</label>
+                    <div>
+                        <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Note Ordering</label>
+                        <select id="fld-n-order" wire:model="notesSettings.note_ordering" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                            <option value="newest_first">Newest First</option>
+                            <option value="oldest_first">Oldest First</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mt-4 text-right"><button wire:click="saveNotesSettings" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">Save Notes Settings</button></div>
+            @endif
+
+            {{-- ═══ CHARGEBACK SETTINGS ═══ --}}
+            @if($section === 'chargebacks_settings' && $isMaster)
+                <h3 class="text-sm font-semibold mb-3">Chargeback Settings</h3>
+                <p class="text-xs text-crm-t3 mb-4">Configure chargeback case management, evidence requirements, and permissions.</p>
+                <div class="space-y-3">
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-cb-enabled" type="checkbox" wire:model="chargebackSettings.chargeback_tab_enabled"> Enable Chargeback Tab on Clients</label>
+                    <div>
+                        <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Case Creator Username</label>
+                        <input id="fld-cb-creator" type="text" wire:model="chargebackSettings.case_creator_username" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg" placeholder="e.g. christiandior">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Evidence Uploader Username</label>
+                        <input id="fld-cb-uploader" type="text" wire:model="chargebackSettings.evidence_uploader_username" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Send Case Recipient Roles (comma-separated)</label>
+                        <input id="fld-cb-roles" type="text" wire:model="chargebackSettings.send_case_recipient_roles" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg" placeholder="admin,master_admin">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Allowed Upload File Types (comma-separated)</label>
+                        <input id="fld-cb-filetypes" type="text" wire:model="chargebackSettings.allowed_upload_types" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg" placeholder="pdf,png,jpg,jpeg">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Max Upload Size (MB)</label>
+                        <input id="fld-cb-maxsize" type="number" wire:model="chargebackSettings.max_upload_size_mb" min="1" max="100" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Required Evidence Types (comma-separated keys)</label>
+                        <textarea id="fld-cb-evtypes" wire:model="chargebackSettings.required_evidence_types" rows="3" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">{{ $chargebackSettings['required_evidence_types'] ?? '' }}</textarea>
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Readiness Threshold %</label>
+                        <input id="fld-cb-threshold" type="number" wire:model="chargebackSettings.readiness_threshold_pct" min="0" max="100" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Card Brands (comma-separated)</label>
+                        <input id="fld-cb-brands" type="text" wire:model="chargebackSettings.card_brands" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg" placeholder="Visa,Mastercard,Amex,Discover">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Case Statuses (comma-separated)</label>
+                        <input id="fld-cb-statuses" type="text" wire:model="chargebackSettings.default_case_statuses" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg" placeholder="open,submitted,won,lost">
+                    </div>
+                </div>
+                <div class="mt-4 text-right"><button wire:click="saveChargebackSettings" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">Save Chargeback Settings</button></div>
+            @endif
+
+            {{-- ═══ STATISTICS & DASHBOARD SETTINGS ═══ --}}
+            @if($section === 'stats_settings' && $isMaster)
+                <h3 class="text-sm font-semibold mb-3">Statistics & Dashboard Settings</h3>
+                <p class="text-xs text-crm-t3 mb-4">Control how pipeline statistics and dashboard data appear for each role.</p>
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Default Stats Range</label>
+                        <select id="fld-st-range" wire:model="statsSettings.default_stats_range" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                            <option value="live">Live</option>
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                        </select>
+                    </div>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-st-fronter" type="checkbox" wire:model="statsSettings.enable_fronter_filter"> Enable Fronter Agent Filter</label>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-st-closer" type="checkbox" wire:model="statsSettings.enable_closer_filter"> Enable Closer Agent Filter</label>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-st-admin" type="checkbox" wire:model="statsSettings.enable_admin_filter"> Enable Admin Agent Filter</label>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-st-pct" type="checkbox" wire:model="statsSettings.show_percentages"> Show Percentages in Stats Tables</label>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-st-personal" type="checkbox" wire:model="statsSettings.personal_stats_only_for_non_admin"> Non-admin Users See Only Personal Stats on Dashboard</label>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-st-master" type="checkbox" wire:model="statsSettings.master_admin_sees_all"> Master Admin Sees All-Company Stats</label>
+                </div>
+                <div class="mt-4 text-right"><button wire:click="saveStatsSettings" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">Save Statistics Settings</button></div>
             @endif
         </div>
     </div>

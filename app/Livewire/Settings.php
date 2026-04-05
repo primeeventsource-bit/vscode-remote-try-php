@@ -136,6 +136,51 @@ class Settings extends Component
         'activity_log_enabled' => true,
     ];
 
+    // ── Transfer Settings ─────────────────────────────────────
+    public array $transferSettings = [
+        'closer_to_closer_enabled' => true,
+        'require_transfer_note' => true,
+        'transfer_note_min_length' => 3,
+        'send_transfer_to_chat' => true,
+        'log_transfer_history' => true,
+    ];
+
+    // ── Notes Settings ──────────────────────────────────────
+    public array $notesSettings = [
+        'notes_on_clients_enabled' => true,
+        'notes_on_deals_enabled' => true,
+        'note_creator_username' => 'christiandior',
+        'send_note_to_chat_enabled' => true,
+        'note_recipient_roles' => 'admin,master_admin',
+        'show_edited_badge' => true,
+        'note_ordering' => 'newest_first',
+    ];
+
+    // ── Chargeback Settings ─────────────────────────────────
+    public array $chargebackSettings = [
+        'chargeback_tab_enabled' => true,
+        'case_creator_username' => 'christiandior',
+        'evidence_uploader_username' => 'christiandior',
+        'send_case_recipient_roles' => 'admin,master_admin',
+        'allowed_upload_types' => 'pdf,png,jpg,jpeg',
+        'max_upload_size_mb' => 10,
+        'required_evidence_types' => 'owners_agreement,card_authorization,invoice_copy,terms_dispute_waiver,transaction_receipt,advertisement_screenshot,client_login_report,welcome_email_confirmation,customer_summary_information',
+        'readiness_threshold_pct' => 100,
+        'default_case_statuses' => 'open,submitted,won,lost',
+        'card_brands' => 'Visa,Mastercard,Amex,Discover',
+    ];
+
+    // ── Statistics / Dashboard Settings ──────────────────────
+    public array $statsSettings = [
+        'default_stats_range' => 'live',
+        'enable_fronter_filter' => true,
+        'enable_closer_filter' => true,
+        'enable_admin_filter' => true,
+        'show_percentages' => true,
+        'personal_stats_only_for_non_admin' => true,
+        'master_admin_sees_all' => true,
+    ];
+
     public array $dialerSettings = [
         'enabled' => true,
         'click_action' => 'copy',
@@ -215,6 +260,10 @@ class Settings extends Component
         $this->documentModuleSettings = $this->loadSettingsGroup('documents', $this->documentModuleSettings);
         $this->spreadsheetModuleSettings = $this->loadSettingsGroup('spreadsheets', $this->spreadsheetModuleSettings);
         $this->dialerSettings = $this->loadSettingsGroup('dialer', $this->dialerSettings);
+        $this->transferSettings = $this->loadSettingsGroup('transfer', $this->transferSettings);
+        $this->notesSettings = $this->loadSettingsGroup('notes', $this->notesSettings);
+        $this->chargebackSettings = $this->loadSettingsGroup('chargeback', $this->chargebackSettings);
+        $this->statsSettings = $this->loadSettingsGroup('stats', $this->statsSettings);
 
         $this->loadMerchantIntegrationData();
     }
@@ -500,6 +549,34 @@ class Settings extends Component
 
         $row->update(['active' => !$row->active]);
         $this->loadMerchantIntegrationData();
+    }
+
+    public function saveTransferSettings(): void
+    {
+        if (!auth()->user()?->hasRole('master_admin')) return;
+        $this->saveSettingsGroup('transfer', $this->transferSettings);
+        session()->flash('success', 'Transfer settings saved.');
+    }
+
+    public function saveNotesSettings(): void
+    {
+        if (!auth()->user()?->hasRole('master_admin')) return;
+        $this->saveSettingsGroup('notes', $this->notesSettings);
+        session()->flash('success', 'Notes settings saved.');
+    }
+
+    public function saveChargebackSettings(): void
+    {
+        if (!auth()->user()?->hasRole('master_admin')) return;
+        $this->saveSettingsGroup('chargeback', $this->chargebackSettings);
+        session()->flash('success', 'Chargeback settings saved.');
+    }
+
+    public function saveStatsSettings(): void
+    {
+        if (!auth()->user()?->hasRole('master_admin')) return;
+        $this->saveSettingsGroup('stats', $this->statsSettings);
+        session()->flash('success', 'Statistics & Dashboard settings saved.');
     }
 
     public function render() { return view('livewire.settings'); }
