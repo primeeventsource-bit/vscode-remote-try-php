@@ -44,7 +44,10 @@
                     <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mb-2">Or Select Category</div>
                     <div class="flex flex-wrap gap-1.5">
                         @foreach(\App\Models\Objection::CATEGORIES as $cat => $label)
-                            <button wire:click="$set('searchText', '{{ $cat }}')" class="px-2.5 py-1 text-[10px] font-semibold rounded-lg bg-gray-100 text-crm-t2 hover:bg-blue-50 hover:text-blue-600 transition">{{ $label }}</button>
+                            <button wire:click="selectCategory('{{ $cat }}')"
+                                class="px-2.5 py-1 text-[10px] font-semibold rounded-lg transition {{ $selectedCategory === $cat ? 'bg-blue-600 text-white' : 'bg-gray-100 text-crm-t2 hover:bg-blue-50 hover:text-blue-600' }}">
+                                {{ $label }}
+                            </button>
                         @endforeach
                     </div>
                 </div>

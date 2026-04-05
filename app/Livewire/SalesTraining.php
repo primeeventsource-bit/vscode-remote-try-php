@@ -19,6 +19,7 @@ class SalesTraining extends Component
 {
     public string $tab = 'live_assist';
     public string $searchText = '';
+    public string $selectedCategory = '';
     public ?int $selectedObjectionId = null;
     public ?int $activeSessionId = null;
 
@@ -72,6 +73,13 @@ class SalesTraining extends Component
     public function selectObjection(int $id): void
     {
         $this->selectedObjectionId = $id;
+    }
+
+    public function selectCategory(string $cat): void
+    {
+        $this->selectedCategory = $cat;
+        $this->searchText = '';
+        $this->selectedObjectionId = null;
     }
 
     public function logRebuttalUsed(int $objectionId, string $level, string $rebuttalText): void
@@ -161,7 +169,16 @@ class SalesTraining extends Component
         if ($this->ready()) {
             $objections = Objection::where('is_active', true)->orderBy('category')->get();
 
-            if ($this->searchText && strlen(trim($this->searchText)) >= 2) {
+            // Category selection — direct filter, no keyword matching needed
+            if ($this->selectedCategory) {
+                $detectedObjections = $objections->where('category', $this->selectedCategory)->values();
+                if ($detectedObjections->isNotEmpty() && !$this->selectedObjectionId) {
+                    $this->selectedObjectionId = $detectedObjections->first()->id;
+                }
+            }
+
+            // Text search — keyword matching + AI
+            elseif ($this->searchText && strlen(trim($this->searchText)) >= 2) {
                 // Step 1: Local keyword match
                 $detectedObjections = Objection::detectFromText($this->searchText);
 
