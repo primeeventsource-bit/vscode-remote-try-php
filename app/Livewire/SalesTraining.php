@@ -77,8 +77,7 @@ class SalesTraining extends Component
 
     public function selectCategory(string $cat): void
     {
-        $this->selectedCategory = $cat;
-        $this->searchText = '';
+        $this->selectedCategory = $this->selectedCategory === $cat ? '' : $cat;
         $this->selectedObjectionId = null;
     }
 
@@ -169,18 +168,28 @@ class SalesTraining extends Component
         if ($this->ready()) {
             $objections = Objection::where('is_active', true)->orderBy('category')->get();
 
-            // Category selection — direct filter, no keyword matching needed
+            // Start with all objections, then narrow
+            $pool = $objections;
+
+            // Category filter
             if ($this->selectedCategory) {
-                $detectedObjections = $objections->where('category', $this->selectedCategory)->values();
-                if ($detectedObjections->isNotEmpty() && !$this->selectedObjectionId) {
-                    $this->selectedObjectionId = $detectedObjections->first()->id;
-                }
+                $pool = $pool->where('category', $this->selectedCategory)->values();
+                $detectedObjections = $pool;
             }
 
-            // Text search — keyword matching + AI
-            elseif ($this->searchText && strlen(trim($this->searchText)) >= 2) {
-                // Step 1: Local keyword match
-                $detectedObjections = Objection::detectFromText($this->searchText);
+            // Text search — keyword matching + AI (works with or without category)
+            if ($this->searchText && strlen(trim($this->searchText)) >= 2) {
+                // Step 1: Local keyword match (within category pool if set)
+                $searchPool = $this->selectedCategory ? $pool : $objections;
+                $text = strtolower($this->searchText);
+                $detectedObjections = $searchPool->filter(function ($obj) use ($text) {
+                    $keywords = array_map('trim', explode(',', strtolower($obj->keywords ?? '')));
+                    foreach ($keywords as $kw) {
+                        if ($kw && str_contains($text, $kw)) return true;
+                    }
+                    // Also match objection text itself
+                    return str_contains(strtolower($obj->objection_text), $text);
+                })->values();
 
                 // Step 2: If no local match, try AI detection
                 if ($detectedObjections->isEmpty()) {
@@ -201,15 +210,20 @@ class SalesTraining extends Component
                     }
                 }
 
-                // Step 3: If still no match, show all objections so user can pick manually
+                // Step 3: If still no match, show pool or top 5
                 if ($detectedObjections->isEmpty()) {
-                    $detectedObjections = $objections->take(5);
+                    $detectedObjections = $this->selectedCategory ? $pool : $objections->take(5);
                 }
 
                 // Auto-select first match if none selected
                 if (!$this->selectedObjectionId && $detectedObjections->isNotEmpty()) {
                     $this->selectedObjectionId = $detectedObjections->first()->id;
                 }
+            }
+
+            // Auto-select first result if nothing selected
+            if (!$this->selectedObjectionId && $detectedObjections->isNotEmpty()) {
+                $this->selectedObjectionId = $detectedObjections->first()->id;
             }
 
             // Recent logs for active session
