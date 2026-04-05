@@ -125,17 +125,26 @@ class Dashboard extends Component
 
         $recentDeals = $deals->sortByDesc('id')->take(5);
 
-        // Task widget
+        // Task widget — full task list for admin/master_admin
         $taskWidget = ['overdue' => 0, 'due_today' => 0, 'open' => 0, 'urgent' => 0];
+        $dashboardTasks = collect();
+        $showTaskScreen = ($isMaster || $isAdmin);
         try {
-            $tq = DB::table('tasks')->where('status', 'open');
-            if (!$isMaster) $tq->where('assigned_to', $user->id);
+            $tq = DB::table('tasks')->where('status', 'open')->orderBy('due_date');
+            // Admin and master admin see ALL tasks
+            if (!$isMaster && !$isAdmin) {
+                $tq->where('assigned_to', $user->id);
+            }
 
             $openTasks = $tq->get();
             $taskWidget['open'] = $openTasks->count();
             $taskWidget['urgent'] = $openTasks->where('priority', 'urgent')->count();
             $taskWidget['due_today'] = $openTasks->filter(fn($t) => $t->due_date && Carbon::parse($t->due_date)->isToday())->count();
             $taskWidget['overdue'] = $openTasks->filter(fn($t) => $t->due_date && Carbon::parse($t->due_date)->isPast())->count();
+
+            if ($showTaskScreen) {
+                $dashboardTasks = $openTasks;
+            }
         } catch (\Throwable $e) {}
 
         return view('livewire.dashboard', compact(
@@ -143,7 +152,8 @@ class Dashboard extends Component
             'pending', 'cancelled', 'totalRev', 'cbRev', 'pendRev',
             'weekDeals', 'weekCharged', 'weekRev', 'closers', 'recentDeals',
             'isFronter', 'isCloser', 'isAdmin', 'isMaster', 'userRole',
-            'monthlyData', 'monthlyChargebackData', 'pipelineStats', 'taskWidget'
+            'monthlyData', 'monthlyChargebackData', 'pipelineStats',
+            'taskWidget', 'dashboardTasks', 'showTaskScreen'
         ));
     }
 

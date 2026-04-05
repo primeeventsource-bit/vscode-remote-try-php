@@ -147,26 +147,77 @@
     @endif
 
     {{-- ══════════════════════════════════════════════
-         TASK WIDGET
+         TASK SCREEN WIDGET (admin/master_admin — ALL tasks)
     ══════════════════════════════════════════════ --}}
-    @if(($taskWidget['open'] ?? 0) > 0 || ($taskWidget['overdue'] ?? 0) > 0)
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-            <a href="{{ route('tasks') }}" class="bg-crm-card border border-crm-border rounded-lg p-3 border-l-[3px] border-l-red-500 hover:bg-crm-hover transition">
-                <div class="text-[10px] text-crm-t3 uppercase tracking-wider">Overdue Tasks</div>
-                <div class="text-xl font-extrabold text-red-500 mt-0.5">{{ $taskWidget['overdue'] ?? 0 }}</div>
-            </a>
-            <a href="{{ route('tasks') }}" class="bg-crm-card border border-crm-border rounded-lg p-3 border-l-[3px] border-l-amber-500 hover:bg-crm-hover transition">
-                <div class="text-[10px] text-crm-t3 uppercase tracking-wider">Due Today</div>
-                <div class="text-xl font-extrabold text-amber-500 mt-0.5">{{ $taskWidget['due_today'] ?? 0 }}</div>
-            </a>
-            <a href="{{ route('tasks') }}" class="bg-crm-card border border-crm-border rounded-lg p-3 border-l-[3px] border-l-blue-500 hover:bg-crm-hover transition">
-                <div class="text-[10px] text-crm-t3 uppercase tracking-wider">Open Tasks</div>
-                <div class="text-xl font-extrabold text-blue-500 mt-0.5">{{ $taskWidget['open'] ?? 0 }}</div>
-            </a>
-            <a href="{{ route('tasks') }}" class="bg-crm-card border border-crm-border rounded-lg p-3 border-l-[3px] border-l-purple-500 hover:bg-crm-hover transition">
-                <div class="text-[10px] text-crm-t3 uppercase tracking-wider">Urgent</div>
-                <div class="text-xl font-extrabold text-purple-500 mt-0.5">{{ $taskWidget['urgent'] ?? 0 }}</div>
-            </a>
+    @if($showTaskScreen ?? false)
+        <div class="bg-crm-card border border-crm-border rounded-lg mb-6">
+            <div class="flex items-center justify-between p-4 border-b border-crm-border">
+                <div>
+                    <div class="text-sm font-bold">Automatic Task List</div>
+                    <div class="text-[10px] text-crm-t3">All open tasks across all admins</div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2 text-[10px]">
+                        <span class="px-2 py-0.5 rounded-full bg-red-50 text-red-600 font-bold">{{ $taskWidget['overdue'] ?? 0 }} Overdue</span>
+                        <span class="px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 font-bold">{{ $taskWidget['due_today'] ?? 0 }} Due Today</span>
+                        <span class="px-2 py-0.5 rounded-full bg-purple-50 text-purple-600 font-bold">{{ $taskWidget['urgent'] ?? 0 }} Urgent</span>
+                        <span class="px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-bold">{{ $taskWidget['open'] ?? 0 }} Open</span>
+                    </div>
+                    <a href="{{ route('tasks') }}" class="px-3 py-1.5 text-[10px] font-semibold text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition">View All</a>
+                </div>
+            </div>
+
+            <div class="max-h-[400px] overflow-y-auto">
+                @forelse($dashboardTasks as $task)
+                    @php
+                        $isOverdue = $task->due_date && \Carbon\Carbon::parse($task->due_date)->isPast();
+                        $isDueToday = $task->due_date && \Carbon\Carbon::parse($task->due_date)->isToday();
+                        $assignee = $users[$task->assigned_to] ?? null;
+                        $pBadge = match($task->priority ?? 'medium') {
+                            'urgent' => 'bg-red-50 text-red-600',
+                            'high' => 'bg-orange-50 text-orange-600',
+                            'medium' => 'bg-blue-50 text-blue-600',
+                            default => 'bg-gray-100 text-gray-500',
+                        };
+                        $typeIcon = match($task->type ?? 'general') {
+                            'client_contact' => '📞',
+                            'follow_up' => '🔄',
+                            'verification_action' => '✓',
+                            'missing_evidence' => '📎',
+                            'chargeback_deadline' => '⚠',
+                            'transfer_followup' => '↗',
+                            'internal_review' => '📋',
+                            default => '📌',
+                        };
+                    @endphp
+                    <a href="{{ route('tasks') }}" class="flex items-center gap-3 px-4 py-2.5 border-b border-crm-border hover:bg-crm-hover transition {{ $isOverdue ? 'bg-red-50/30' : '' }}">
+                        <span class="text-sm">{{ $typeIcon }}</span>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-xs font-semibold truncate">{{ $task->title }}</div>
+                            <div class="flex items-center gap-2 mt-0.5">
+                                @if($assignee)
+                                    <span class="text-[9px] text-crm-t3">{{ $assignee->name ?? '?' }}</span>
+                                @endif
+                                @if($task->client_name)
+                                    <span class="text-[9px] text-crm-t3">{{ $task->client_name }}</span>
+                                @endif
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1.5 flex-shrink-0">
+                            @if($task->due_date)
+                                <span class="text-[9px] font-mono {{ $isOverdue ? 'text-red-600 font-bold' : ($isDueToday ? 'text-amber-600 font-semibold' : 'text-crm-t3') }}">
+                                    {{ \Carbon\Carbon::parse($task->due_date)->format('n/j g:iA') }}
+                                </span>
+                            @endif
+                            <span class="text-[8px] font-bold px-1.5 py-0.5 rounded {{ $pBadge }}">{{ ucfirst($task->priority ?? 'medium') }}</span>
+                        </div>
+                    </a>
+                @empty
+                    <div class="px-4 py-8 text-center">
+                        <p class="text-sm text-crm-t3">No open tasks</p>
+                    </div>
+                @endforelse
+            </div>
         </div>
     @endif
 
