@@ -115,6 +115,7 @@
                             'deal_sheet' => 'Deal Sheet',
                             'banking' => 'Banking',
                             'payment' => 'Payment',
+                            'chargebacks' => 'Chargebacks',
                             'audit' => 'Audit Log',
                         ];
                     @endphp
@@ -124,6 +125,7 @@
                                 'deal_sheet' => $canViewDealSheet,
                                 'banking' => $canViewBanking,
                                 'payment' => $canViewPayment,
+                                'chargebacks' => auth()->user()?->hasRole('master_admin', 'admin'),
                                 'audit' => $canViewAudit,
                                 default => true,
                             };
@@ -595,6 +597,206 @@
                 {{-- ╔══════════════════════════════════════════════╗
                      ║  TAB: AUDIT HISTORY                         ║
                      ╚══════════════════════════════════════════════╝ --}}
+                {{-- ╔══════════════════════════════════════════════╗
+                     ║  TAB: CHARGEBACKS                            ║
+                     ╚══════════════════════════════════════════════╝ --}}
+                @elseif($activeTab === 'chargebacks')
+                    {{-- Case list or case detail --}}
+                    @if($selectedCase)
+                        {{-- ═══ CASE DETAIL VIEW ═══ --}}
+                        <div class="mb-3">
+                            <button wire:click="selectCase({{ $selectedCase->id }})" class="text-xs text-blue-600 hover:underline">&larr; Back to cases</button>
+                        </div>
+
+                        {{-- Case header --}}
+                        <div class="bg-white border border-crm-border rounded-lg p-3 mb-3">
+                            <div class="flex items-center justify-between mb-2">
+                                <div>
+                                    <div class="text-sm font-bold">Case {{ $selectedCase->case_number }}</div>
+                                    <div class="text-[10px] text-crm-t3">{{ $selectedCase->reason_code }} — {{ $selectedCase->reason_description ?: 'No reason' }}</div>
+                                </div>
+                                <span class="text-[9px] font-bold px-2 py-0.5 rounded {{ match($selectedCase->status) {
+                                    'won' => 'bg-emerald-50 text-emerald-600',
+                                    'lost' => 'bg-red-50 text-red-500',
+                                    'submitted' => 'bg-blue-50 text-blue-600',
+                                    default => 'bg-amber-50 text-amber-600',
+                                } }}">{{ ucfirst($selectedCase->status) }}</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 text-[10px]">
+                                <div><span class="text-crm-t3">Amount:</span> <span class="font-bold">${{ number_format($selectedCase->transaction_amount ?? 0, 2) }}</span></div>
+                                <div><span class="text-crm-t3">Disputed:</span> <span class="font-bold text-red-500">${{ number_format($selectedCase->disputed_amount ?? 0, 2) }}</span></div>
+                                <div><span class="text-crm-t3">Card:</span> <span class="font-semibold">{{ $selectedCase->card_brand ?: '--' }}</span></div>
+                                <div><span class="text-crm-t3">Processor:</span> <span class="font-semibold">{{ $selectedCase->processor_name ?: '--' }}</span></div>
+                                <div><span class="text-crm-t3">Sale Date:</span> <span class="font-semibold">{{ $selectedCase->sale_date?->format('M j, Y') ?? '--' }}</span></div>
+                                <div><span class="text-crm-t3">Deadline:</span> <span class="font-bold {{ $selectedCase->response_due_at && $selectedCase->response_due_at->isPast() ? 'text-red-600' : 'text-amber-600' }}">{{ $selectedCase->response_due_at?->format('M j, Y') ?? '--' }}</span></div>
+                            </div>
+                        </div>
+
+                        {{-- Readiness tracker --}}
+                        @if($caseReadiness)
+                            <div class="bg-white border border-crm-border rounded-lg p-3 mb-3">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold">Evidence Readiness</div>
+                                    <span class="text-xs font-bold {{ $caseReadiness['ready'] ? 'text-emerald-600' : 'text-amber-600' }}">{{ $caseReadiness['uploaded'] }} / {{ $caseReadiness['total'] }} — {{ $caseReadiness['pct'] }}%</span>
+                                </div>
+                                <div class="h-2 bg-gray-100 rounded-full overflow-hidden mb-2">
+                                    <div class="h-full rounded-full transition-all {{ $caseReadiness['pct'] >= 100 ? 'bg-emerald-500' : ($caseReadiness['pct'] >= 50 ? 'bg-amber-500' : 'bg-red-400') }}"
+                                         style="width: {{ $caseReadiness['pct'] }}%"></div>
+                                </div>
+                                @if(!empty($caseReadiness['missing_types']))
+                                    <div class="text-[9px] text-red-500">Missing: {{ implode(', ', array_map(fn($t) => \App\Models\ChargebackCase::DOCUMENT_TYPES[$t] ?? $t, $caseReadiness['missing_types'])) }}</div>
+                                @endif
+                            </div>
+                        @endif
+
+                        {{-- Evidence checklist --}}
+                        <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mb-2">Required Evidence</div>
+                        <div class="space-y-1.5 mb-3">
+                            @foreach(\App\Models\ChargebackCase::DOCUMENT_TYPES as $docType => $docLabel)
+                                @php
+                                    $doc = $selectedCase->evidence->firstWhere('document_type', $docType);
+                                @endphp
+                                <div class="bg-white border border-crm-border rounded-lg p-2.5 flex items-center justify-between gap-2">
+                                    <div class="min-w-0">
+                                        <div class="text-xs font-semibold">{{ $docLabel }}</div>
+                                        @if($doc)
+                                            <div class="text-[9px] text-crm-t3 truncate">{{ $doc->original_filename }} &middot; {{ $users->get($doc->uploaded_by_user_id)?->name ?? '?' }} &middot; {{ $doc->created_at->format('M j g:iA') }}</div>
+                                        @else
+                                            <div class="text-[9px] text-red-500">No file uploaded</div>
+                                        @endif
+                                    </div>
+                                    <div class="flex items-center gap-1 flex-shrink-0">
+                                        @if($doc)
+                                            <span class="text-[8px] font-bold px-1.5 py-0.5 rounded {{ $doc->status === 'verified' ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600' }}">{{ ucfirst($doc->status) }}</span>
+                                            @if($canManageCases && $doc->status !== 'verified')
+                                                <button wire:click="verifyEvidence({{ $doc->id }})" class="text-[8px] text-blue-600 font-semibold hover:underline">Verify</button>
+                                            @endif
+                                        @else
+                                            <span class="text-[8px] font-bold px-1.5 py-0.5 rounded bg-red-50 text-red-500">Missing</span>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+
+                        {{-- Upload form (ChristianDior only) --}}
+                        @if($canManageCases)
+                            <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-3 mb-3">
+                                <div class="text-[10px] text-indigo-700 uppercase tracking-wider font-semibold mb-2">Upload Evidence</div>
+                                <div class="flex flex-wrap items-end gap-2">
+                                    <div class="flex-1 min-w-[120px]">
+                                        <select id="fld-cb-doctype" wire:model="uploadDocType" class="w-full px-2 py-1.5 text-xs bg-white border border-crm-border rounded-lg">
+                                            <option value="">Document type...</option>
+                                            @foreach(\App\Models\ChargebackCase::DOCUMENT_TYPES as $dt => $dl)
+                                                <option value="{{ $dt }}">{{ $dl }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="flex-1 min-w-[120px]">
+                                        <input id="fld-cb-file" type="file" wire:model="evidenceUpload" accept=".pdf,.png,.jpg,.jpeg" class="w-full text-xs">
+                                    </div>
+                                    <button wire:click="uploadEvidence" wire:loading.attr="disabled"
+                                        class="px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition disabled:opacity-50">
+                                        <span wire:loading.remove wire:target="uploadEvidence">Upload</span>
+                                        <span wire:loading wire:target="uploadEvidence">Uploading...</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {{-- Status actions --}}
+                            <div class="flex flex-wrap gap-1.5">
+                                @foreach(['open' => 'Open', 'submitted' => 'Submitted', 'won' => 'Won', 'lost' => 'Lost'] as $st => $stLabel)
+                                    @if($selectedCase->status !== $st)
+                                        <button wire:click="updateCaseStatus({{ $selectedCase->id }}, '{{ $st }}')"
+                                            class="px-2.5 py-1 text-[10px] font-semibold rounded {{ match($st) {
+                                                'won' => 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200',
+                                                'lost' => 'bg-red-100 text-red-700 hover:bg-red-200',
+                                                'submitted' => 'bg-blue-100 text-blue-700 hover:bg-blue-200',
+                                                default => 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+                                            } }} transition">{{ $stLabel }}</button>
+                                    @endif
+                                @endforeach
+                            </div>
+                        @endif
+
+                    @else
+                        {{-- ═══ CASE LIST VIEW ═══ --}}
+                        @if($canManageCases)
+                            <button wire:click="openCreateCase"
+                                class="w-full mb-3 py-2 text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition">
+                                + New Chargeback Case
+                            </button>
+                        @endif
+
+                        {{-- Create case form --}}
+                        @if($showCreateCase)
+                            <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-3 mb-3">
+                                <div class="text-xs font-bold mb-2">New Chargeback Case</div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    @foreach([
+                                        'case_number' => 'Case Number',
+                                        'card_brand' => 'Card Brand',
+                                        'processor_name' => 'Processor',
+                                        'reason_code' => 'Reason Code',
+                                        'transaction_amount' => 'Transaction Amount',
+                                        'disputed_amount' => 'Disputed Amount',
+                                        'order_id' => 'Order/Verification ID',
+                                        'transaction_id' => 'Transaction ID',
+                                    ] as $field => $label)
+                                        <div>
+                                            <label class="text-[9px] text-crm-t3 uppercase">{{ $label }}</label>
+                                            <input id="fld-cb-{{ $field }}" type="text" wire:model="caseForm.{{ $field }}" class="w-full px-2 py-1 text-xs bg-white border border-crm-border rounded">
+                                        </div>
+                                    @endforeach
+                                    <div>
+                                        <label class="text-[9px] text-crm-t3 uppercase">Response Deadline</label>
+                                        <input id="fld-cb-deadline" type="date" wire:model="caseForm.response_due_at" class="w-full px-2 py-1 text-xs bg-white border border-crm-border rounded">
+                                    </div>
+                                    <div>
+                                        <label class="text-[9px] text-crm-t3 uppercase">Sale Date</label>
+                                        <input id="fld-cb-saledate" type="date" wire:model="caseForm.sale_date" class="w-full px-2 py-1 text-xs bg-white border border-crm-border rounded">
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <label class="text-[9px] text-crm-t3 uppercase">Reason Description</label>
+                                    <input id="fld-cb-reason-desc" type="text" wire:model="caseForm.reason_description" class="w-full px-2 py-1 text-xs bg-white border border-crm-border rounded">
+                                </div>
+                                <div class="flex gap-2 mt-2">
+                                    <button wire:click="saveChargebackCase" class="px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 rounded hover:bg-indigo-700 transition">Create Case</button>
+                                    <button wire:click="$set('showCreateCase', false)" class="px-3 py-1.5 text-xs text-crm-t2 bg-gray-100 rounded hover:bg-gray-200 transition">Cancel</button>
+                                </div>
+                            </div>
+                        @endif
+
+                        {{-- Existing cases list --}}
+                        @forelse($chargebackCases as $case)
+                            <div wire:click="selectCase({{ $case->id }})"
+                                 class="bg-white border border-crm-border rounded-lg p-3 mb-2 cursor-pointer hover:bg-crm-hover transition">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <div class="text-xs font-bold">{{ $case->case_number }}</div>
+                                        <div class="text-[10px] text-crm-t3">{{ $case->reason_code }} &middot; {{ $case->card_brand ?: '--' }} &middot; ${{ number_format($case->disputed_amount ?? 0, 2) }}</div>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="text-[8px] font-bold px-1.5 py-0.5 rounded {{ match($case->status) {
+                                            'won' => 'bg-emerald-50 text-emerald-600',
+                                            'lost' => 'bg-red-50 text-red-500',
+                                            'submitted' => 'bg-blue-50 text-blue-600',
+                                            default => 'bg-amber-50 text-amber-600',
+                                        } }}">{{ ucfirst($case->status) }}</span>
+                                        @if($case->response_due_at)
+                                            <div class="text-[9px] text-crm-t3 mt-0.5">Due: {{ $case->response_due_at->format('M j') }}</div>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                        @empty
+                            <div class="text-center py-6">
+                                <p class="text-xs text-crm-t3">No chargeback cases for this client</p>
+                            </div>
+                        @endforelse
+                    @endif
+
                 @elseif($activeTab === 'audit' && $canViewAudit)
                     <div class="text-[10px] text-crm-t3 uppercase tracking-wider mb-3 font-semibold">Audit History</div>
 

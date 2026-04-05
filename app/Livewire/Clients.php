@@ -2,6 +2,8 @@
 
 namespace App\Livewire;
 
+use App\Models\ChargebackCase;
+use App\Models\ChargebackEvidence;
 use App\Models\ClientAuditLog;
 use App\Models\CrmNote;
 use App\Models\Deal;
@@ -10,6 +12,7 @@ use App\Services\ClientAuditService;
 use App\Services\CrmNoteService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Livewire\WithFileUploads;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -18,13 +21,15 @@ use Livewire\Component;
 #[Title('Clients')]
 class Clients extends Component
 {
+    use WithFileUploads;
+
     // ── List state ──────────────────────────────────────────────
     public string $search = '';
     public string $statusTab = 'all';
     public ?int $selectedClient = null;
 
     // ── Detail / editing state ──────────────────────────────────
-    public string $activeTab = 'info'; // info | deal_sheet | banking | payment | audit
+    public string $activeTab = 'info'; // info | deal_sheet | banking | payment | audit | chargebacks
     public bool $editing = false;
 
     // Editable form arrays per section
@@ -32,6 +37,13 @@ class Clients extends Component
     public array $dealSheetForm = [];
     public array $bankingForm = [];
     public array $paymentForm = [];
+
+    // ── Chargeback case state ──────────────────────────────────
+    public bool $showCreateCase = false;
+    public array $caseForm = [];
+    public ?int $selectedCaseId = null;
+    public $evidenceUpload = null; // file upload
+    public string $uploadDocType = '';
 
     // ── Permission cache (computed per-request) ─────────────────
     public bool $canEdit = false;
@@ -85,8 +97,10 @@ class Clients extends Component
         if ($tab === 'banking' && !Gate::allows('viewBanking', $deal)) return;
         if ($tab === 'payment' && !Gate::allows('viewPaymentProfile', $deal)) return;
         if ($tab === 'audit' && !Gate::allows('viewAuditLogs', $deal)) return;
+        if ($tab === 'chargebacks' && !$user->hasRole('master_admin', 'admin')) return;
 
         $this->activeTab = $tab;
+        $this->selectedCaseId = null; // reset case selection when switching tabs
         $this->editing = false;
 
         // Audit: log sensitive section views
@@ -376,6 +390,159 @@ class Clients extends Component
         $this->canViewAudit = Gate::allows('viewAuditLogs', $deal);
     }
 
+    // ── Chargeback case methods ─────────────────────────────
+
+    public function openCreateCase(): void
+    {
+        $user = auth()->user();
+        if (!$user || !Gate::allows('create', ChargebackCase::class)) {
+            $this->flash('Unauthorized.', 'error'); return;
+        }
+        $active = $this->getActiveDeal();
+        if (!$active) return;
+
+        $this->caseForm = [
+            'case_number' => 'CB-' . strtoupper(substr(md5(now()->timestamp), 0, 8)),
+            'card_type' => $active->card_type ?? '',
+            'card_brand' => $active->card_brand ?? $active->card_type ?? '',
+            'processor_name' => $active->merchant ?? '',
+            'reason_code' => '',
+            'reason_description' => '',
+            'transaction_amount' => $active->fee ?? '',
+            'disputed_amount' => $active->fee ?? '',
+            'transaction_id' => '',
+            'order_id' => $active->verification_num ?? '',
+            'response_due_at' => '',
+            'sale_date' => $active->charged_date?->format('Y-m-d') ?? '',
+            'service_start_date' => $active->timestamp?->format('Y-m-d') ?? '',
+            'customer_ip_address' => '',
+            'internal_comments' => '',
+        ];
+        $this->showCreateCase = true;
+    }
+
+    public function saveChargebackCase(): void
+    {
+        $user = auth()->user();
+        if (!$user || !Gate::allows('create', ChargebackCase::class)) {
+            $this->flash('Unauthorized.', 'error'); return;
+        }
+        $active = $this->getActiveDeal();
+        if (!$active) return;
+
+        if (!trim($this->caseForm['case_number'] ?? '')) {
+            $this->flash('Case number is required.', 'error'); return;
+        }
+
+        try {
+            ChargebackCase::create([
+                'client_id' => $active->id,
+                'deal_id' => $active->id,
+                'case_number' => $this->caseForm['case_number'],
+                'card_type' => $this->caseForm['card_type'] ?: null,
+                'card_brand' => $this->caseForm['card_brand'] ?: null,
+                'processor_name' => $this->caseForm['processor_name'] ?: null,
+                'reason_code' => $this->caseForm['reason_code'] ?: null,
+                'reason_description' => $this->caseForm['reason_description'] ?: null,
+                'transaction_amount' => $this->caseForm['transaction_amount'] ?: null,
+                'disputed_amount' => $this->caseForm['disputed_amount'] ?: null,
+                'transaction_id' => $this->caseForm['transaction_id'] ?: null,
+                'order_id' => $this->caseForm['order_id'] ?: null,
+                'response_due_at' => $this->caseForm['response_due_at'] ?: null,
+                'sale_date' => $this->caseForm['sale_date'] ?: null,
+                'service_start_date' => $this->caseForm['service_start_date'] ?: null,
+                'customer_ip_address' => $this->caseForm['customer_ip_address'] ?: null,
+                'internal_comments' => $this->caseForm['internal_comments'] ?: null,
+                'status' => 'open',
+                'created_by_user_id' => $user->id,
+            ]);
+
+            $this->showCreateCase = false;
+            $this->caseForm = [];
+            $this->flash('Chargeback case created.');
+        } catch (\Throwable $e) {
+            report($e);
+            $this->flash('Failed to create case: ' . $e->getMessage(), 'error');
+        }
+    }
+
+    public function selectCase(int $id): void
+    {
+        $this->selectedCaseId = $this->selectedCaseId === $id ? null : $id;
+    }
+
+    public function uploadEvidence(): void
+    {
+        $user = auth()->user();
+        $case = $this->selectedCaseId ? ChargebackCase::find($this->selectedCaseId) : null;
+        if (!$user || !$case || !Gate::allows('upload', $case)) {
+            $this->flash('Unauthorized.', 'error'); return;
+        }
+
+        if (!$this->uploadDocType || !$this->evidenceUpload) {
+            $this->flash('Select document type and file.', 'error'); return;
+        }
+
+        $this->validate([
+            'evidenceUpload' => 'file|max:10240|mimes:pdf,png,jpg,jpeg',
+        ]);
+
+        $file = $this->evidenceUpload;
+        $storedName = time() . '_' . $file->getClientOriginalName();
+        $path = $file->storeAs('chargeback-evidence/' . $case->id, $storedName, 'local');
+
+        // Replace existing doc of same type
+        ChargebackEvidence::where('chargeback_case_id', $case->id)
+            ->where('document_type', $this->uploadDocType)
+            ->delete();
+
+        ChargebackEvidence::create([
+            'chargeback_case_id' => $case->id,
+            'document_type' => $this->uploadDocType,
+            'original_filename' => $file->getClientOriginalName(),
+            'stored_filename' => $storedName,
+            'file_path' => $path,
+            'mime_type' => $file->getMimeType(),
+            'file_size' => $file->getSize(),
+            'status' => 'uploaded',
+            'uploaded_by_user_id' => $user->id,
+        ]);
+
+        $this->evidenceUpload = null;
+        $this->uploadDocType = '';
+        $this->flash('Evidence uploaded.');
+    }
+
+    public function verifyEvidence(int $evidenceId): void
+    {
+        $user = auth()->user();
+        $evidence = ChargebackEvidence::find($evidenceId);
+        if (!$evidence || !$user) return;
+        $case = ChargebackCase::find($evidence->chargeback_case_id);
+        if (!$case || !Gate::allows('verify', $case)) return;
+
+        $evidence->update([
+            'status' => 'verified',
+            'verified_by_user_id' => $user->id,
+            'verified_at' => now(),
+        ]);
+        $this->flash('Evidence verified.');
+    }
+
+    public function updateCaseStatus(int $caseId, string $status): void
+    {
+        $user = auth()->user();
+        $case = ChargebackCase::find($caseId);
+        if (!$case || !$user || !Gate::allows('update', $case)) return;
+
+        $data = ['status' => $status, 'updated_by_user_id' => $user->id];
+        if ($status === 'submitted') $data['submitted_at'] = now();
+        if (in_array($status, ['won', 'lost'])) $data['resolved_at'] = now();
+
+        $case->update($data);
+        $this->flash('Case status updated to ' . $status . '.');
+    }
+
     // ── Note methods ──────────────────────────────────────────
 
     public function addClientNote(): void
@@ -545,9 +712,30 @@ class Clients extends Component
             $canSendNoteToChat = $user->hasRole('master_admin', 'admin');
         }
 
+        // Load chargeback cases for chargebacks tab
+        $chargebackCases = collect();
+        $selectedCase = null;
+        $canManageCases = false;
+        $caseReadiness = null;
+        if ($active) {
+            $canManageCases = Gate::allows('create', ChargebackCase::class);
+            if ($this->activeTab === 'chargebacks') {
+                try {
+                    $chargebackCases = ChargebackCase::where('client_id', $active->id)
+                        ->orderByDesc('created_at')->get();
+                } catch (\Throwable $e) {}
+
+                if ($this->selectedCaseId) {
+                    $selectedCase = ChargebackCase::with('evidence')->find($this->selectedCaseId);
+                    $caseReadiness = $selectedCase?->readiness;
+                }
+            }
+        }
+
         return view('livewire.clients', compact(
             'clients', 'users', 'active', 'totalRev', 'cbRev', 'auditLogs',
-            'clientNotes', 'canAddNote', 'canSendNoteToChat'
+            'clientNotes', 'canAddNote', 'canSendNoteToChat',
+            'chargebackCases', 'selectedCase', 'canManageCases', 'caseReadiness'
         ));
     }
 }

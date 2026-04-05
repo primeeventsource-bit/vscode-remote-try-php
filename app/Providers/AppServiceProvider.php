@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
+use App\Models\ChargebackCase;
 use App\Models\CrmNote;
 use App\Models\Deal;
+use App\Policies\ChargebackCasePolicy;
 use App\Policies\ClientPolicy;
 use App\Policies\CrmNotePolicy;
 use Illuminate\Support\Facades\Gate;
@@ -22,6 +24,7 @@ class AppServiceProvider extends ServiceProvider
         // Register policies
         Gate::policy(Deal::class, ClientPolicy::class);
         Gate::policy(CrmNote::class, CrmNotePolicy::class);
+        Gate::policy(ChargebackCase::class, ChargebackCasePolicy::class);
         $defaultConnection = config('database.default');
 
         // Prevent hard failures when DB_CONNECTION=sqlsrv but SQL Server drivers are not installed.
