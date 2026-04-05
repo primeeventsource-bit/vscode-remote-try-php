@@ -29,6 +29,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/documents', \App\Livewire\Documents::class)->name('documents');
     Route::get('/spreadsheets', \App\Livewire\Spreadsheets::class)->name('spreadsheets');
     Route::get('/video-call/{room?}', \App\Livewire\VideoCall::class)->name('video-call');
+    Route::get('/training', \App\Livewire\Onboarding::class)->name('training');
 
     // Presence heartbeat
     Route::post('/presence/heartbeat', function () {

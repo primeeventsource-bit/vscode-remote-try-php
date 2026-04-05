@@ -26,6 +26,7 @@
                 'spreadsheets' => 'Spreadsheet Settings',
                 'integrations' => 'Integrations',
                 'calling' => 'Calling / Dialer',
+                'onboarding_settings' => 'Onboarding & Training',
                 'presence_settings' => 'User Presence',
                 'video_call_settings' => 'Video Calls',
                 'avatar_settings' => 'Avatars & Profiles',
@@ -598,6 +599,21 @@
 
                     <button wire:click="saveDialerSettings" class="px-5 py-2.5 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow transition">Save Dialer Settings</button>
                 </div>
+            @endif
+
+            {{-- ═══ ONBOARDING SETTINGS ═══ --}}
+            @if($section === 'onboarding_settings' && $isMaster)
+                <h3 class="text-sm font-semibold mb-3">Onboarding & Training</h3>
+                <p class="text-xs text-crm-t3 mb-4">Control the in-app onboarding system for all roles.</p>
+                <div class="space-y-3">
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-ob-enabled" type="checkbox" wire:model="onboardingSettings.onboarding_enabled"> Enable Onboarding System</label>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-ob-firstlogin" type="checkbox" wire:model="onboardingSettings.show_on_first_login"> Show Onboarding on First Login</label>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-ob-sidebar" type="checkbox" wire:model="onboardingSettings.show_in_sidebar"> Show Training & Help in Sidebar</label>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-ob-skip" type="checkbox" wire:model="onboardingSettings.allow_skip_steps"> Allow Users to Skip Steps</label>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-ob-adminview" type="checkbox" wire:model="onboardingSettings.admin_can_view_progress"> Admin Can View Training Progress</label>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-ob-reset" type="checkbox" wire:model="onboardingSettings.master_admin_can_reset"> Master Admin Can Reset Training</label>
+                </div>
+                <div class="mt-4 text-right"><button wire:click="saveOnboardingSettings" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">Save Onboarding Settings</button></div>
             @endif
 
             {{-- ═══ PRESENCE SETTINGS ═══ --}}

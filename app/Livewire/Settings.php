@@ -202,6 +202,16 @@ class Settings extends Component
         'charged_green_task_assignee_mode' => 'admin_only',
     ];
 
+    // ── Onboarding Settings ─────────────────────────────────
+    public array $onboardingSettings = [
+        'onboarding_enabled' => true,
+        'show_on_first_login' => true,
+        'show_in_sidebar' => true,
+        'allow_skip_steps' => true,
+        'admin_can_view_progress' => true,
+        'master_admin_can_reset' => true,
+    ];
+
     // ── Presence Settings ────────────────────────────────────
     public array $presenceSettings = [
         'enable_user_presence_tracking' => true,
@@ -322,6 +332,7 @@ class Settings extends Component
         $this->documentModuleSettings = $this->loadSettingsGroup('documents', $this->documentModuleSettings);
         $this->spreadsheetModuleSettings = $this->loadSettingsGroup('spreadsheets', $this->spreadsheetModuleSettings);
         $this->dialerSettings = $this->loadSettingsGroup('dialer', $this->dialerSettings);
+        $this->onboardingSettings = $this->loadSettingsGroup('onboarding', $this->onboardingSettings);
         $this->presenceSettings = $this->loadSettingsGroup('presence', $this->presenceSettings);
         $this->videoCallSettings = $this->loadSettingsGroup('video_call', $this->videoCallSettings);
         $this->avatarSettings = $this->loadSettingsGroup('avatar', $this->avatarSettings);
@@ -661,6 +672,13 @@ class Settings extends Component
 
         $row->update(['active' => !$row->active]);
         $this->loadMerchantIntegrationData();
+    }
+
+    public function saveOnboardingSettings(): void
+    {
+        if (!auth()->user()?->hasRole('master_admin')) return;
+        $this->saveSettingsGroup('onboarding', $this->onboardingSettings);
+        session()->flash('success', 'Onboarding settings saved.');
     }
 
     public function savePresenceSettings(): void
