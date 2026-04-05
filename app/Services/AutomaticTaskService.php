@@ -136,4 +136,64 @@ class AutomaticTaskService
             'note' => 'Auto-created: A note was shared with you for urgent follow-up.',
         ]);
     }
+
+    // ── ADMIN-ONLY auto-tasks for Verified / Charged Green ──
+
+    /**
+     * Auto-task when deal moves to Verified status.
+     * HARD RULE: assigned to admin ONLY.
+     */
+    public static function onDealVerified(int $dealId, string $clientName, \App\Models\User $admin): void
+    {
+        if (!self::isAdmin($admin)) return; // reject non-admin
+
+        self::createTask([
+            'title' => "Deal verified: Process {$clientName}",
+            'type' => 'verification_action',
+            'assigned_to' => $admin->id,
+            'created_by' => $admin->id,
+            'client_name' => $clientName,
+            'deal_id' => $dealId,
+            'priority' => 'high',
+            'due_date' => now()->addDay()->format('Y-m-d H:i'),
+            'auto_created' => true,
+            'related_type' => 'deal',
+            'related_id' => $dealId,
+            'note' => 'Auto-created (admin-only): Deal verified. Complete charging process.',
+            'metadata' => ['assignee_mode' => 'admin_only', 'trigger' => 'verified'],
+        ]);
+    }
+
+    /**
+     * Auto-task when deal is Charged Green.
+     * HARD RULE: assigned to admin ONLY.
+     */
+    public static function onDealChargedGreen(int $dealId, string $clientName, \App\Models\User $admin): void
+    {
+        if (!self::isAdmin($admin)) return; // reject non-admin
+
+        self::createTask([
+            'title' => "Deal charged green: Finalize {$clientName}",
+            'type' => 'verification_action',
+            'assigned_to' => $admin->id,
+            'created_by' => $admin->id,
+            'client_name' => $clientName,
+            'deal_id' => $dealId,
+            'priority' => 'medium',
+            'due_date' => now()->addDay()->format('Y-m-d H:i'),
+            'auto_created' => true,
+            'related_type' => 'deal',
+            'related_id' => $dealId,
+            'note' => 'Auto-created (admin-only): Deal charged green. Complete post-charge tasks and payroll.',
+            'metadata' => ['assignee_mode' => 'admin_only', 'trigger' => 'charged_green'],
+        ]);
+    }
+
+    /**
+     * Validates that a user is an admin. Used to enforce admin-only assignment.
+     */
+    private static function isAdmin(\App\Models\User $user): bool
+    {
+        return in_array($user->role, ['admin', 'master_admin', 'admin_limited']);
+    }
 }

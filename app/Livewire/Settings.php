@@ -192,6 +192,8 @@ class Settings extends Component
         'auto_create_on_note_share' => true,
         'default_due_days' => 1,
         'allow_manual_create' => true,
+        'verified_task_assignee_mode' => 'admin_only',
+        'charged_green_task_assignee_mode' => 'admin_only',
     ];
 
     public array $dialerSettings = [

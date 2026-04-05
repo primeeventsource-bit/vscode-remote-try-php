@@ -210,6 +210,9 @@ class PipelineStateService
                     'verification_received_at' => now(),
                 ]);
             }
+
+            // Auto-task: Verified — admin only
+            AutomaticTaskService::onDealVerified($deal->id, $deal->owner_name ?? 'Deal', $admin);
         });
     }
 
@@ -247,6 +250,9 @@ class PipelineStateService
             }
 
             PipelineEventService::logVerificationChargedGreen($deal, $admin);
+
+            // Auto-task: Charged Green — admin only
+            AutomaticTaskService::onDealChargedGreen($deal->id, $deal->owner_name ?? 'Deal', $admin);
 
             try {
                 \App\Services\CommissionCalculator::calculate($deal);

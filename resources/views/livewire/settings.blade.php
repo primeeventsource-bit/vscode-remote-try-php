@@ -475,6 +475,25 @@
                         <input id="fld-task-duedays" type="number" wire:model="taskSettings.default_due_days" min="0" max="90" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                     </div>
                     <label class="flex items-center gap-2 text-sm"><input id="fld-task-manual" type="checkbox" wire:model="taskSettings.allow_manual_create"> Allow Manual Task Creation</label>
+                    <div class="border-t border-crm-border pt-3 mt-3">
+                        <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mb-2">Admin-Only Task Assignment</div>
+                        <div class="space-y-2">
+                            <div>
+                                <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Verified Task Assignee</label>
+                                <select id="fld-task-verif-mode" wire:model="taskSettings.verified_task_assignee_mode" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                                    <option value="admin_only">Admin Only</option>
+                                </select>
+                                <p class="text-[9px] text-crm-t3 mt-0.5">Tasks for Verified status changes are assigned to admin only.</p>
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Charged Green Task Assignee</label>
+                                <select id="fld-task-green-mode" wire:model="taskSettings.charged_green_task_assignee_mode" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                                    <option value="admin_only">Admin Only</option>
+                                </select>
+                                <p class="text-[9px] text-crm-t3 mt-0.5">Tasks for Charged Green status changes are assigned to admin only.</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="mt-4 text-right"><button wire:click="saveTaskSettings" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">Save Task Settings</button></div>
             @endif
