@@ -26,6 +26,7 @@
                 'spreadsheets' => 'Spreadsheet Settings',
                 'integrations' => 'Integrations',
                 'calling' => 'Calling / Dialer',
+                'presence_settings' => 'User Presence',
                 'video_call_settings' => 'Video Calls',
                 'avatar_settings' => 'Avatars & Profiles',
                 'task_settings' => 'Automatic Tasks',
@@ -505,6 +506,34 @@
 
                     <button wire:click="saveDialerSettings" class="px-5 py-2.5 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow transition">Save Dialer Settings</button>
                 </div>
+            @endif
+
+            {{-- ═══ PRESENCE SETTINGS ═══ --}}
+            @if($section === 'presence_settings' && $isMaster)
+                <h3 class="text-sm font-semibold mb-3">User Presence Tracking</h3>
+                <p class="text-xs text-crm-t3 mb-4">Control real-time online/idle/offline status across the CRM.</p>
+                <div class="space-y-3">
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-pr-enable" type="checkbox" wire:model="presenceSettings.enable_user_presence_tracking"> Enable Presence Tracking</label>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Idle Threshold (seconds)</label>
+                            <input id="fld-pr-idle" type="number" wire:model="presenceSettings.idle_threshold_seconds" min="60" max="3600" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Offline Timeout (seconds)</label>
+                            <input id="fld-pr-offline" type="number" wire:model="presenceSettings.offline_timeout_seconds" min="30" max="600" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Heartbeat Interval (seconds)</label>
+                            <input id="fld-pr-hb" type="number" wire:model="presenceSettings.heartbeat_interval_seconds" min="10" max="120" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                        </div>
+                    </div>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-pr-idletime" type="checkbox" wire:model="presenceSettings.show_idle_time_in_ui"> Show Idle Duration in UI</label>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-pr-chat" type="checkbox" wire:model="presenceSettings.show_presence_badges_in_chat"> Show Presence in Chat</label>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-pr-agents" type="checkbox" wire:model="presenceSettings.show_presence_badges_in_agent_directory"> Show Presence in Agent Directory</label>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-pr-picker" type="checkbox" wire:model="presenceSettings.show_presence_badges_in_group_call_picker"> Show Presence in Call Picker</label>
+                </div>
+                <div class="mt-4 text-right"><button wire:click="savePresenceSettings" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">Save Presence Settings</button></div>
             @endif
 
             {{-- ═══ VIDEO CALL SETTINGS ═══ --}}

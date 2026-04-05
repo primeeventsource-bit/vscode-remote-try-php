@@ -202,6 +202,18 @@ class Settings extends Component
         'charged_green_task_assignee_mode' => 'admin_only',
     ];
 
+    // ── Presence Settings ────────────────────────────────────
+    public array $presenceSettings = [
+        'enable_user_presence_tracking' => true,
+        'idle_threshold_seconds' => 300,
+        'offline_timeout_seconds' => 90,
+        'heartbeat_interval_seconds' => 30,
+        'show_idle_time_in_ui' => true,
+        'show_presence_badges_in_chat' => true,
+        'show_presence_badges_in_agent_directory' => true,
+        'show_presence_badges_in_group_call_picker' => true,
+    ];
+
     // ── Video Call Settings ─────────────────────────────────
     public array $videoCallSettings = [
         'enable_group_video_calls' => true,
@@ -308,6 +320,7 @@ class Settings extends Component
         $this->documentModuleSettings = $this->loadSettingsGroup('documents', $this->documentModuleSettings);
         $this->spreadsheetModuleSettings = $this->loadSettingsGroup('spreadsheets', $this->spreadsheetModuleSettings);
         $this->dialerSettings = $this->loadSettingsGroup('dialer', $this->dialerSettings);
+        $this->presenceSettings = $this->loadSettingsGroup('presence', $this->presenceSettings);
         $this->videoCallSettings = $this->loadSettingsGroup('video_call', $this->videoCallSettings);
         $this->avatarSettings = $this->loadSettingsGroup('avatar', $this->avatarSettings);
         $this->taskSettings = $this->loadSettingsGroup('tasks', $this->taskSettings);
@@ -636,6 +649,13 @@ class Settings extends Component
 
         $row->update(['active' => !$row->active]);
         $this->loadMerchantIntegrationData();
+    }
+
+    public function savePresenceSettings(): void
+    {
+        if (!auth()->user()?->hasRole('master_admin')) return;
+        $this->saveSettingsGroup('presence', $this->presenceSettings);
+        session()->flash('success', 'Presence settings saved.');
     }
 
     public function saveVideoCallSettings(): void

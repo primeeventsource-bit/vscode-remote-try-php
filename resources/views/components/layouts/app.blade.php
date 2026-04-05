@@ -183,5 +183,47 @@
     @endif
 
     @livewireScripts
+
+    {{-- Presence heartbeat tracker --}}
+    @auth
+    <script>
+    (function() {
+        let lastActivity = Date.now();
+        const HEARTBEAT_MS = 30000;
+        const IDLE_MS = 300000; // 5 min
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+
+        // Track activity
+        ['mousemove','mousedown','keydown','scroll','touchstart'].forEach(evt => {
+            document.addEventListener(evt, () => { lastActivity = Date.now(); }, { passive: true, capture: true });
+        });
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) lastActivity = Date.now(); });
+
+        // Send heartbeat
+        function sendHeartbeat() {
+            const isActive = (Date.now() - lastActivity) < IDLE_MS;
+            fetch('/presence/heartbeat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken || '' },
+                body: JSON.stringify({ active: isActive }),
+                keepalive: true
+            }).catch(() => {});
+        }
+
+        sendHeartbeat(); // immediate on load
+        setInterval(sendHeartbeat, HEARTBEAT_MS);
+
+        // Attempt offline on unload
+        window.addEventListener('beforeunload', () => {
+            fetch('/presence/heartbeat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken || '' },
+                body: JSON.stringify({ active: false }),
+                keepalive: true
+            }).catch(() => {});
+        });
+    })();
+    </script>
+    @endauth
 </body>
 </html>

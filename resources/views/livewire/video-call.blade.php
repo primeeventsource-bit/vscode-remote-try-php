@@ -235,12 +235,7 @@
                                 </div>
 
                                 {{-- Status badge --}}
-                                <span class="text-[8px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 {{ match($agent->status) {
-                                    'online' => 'bg-emerald-50 text-emerald-600',
-                                    'busy', 'on_call' => 'bg-amber-50 text-amber-600',
-                                    'offline' => 'bg-gray-100 text-gray-500',
-                                    default => 'bg-gray-100 text-gray-500',
-                                } }}">{{ ucfirst($agent->status ?? 'offline') }}</span>
+                                @include('livewire.partials.presence-badge', ['user' => $agent])
                             </div>
                         @empty
                             <div class="py-8 text-center text-sm text-crm-t3">No agents found</div>

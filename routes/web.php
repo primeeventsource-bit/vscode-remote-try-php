@@ -30,7 +30,20 @@ Route::middleware('auth')->group(function () {
     Route::get('/spreadsheets', \App\Livewire\Spreadsheets::class)->name('spreadsheets');
     Route::get('/video-call/{room?}', \App\Livewire\VideoCall::class)->name('video-call');
 
+    // Presence heartbeat
+    Route::post('/presence/heartbeat', function () {
+        $user = auth()->user();
+        if (!$user) return response()->json(['ok' => false], 401);
+        $isActive = (bool) request()->input('active', true);
+        \App\Services\Presence\UserPresenceService::markHeartbeat($user, $isActive);
+        return response()->json(['ok' => true]);
+    })->name('presence.heartbeat');
+
     Route::post('/logout', function () {
+        $user = auth()->user();
+        if ($user) {
+            \App\Services\Presence\UserPresenceService::markOffline($user);
+        }
         Auth::logout();
         request()->session()->invalidate();
         request()->session()->regenerateToken();
