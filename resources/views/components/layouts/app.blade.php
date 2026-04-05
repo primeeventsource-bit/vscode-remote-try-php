@@ -97,6 +97,7 @@
                     ]],
                     ['title' => 'TRAINING', 'items' => [
                         ['route' => 'sales-training','icon' => '🎯', 'label' => 'Sales Training',   'perm' => null],
+                        ['route' => 'daily-sales',  'icon' => '📅', 'label' => 'Daily Sales System','perm' => null],
                         ['route' => 'training',     'icon' => '📚', 'label' => 'Training & Help',  'perm' => null],
                     ]],
                     ['title' => 'COMMUNICATION', 'items' => [

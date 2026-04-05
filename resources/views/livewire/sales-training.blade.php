@@ -7,7 +7,7 @@
     {{-- Tabs --}}
     <div class="flex flex-wrap items-center gap-1 bg-crm-card border border-crm-border rounded-lg p-0.5 mb-5">
         @php
-            $tabs = ['live_assist' => 'Live Close Assist', 'library' => 'Objection Library', 'analytics' => 'Sales Performance'];
+            $tabs = ['live_assist' => 'Live Close Assist', 'scripts' => 'Scripts', 'library' => 'Objection Library', 'training' => 'Training Modules', 'analytics' => 'Sales Performance'];
             if ($isAdmin) $tabs['manage'] = 'Manage Rebuttals';
         @endphp
         @foreach($tabs as $key => $label)
@@ -147,6 +147,46 @@
     @endif
 
     {{-- ═══════════════════════════════════════════════
+         SCRIPTS
+    ═══════════════════════════════════════════════ --}}
+    @if($tab === 'scripts')
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div class="lg:col-span-1 space-y-1">
+                <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mb-2 px-1">Script Library</div>
+                @forelse($scripts as $script)
+                    <button wire:click="$set('selectedScriptId', {{ $script->id }})"
+                        class="w-full text-left px-3 py-2.5 rounded-lg text-sm transition {{ $selectedScriptId === $script->id ? 'bg-blue-50 text-blue-600 border border-blue-200' : 'bg-crm-card border border-crm-border hover:bg-crm-hover' }}">
+                        <div class="font-semibold">{{ $script->name }}</div>
+                        <div class="text-[10px] text-crm-t3">{{ ucfirst($script->category) }} {{ $script->stage ? '· ' . ucfirst($script->stage) : '' }}</div>
+                    </button>
+                @empty
+                    <div class="bg-crm-card border border-crm-border rounded-lg p-6 text-center">
+                        <p class="text-xs text-crm-t3">No scripts available yet</p>
+                    </div>
+                @endforelse
+            </div>
+            <div class="lg:col-span-2">
+                @if($selectedScript)
+                    <div class="bg-crm-card border border-crm-border rounded-lg p-5">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <div class="text-sm font-bold">{{ $selectedScript->name }}</div>
+                                <span class="text-[9px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-600">{{ ucfirst($selectedScript->category) }}</span>
+                            </div>
+                        </div>
+                        <div class="prose prose-sm max-w-none text-crm-t1 whitespace-pre-wrap leading-relaxed">{{ $selectedScript->content }}</div>
+                    </div>
+                @else
+                    <div class="bg-crm-card border border-crm-border rounded-lg p-12 text-center">
+                        <div class="text-3xl mb-3">📜</div>
+                        <p class="text-sm text-crm-t3">Select a script to view</p>
+                    </div>
+                @endif
+            </div>
+        </div>
+    @endif
+
+    {{-- ═══════════════════════════════════════════════
          OBJECTION LIBRARY
     ═══════════════════════════════════════════════ --}}
     @if($tab === 'library')
@@ -174,6 +214,51 @@
     {{-- ═══════════════════════════════════════════════
          ANALYTICS
     ═══════════════════════════════════════════════ --}}
+    {{-- ═══ TRAINING MODULES ═══ --}}
+    @if($tab === 'training')
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div class="lg:col-span-1 space-y-1">
+                <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mb-2 px-1">Modules</div>
+                @forelse($modules as $mod)
+                    <button wire:click="$set('selectedModuleId', {{ $mod->id }})"
+                        class="w-full text-left px-3 py-2.5 rounded-lg text-sm transition {{ $selectedModuleId === $mod->id ? 'bg-blue-50 text-blue-600 border border-blue-200' : 'bg-crm-card border border-crm-border hover:bg-crm-hover' }}">
+                        <div class="font-semibold">{{ $mod->title }}</div>
+                        <div class="text-[10px] text-crm-t3">{{ ucfirst($mod->category) }} {{ $mod->estimated_minutes ? '· ~' . $mod->estimated_minutes . 'min' : '' }}</div>
+                    </button>
+                @empty
+                    <div class="bg-crm-card border border-crm-border rounded-lg p-6 text-center">
+                        <p class="text-xs text-crm-t3">No training modules yet</p>
+                    </div>
+                @endforelse
+            </div>
+            <div class="lg:col-span-2">
+                @if($selectedModule)
+                    <div class="bg-crm-card border border-crm-border rounded-lg p-5">
+                        <div class="mb-4">
+                            <div class="text-lg font-bold">{{ $selectedModule->title }}</div>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="text-[9px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-600">{{ ucfirst($selectedModule->category) }}</span>
+                                @if($selectedModule->estimated_minutes)
+                                    <span class="text-[10px] text-crm-t3">~{{ $selectedModule->estimated_minutes }} min</span>
+                                @endif
+                            </div>
+                            @if($selectedModule->description)
+                                <p class="text-xs text-crm-t3 mt-2">{{ $selectedModule->description }}</p>
+                            @endif
+                        </div>
+                        <div class="prose prose-sm max-w-none text-crm-t1 whitespace-pre-wrap leading-relaxed border-t border-crm-border pt-4">{{ $selectedModule->content }}</div>
+                    </div>
+                @else
+                    <div class="bg-crm-card border border-crm-border rounded-lg p-12 text-center">
+                        <div class="text-3xl mb-3">📚</div>
+                        <p class="text-sm text-crm-t3">Select a training module to view</p>
+                    </div>
+                @endif
+            </div>
+        </div>
+    @endif
+
+    {{-- ═══ ANALYTICS ═══ --}}
     @if($tab === 'analytics')
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <div class="bg-crm-card border border-crm-border rounded-lg p-4 border-t-[3px] border-t-emerald-500">

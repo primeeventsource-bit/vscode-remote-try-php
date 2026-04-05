@@ -22,6 +22,8 @@ class SalesTraining extends Component
     public string $selectedCategory = '';
     public ?int $selectedObjectionId = null;
     public ?int $activeSessionId = null;
+    public ?int $selectedScriptId = null;
+    public ?int $selectedModuleId = null;
 
     // Objection management (admin)
     public bool $showAddObjection = false;
@@ -286,9 +288,26 @@ class SalesTraining extends Component
 
         $selectedObjection = $this->selectedObjectionId ? Objection::find($this->selectedObjectionId) : null;
 
+        // Scripts
+        $scripts = collect();
+        $selectedScript = null;
+        try {
+            $scripts = \App\Models\SalesScript::where('is_active', true)->orderBy('order_index')->get();
+            $selectedScript = $this->selectedScriptId ? \App\Models\SalesScript::find($this->selectedScriptId) : null;
+        } catch (\Throwable $e) {}
+
+        // Training modules
+        $modules = collect();
+        $selectedModule = null;
+        try {
+            $modules = \App\Models\TrainingModule::where('is_active', true)->orderBy('order_index')->get();
+            $selectedModule = $this->selectedModuleId ? \App\Models\TrainingModule::find($this->selectedModuleId) : null;
+        } catch (\Throwable $e) {}
+
         return view('livewire.sales-training', compact(
             'objections', 'detectedObjections', 'selectedObjection',
-            'isAdmin', 'analytics', 'recentLogs'
+            'isAdmin', 'analytics', 'recentLogs',
+            'scripts', 'selectedScript', 'modules', 'selectedModule'
         ));
     }
 }
