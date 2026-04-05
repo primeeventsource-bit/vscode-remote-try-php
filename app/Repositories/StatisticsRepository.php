@@ -54,27 +54,31 @@ class StatisticsRepository
         $result = [];
 
         foreach ($fronters as $f) {
-            // Transfers sent by this fronter
-            $transfersSent = PipelineEvent::eventType(PipelineEvent::TRANSFERRED_TO_CLOSER)
-                ->forSourceUser($f->id)
-                ->inRange($from, $to)
-                ->count();
+            // Step 1: TRANSFER COHORT — distinct lead IDs this fronter sent
+            $sentLeadIds = DB::table('pipeline_events')
+                ->where('event_type', PipelineEvent::TRANSFERRED_TO_CLOSER)
+                ->where('source_user_id', $f->id)
+                ->when($from, fn($q) => $q->where('event_at', '>=', $from))
+                ->when($to, fn($q) => $q->where('event_at', '<=', $to))
+                ->whereNotNull('lead_id')
+                ->distinct()
+                ->pluck('lead_id')
+                ->toArray();
 
-            // Deals closed from leads this fronter transferred
-            // A deal is "closed" for this fronter if there's a closer_closed_deal event
-            // where the lead was originally transferred by this fronter
-            $dealsClosed = DB::table('pipeline_events as closed')
-                ->join('pipeline_events as transferred', function ($join) {
-                    $join->on('closed.lead_id', '=', 'transferred.lead_id')
-                         ->where('transferred.event_type', '=', PipelineEvent::TRANSFERRED_TO_CLOSER);
-                })
-                ->where('closed.event_type', PipelineEvent::CLOSER_CLOSED_DEAL)
-                ->where('transferred.source_user_id', $f->id)
-                ->when($from, fn($q) => $q->where('closed.event_at', '>=', $from))
-                ->when($to, fn($q) => $q->where('closed.event_at', '<=', $to))
-                ->distinct('closed.deal_id')
-                ->count('closed.deal_id');
+            $transfersSent = count($sentLeadIds);
 
+            // Step 2: From that SAME cohort, count leads that got closed
+            $dealsClosed = 0;
+            if ($transfersSent > 0) {
+                $dealsClosed = DB::table('pipeline_events')
+                    ->where('event_type', PipelineEvent::CLOSER_CLOSED_DEAL)
+                    ->whereIn('lead_id', $sentLeadIds)
+                    ->distinct('lead_id')
+                    ->count('lead_id');
+            }
+
+            // Safeguard
+            $dealsClosed = min($dealsClosed, $transfersSent);
             $noDeals = max(0, $transfersSent - $dealsClosed);
 
             $result[] = [
@@ -105,22 +109,35 @@ class StatisticsRepository
         $result = [];
 
         foreach ($fronters as $f) {
-            $query = DB::table('leads')
+            // Cohort: leads transferred by this fronter
+            $tQuery = DB::table('leads')
                 ->where('disposition', 'Transferred to Closer')
                 ->where(function ($q) use ($f) {
                     $q->where('original_fronter', $f->id)
                       ->orWhere('assigned_to', $f->id);
                 });
-            if ($from) $query->where('updated_at', '>=', $from);
-            if ($to) $query->where('updated_at', '<=', $to);
+            if ($from) $tQuery->where('updated_at', '>=', $from);
+            if ($to) $tQuery->where('updated_at', '<=', $to);
 
-            $transfersSent = $query->count();
+            $transferredLeadIds = $tQuery->pluck('id')->toArray();
+            $transfersSent = count($transferredLeadIds);
 
-            $dealsQuery = DB::table('deals')->where('fronter', $f->id);
-            if ($from) $dealsQuery->where('created_at', '>=', $from);
-            if ($to) $dealsQuery->where('created_at', '<=', $to);
-            $dealsClosed = $dealsQuery->count();
+            // From that cohort, count leads that became deals
+            $dealsClosed = 0;
+            if ($transfersSent > 0) {
+                $leadNames = DB::table('leads')->whereIn('id', $transferredLeadIds)->pluck('owner_name')->toArray();
+                $dealsQuery = DB::table('deals')->where('fronter', $f->id);
+                if (!empty($leadNames)) {
+                    $dealsQuery->where(function ($q) use ($transferredLeadIds, $leadNames) {
+                        $q->whereIn('lead_id', $transferredLeadIds)
+                          ->orWhereIn('owner_name', $leadNames);
+                    });
+                }
+                $dealsClosed = $dealsQuery->count();
+            }
 
+            // Safeguard
+            $dealsClosed = min($dealsClosed, $transfersSent);
             $noDeals = max(0, $transfersSent - $dealsClosed);
 
             $result[] = [
@@ -161,21 +178,66 @@ class StatisticsRepository
         $result = [];
 
         foreach ($closers as $c) {
-            $transfersReceived = PipelineEvent::eventType(PipelineEvent::TRANSFERRED_TO_CLOSER)
-                ->forTargetUser($c->id)
-                ->inRange($from, $to)
-                ->count();
+            // Step 1: Get the RECEIVED TRANSFER COHORT — distinct lead IDs
+            $receivedLeadIds = DB::table('pipeline_events')
+                ->where('event_type', PipelineEvent::TRANSFERRED_TO_CLOSER)
+                ->where('target_user_id', $c->id)
+                ->when($from, fn($q) => $q->where('event_at', '>=', $from))
+                ->when($to, fn($q) => $q->where('event_at', '<=', $to))
+                ->whereNotNull('lead_id')
+                ->distinct()
+                ->pluck('lead_id')
+                ->toArray();
 
-            $dealsClosed = PipelineEvent::eventType(PipelineEvent::CLOSER_CLOSED_DEAL)
-                ->forPerformer($c->id)
-                ->inRange($from, $to)
-                ->count();
+            $transfersReceived = count($receivedLeadIds);
 
-            $sentToVerification = PipelineEvent::eventType(PipelineEvent::SENT_TO_VERIFICATION)
-                ->forSourceUser($c->id)
-                ->inRange($from, $to)
-                ->count();
+            if ($transfersReceived === 0) {
+                $result[] = self::emptyCloserRow($c);
+                continue;
+            }
 
+            // Step 2: From that SAME cohort, count deals closed
+            $dealsClosed = DB::table('pipeline_events')
+                ->where('event_type', PipelineEvent::CLOSER_CLOSED_DEAL)
+                ->where('performed_by_user_id', $c->id)
+                ->whereIn('lead_id', $receivedLeadIds)
+                ->distinct('lead_id')
+                ->count('lead_id');
+
+            // Step 3: From that SAME closed subset, count sent to verification
+            $closedLeadIds = DB::table('pipeline_events')
+                ->where('event_type', PipelineEvent::CLOSER_CLOSED_DEAL)
+                ->where('performed_by_user_id', $c->id)
+                ->whereIn('lead_id', $receivedLeadIds)
+                ->whereNotNull('deal_id')
+                ->distinct()
+                ->pluck('deal_id')
+                ->toArray();
+
+            $sentToVerification = 0;
+            if (!empty($closedLeadIds)) {
+                $sentToVerification = DB::table('pipeline_events')
+                    ->where('event_type', PipelineEvent::SENT_TO_VERIFICATION)
+                    ->where('source_user_id', $c->id)
+                    ->whereIn('deal_id', $closedLeadIds)
+                    ->distinct('deal_id')
+                    ->count('deal_id');
+            }
+
+            // Step 4: Not closed = from cohort with closer_not_closed event
+            $notClosedExplicit = DB::table('pipeline_events')
+                ->where('event_type', PipelineEvent::CLOSER_NOT_CLOSED)
+                ->where('performed_by_user_id', $c->id)
+                ->whereIn('lead_id', $receivedLeadIds)
+                ->distinct('lead_id')
+                ->count('lead_id');
+
+            // Fallback: not_closed = transfers - deals (but never negative)
+            $notClosed = max($notClosedExplicit, $transfersReceived - $dealsClosed);
+
+            // Safeguard: deals_closed cannot exceed transfers_received
+            $dealsClosed = min($dealsClosed, $transfersReceived);
+            $sentToVerification = min($sentToVerification, $dealsClosed);
             $notClosed = max(0, $transfersReceived - $dealsClosed);
 
             $result[] = [
@@ -196,6 +258,23 @@ class StatisticsRepository
         return $result;
     }
 
+    private static function emptyCloserRow(User $c): array
+    {
+        return [
+            'user_id' => $c->id,
+            'name' => $c->name,
+            'avatar' => $c->avatar ?? strtoupper(substr($c->name, 0, 2)),
+            'color' => $c->color ?? '#6b7280',
+            'transfers_received' => 0,
+            'deals_closed' => 0,
+            'sent_to_verification' => 0,
+            'not_closed' => 0,
+            'close_pct' => 0.0,
+            'no_close_pct' => 0.0,
+            'verification_pct' => 0.0,
+        ];
+    }
+
     private static function closerStatsFallback($from, $to, ?int $userId = null): array
     {
         $query = User::where('role', 'closer')->orderBy('name');
@@ -204,26 +283,51 @@ class StatisticsRepository
         $result = [];
 
         foreach ($closers as $c) {
+            // Cohort: leads transferred to this closer
             $recvQuery = DB::table('leads')
                 ->where('disposition', 'Transferred to Closer')
                 ->where('transferred_to', (string) $c->id);
             if ($from) $recvQuery->where('updated_at', '>=', $from);
             if ($to) $recvQuery->where('updated_at', '<=', $to);
-            $transfersReceived = $recvQuery->count();
 
+            $receivedLeadIds = $recvQuery->pluck('id')->toArray();
+            $transfersReceived = count($receivedLeadIds);
+
+            if ($transfersReceived === 0) {
+                $result[] = self::emptyCloserRow($c);
+                continue;
+            }
+
+            // Deals from leads in this cohort (via lead_id or owner_name match)
             $dealsQuery = DB::table('deals')->where('closer', $c->id);
-            if ($from) $dealsQuery->where('created_at', '>=', $from);
-            if ($to) $dealsQuery->where('created_at', '<=', $to);
+            if (!empty($receivedLeadIds)) {
+                $leadNames = DB::table('leads')->whereIn('id', $receivedLeadIds)->pluck('owner_name')->toArray();
+                $dealsQuery->where(function ($q) use ($receivedLeadIds, $leadNames) {
+                    $q->whereIn('lead_id', $receivedLeadIds);
+                    if (!empty($leadNames)) {
+                        $q->orWhereIn('owner_name', $leadNames);
+                    }
+                });
+            }
             $dealsClosed = $dealsQuery->count();
 
             $verifQuery = DB::table('deals')
                 ->where('closer', $c->id)
                 ->whereNotNull('assigned_admin')
                 ->whereIn('status', ['in_verification', 'charged', 'chargeback', 'chargeback_won', 'chargeback_lost']);
-            if ($from) $verifQuery->where('created_at', '>=', $from);
-            if ($to) $verifQuery->where('created_at', '<=', $to);
+            if (!empty($receivedLeadIds)) {
+                $verifQuery->where(function ($q) use ($receivedLeadIds, $leadNames) {
+                    $q->whereIn('lead_id', $receivedLeadIds);
+                    if (!empty($leadNames)) {
+                        $q->orWhereIn('owner_name', $leadNames);
+                    }
+                });
+            }
             $sentToVerification = $verifQuery->count();
 
+            // Safeguards
+            $dealsClosed = min($dealsClosed, $transfersReceived);
+            $sentToVerification = min($sentToVerification, $dealsClosed);
             $notClosed = max(0, $transfersReceived - $dealsClosed);
 
             $result[] = [
