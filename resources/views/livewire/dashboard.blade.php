@@ -244,7 +244,7 @@
             <div class="bg-crm-card border border-crm-border rounded-lg p-4 border-t-[3px] border-t-red-400">
                 <div class="text-[10px] text-crm-t3 uppercase tracking-wider">My Chargebacks</div>
                 <div class="text-2xl font-extrabold text-red-500 mt-1">{{ $chargebacks->count() }}</div>
-                <div class="text-[10px] text-crm-t3 mt-1">${{ number_format($chargebacks->sum('fee')) }}</div>
+                <div class="text-[10px] text-crm-t3 mt-1">${{ number_format($cbRev) }}</div>
             </div>
         @elseif($isFronter)
             <div class="bg-crm-card border border-crm-border rounded-lg p-4 border-t-[3px] border-t-blue-500">

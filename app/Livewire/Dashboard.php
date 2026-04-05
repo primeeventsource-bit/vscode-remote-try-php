@@ -90,11 +90,20 @@ class Dashboard extends Component
         $totalRev = (float) ($stats->total_rev ?? 0);
         $cbRev = (float) ($stats->cb_rev ?? 0);
         $pendRev = (float) ($stats->pend_rev ?? 0);
-        $charged = (object) ['count' => fn() => (int) ($stats->charged_count ?? 0), 'sum' => fn($f) => $totalRev];
-        $chargebacks = (object) ['count' => fn() => (int) ($stats->cb_count ?? 0), 'sum' => fn($f) => $cbRev];
-        $pending = (object) ['count' => fn() => (int) ($stats->pending_count ?? 0), 'sum' => fn($f) => $pendRev];
-        $cancelled = (object) ['count' => fn() => (int) ($stats->cancelled_count ?? 0)];
-        $deals = (object) ['count' => fn() => (int) ($stats->total_deals ?? 0)];
+
+        // Create small collections so Blade ->count() and ->sum() work
+        $chargedCount = (int) ($stats->charged_count ?? 0);
+        $cbCount = (int) ($stats->cb_count ?? 0);
+        $pendingCount = (int) ($stats->pending_count ?? 0);
+        $cancelledCount = (int) ($stats->cancelled_count ?? 0);
+        $totalDealsCount = (int) ($stats->total_deals ?? 0);
+
+        // Wrap as countable objects so Blade $var->count() calls work
+        $charged = collect(array_fill(0, $chargedCount, null));
+        $chargebacks = collect(array_fill(0, $cbCount, null));
+        $pending = collect(array_fill(0, $pendingCount, null));
+        $cancelled = collect(array_fill(0, $cancelledCount, null));
+        $deals = collect(array_fill(0, $totalDealsCount, null));
 
         // Week stats via DB
         $weekStats = (clone $dealScope)->where('charged', 'yes')
@@ -102,8 +111,9 @@ class Dashboard extends Component
             ->where('timestamp', '>=', $weekStart)
             ->selectRaw('SUM(fee) as rev, COUNT(*) as cnt')->first();
         $weekRev = (float) ($weekStats->rev ?? 0);
-        $weekCharged = (object) ['count' => fn() => (int) ($weekStats->cnt ?? 0), 'sum' => fn($f) => $weekRev];
-        $weekDeals = (object) ['count' => fn() => (int) ($weekStats->cnt ?? 0)];
+        $weekChargedCount = (int) ($weekStats->cnt ?? 0);
+        $weekCharged = collect(array_fill(0, $weekChargedCount, null));
+        $weekDeals = collect(array_fill(0, $weekChargedCount, null));
 
         // Monthly performance via DB – last 6 months
         $monthlyData = collect();
