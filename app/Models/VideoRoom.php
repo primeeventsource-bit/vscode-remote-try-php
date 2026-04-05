@@ -8,7 +8,7 @@ use Illuminate\Support\Str;
 class VideoRoom extends Model
 {
     protected $fillable = [
-        'uuid', 'name', 'created_by', 'type', 'status', 'started_at', 'ended_at',
+        'uuid', 'name', 'created_by', 'type', 'chat_id', 'status', 'started_at', 'ended_at',
     ];
 
     protected $casts = [
@@ -24,6 +24,10 @@ class VideoRoom extends Model
     }
 
     public function creator() { return $this->belongsTo(User::class, 'created_by'); }
+    public function chat() { return $this->belongsTo(Chat::class, 'chat_id'); }
+
+    public function isDirect(): bool { return $this->type === 'direct'; }
+    public function isGroup(): bool { return $this->type === 'group'; }
     public function participants() { return $this->hasMany(VideoRoomParticipant::class, 'room_id'); }
     public function logs() { return $this->hasMany(VideoCallLog::class, 'room_id'); }
     public function signals() { return $this->hasMany(VideoSignal::class, 'room_id'); }

@@ -228,6 +228,8 @@ class Settings extends Component
         'max_group_call_participants' => 20,
         'show_agent_status_in_picker' => true,
         'allow_admin_force_end_group_call' => true,
+        'enable_direct_video_calls' => true,
+        'allow_agents_start_direct_video_calls' => true,
     ];
 
     // ── Avatar Settings ─────────────────────────────────────

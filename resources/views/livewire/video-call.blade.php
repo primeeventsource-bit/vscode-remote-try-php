@@ -40,7 +40,7 @@
          ACTIVE ROOM VIEW
          ═══════════════════════════════════════════════ --}}
     @if($roomId && $room && !$room->isEnded())
-        <div class="bg-gray-900 rounded-xl overflow-hidden" style="min-height: 70vh;">
+        <div class="bg-gray-900 rounded-xl overflow-hidden" style="min-height: 70vh;" wire:poll.3s>
             {{-- Room header --}}
             <div class="flex items-center justify-between px-4 py-3 bg-gray-800">
                 <div class="flex items-center gap-3">
@@ -50,7 +50,7 @@
                 </div>
                 <div class="flex items-center gap-2">
                     @if(Gate::allows('end', $room))
-                        <button wire:click="endRoom" class="px-3 py-1.5 text-xs font-bold text-white bg-red-600 rounded-lg hover:bg-red-700 transition">End Call</button>
+                        <button @click="$wire.endRoom().then(() => cleanup())" class="px-3 py-1.5 text-xs font-bold text-white bg-red-600 rounded-lg hover:bg-red-700 transition">End Call</button>
                     @endif
                 </div>
             </div>
@@ -126,6 +126,17 @@
                     📴
                 </button>
             </div>
+        </div>
+
+    {{-- ═══════════════════════════════════════════════
+         CALL ENDED STATE
+         ═══════════════════════════════════════════════ --}}
+    @elseif($roomStatus === 'ended')
+        <div class="bg-gray-900 rounded-xl p-12 text-center" style="min-height: 40vh;" x-init="cleanup()">
+            <div class="text-5xl mb-4">📴</div>
+            <div class="text-white text-xl font-bold mb-2">Call Ended</div>
+            <p class="text-gray-400 text-sm mb-6">This call has been ended.</p>
+            <a href="{{ route('video-call') }}" class="px-6 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">Back to Video Calls</a>
         </div>
 
     {{-- ═══════════════════════════════════════════════
@@ -365,6 +376,13 @@ function videoCallApp() {
 
         async pollForSignals() {
             try {
+                // Check if room was ended by someone else
+                const status = this.$wire.roomStatus;
+                if (status === 'ended' || status === 'none') {
+                    this.cleanup();
+                    return;
+                }
+
                 const signals = await this.$wire.pollSignals();
                 for (const sig of signals) {
                     await this.handleSignal(sig);

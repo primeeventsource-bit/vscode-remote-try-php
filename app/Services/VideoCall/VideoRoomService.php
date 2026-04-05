@@ -116,6 +116,8 @@ class VideoRoomService
 
     public static function endRoom(VideoRoom $room, User $endedBy): void
     {
+        if ($room->isEnded()) return; // idempotent
+
         $room->markEnded();
 
         VideoCallLog::create([
@@ -123,6 +125,87 @@ class VideoRoomService
             'user_id' => $endedBy->id,
             'event_type' => 'ended',
         ]);
+
+        // Clean up signals
+        try {
+            \App\Models\VideoSignal::where('room_id', $room->id)->delete();
+        } catch (\Throwable $e) {}
+    }
+
+    /**
+     * Create or reuse a direct 1-on-1 video room from a DM chat thread.
+     */
+    public static function createOrReuseDirectRoom(\App\Models\Chat $chat, User $initiator): ?VideoRoom
+    {
+        // Must be a DM thread
+        if ($chat->type !== 'dm') return null;
+
+        $members = is_array($chat->members) ? $chat->members : json_decode($chat->members ?? '[]', true);
+        $memberIds = array_map('intval', array_values($members));
+
+        if (!in_array($initiator->id, $memberIds)) return null;
+
+        // Check for active direct room on this chat
+        $existing = VideoRoom::where('chat_id', $chat->id)
+            ->where('type', 'direct')
+            ->whereIn('status', ['waiting', 'active'])
+            ->first();
+
+        if ($existing) return $existing;
+
+        // Create new direct room
+        return DB::transaction(function () use ($chat, $initiator, $memberIds) {
+            $otherUserId = collect($memberIds)->first(fn($id) => $id !== $initiator->id);
+            $otherUser = User::find($otherUserId);
+
+            $room = VideoRoom::create([
+                'name' => 'Call with ' . ($otherUser->name ?? 'User'),
+                'created_by' => $initiator->id,
+                'type' => 'direct',
+                'chat_id' => $chat->id,
+                'status' => 'waiting',
+            ]);
+
+            // Add initiator as host
+            VideoRoomParticipant::create([
+                'room_id' => $room->id,
+                'user_id' => $initiator->id,
+                'invited_by' => $initiator->id,
+                'role' => 'host',
+                'invite_status' => 'accepted',
+            ]);
+
+            // Add other participant
+            if ($otherUserId) {
+                VideoRoomParticipant::create([
+                    'room_id' => $room->id,
+                    'user_id' => $otherUserId,
+                    'invited_by' => $initiator->id,
+                    'role' => 'participant',
+                    'invite_status' => 'pending',
+                ]);
+            }
+
+            VideoCallLog::create([
+                'room_id' => $room->id,
+                'user_id' => $initiator->id,
+                'event_type' => 'created',
+                'meta' => ['type' => 'direct', 'chat_id' => $chat->id],
+            ]);
+
+            return $room;
+        });
+    }
+
+    /**
+     * Get active direct room for a chat thread.
+     */
+    public static function getActiveDirectRoom(int $chatId): ?VideoRoom
+    {
+        return VideoRoom::where('chat_id', $chatId)
+            ->where('type', 'direct')
+            ->whereIn('status', ['waiting', 'active'])
+            ->first();
     }
 
     /**

@@ -25,6 +25,11 @@ class VideoRoomPolicy
 
     public function end(User $user, VideoRoom $room): bool
     {
+        // Direct calls: either participant can end
+        if ($room->isDirect()) {
+            return $room->hasParticipant($user);
+        }
+        // Group calls: only creator or master admin
         return $user->id === $room->created_by || $user->hasRole('master_admin');
     }
 }

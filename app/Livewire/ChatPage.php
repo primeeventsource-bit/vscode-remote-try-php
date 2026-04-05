@@ -245,6 +245,23 @@ class ChatPage extends Component
         $chat->update(['icon_emoji' => $emoji, 'icon_path' => null]);
     }
 
+    public function startDirectCall(): void
+    {
+        if (!$this->selectedChat) return;
+        $chat = Chat::find($this->selectedChat);
+        if (!$chat || $chat->type !== 'dm') return;
+
+        try {
+            $room = \App\Services\VideoCall\VideoRoomService::createOrReuseDirectRoom($chat, auth()->user());
+            if ($room) {
+                \App\Services\VideoCall\VideoRoomService::joinRoom($room, auth()->user());
+                $this->redirect(route('video-call', ['room' => $room->uuid]));
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        }
+    }
+
     private function canManageGroup(): bool
     {
         $user = auth()->user();
@@ -417,6 +434,14 @@ class ChatPage extends Component
             } catch (\Throwable $e) {}
         }
 
+        // Check for active direct call on current DM
+        $activeDirectCall = null;
+        if ($activeChat && $activeChat->type === 'dm') {
+            try {
+                $activeDirectCall = \App\Services\VideoCall\VideoRoomService::getActiveDirectRoom($activeChat->id);
+            } catch (\Throwable $e) {}
+        }
+
         return view('livewire.chat-page', [
             'chats' => $chats,
             'messages' => $messages,
@@ -427,6 +452,7 @@ class ChatPage extends Component
             'currentUserId' => $currentUserId,
             'sharedMedia' => $sharedMedia,
             'unreadCounts' => $unreadCounts,
+            'activeDirectCall' => $activeDirectCall,
         ]);
     }
 }
