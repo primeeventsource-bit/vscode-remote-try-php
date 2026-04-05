@@ -4,46 +4,40 @@ namespace App\Policies;
 
 use App\Models\CrmNote;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 
-/**
- * Notes authorization policy.
- *
- * HARD RULE: Only the ChristianDior master admin can create or edit notes.
- * This is enforced by checking: role=master_admin AND username=christiandior.
- * All other users can only view notes (if their role allows viewing the record).
- */
 class CrmNotePolicy
 {
-    private const AUTHORIZED_EDITOR_USERNAME = 'christiandior';
+    private function getAuthorizedUsername(): string
+    {
+        try {
+            $raw = DB::table('crm_settings')->where('key', 'notes.note_creator_username')->value('value');
+            if ($raw) return strtolower(trim(json_decode($raw, true) ?? 'christiandior'));
+        } catch (\Throwable $e) {}
+        return 'christiandior';
+    }
 
-    /**
-     * Is this user the authorized note editor?
-     */
     private function isAuthorizedEditor(User $user): bool
     {
         return $user->hasRole('master_admin')
-            && strtolower($user->username) === self::AUTHORIZED_EDITOR_USERNAME;
+            && strtolower($user->username) === $this->getAuthorizedUsername();
     }
 
-    /** Anyone with access to the record can view notes */
     public function view(User $user, CrmNote $note): bool
     {
         return true;
     }
 
-    /** Only ChristianDior master admin */
     public function create(User $user): bool
     {
         return $this->isAuthorizedEditor($user);
     }
 
-    /** Only ChristianDior master admin */
     public function update(User $user, CrmNote $note): bool
     {
         return $this->isAuthorizedEditor($user);
     }
 
-    /** Admin or master admin can send notes to chat */
     public function sendToChat(User $user, CrmNote $note): bool
     {
         return $user->hasRole('master_admin', 'admin');
