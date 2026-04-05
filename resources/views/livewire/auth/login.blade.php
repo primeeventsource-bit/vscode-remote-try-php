@@ -2,7 +2,7 @@
     <div class="flex items-center justify-center gap-12 w-full max-w-7xl">
         {{-- Left Logo --}}
         <div class="hidden md:block flex-shrink-0">
-            <img src="{{ asset('images/prime-logo.png') }}" alt="Prime" style="width:400px;height:400px;" class="object-contain">
+            <img src="{{ asset('images/prime-logo.png') }}" alt="Prime" style="width:640px;height:640px;" class="object-contain">
         </div>
 
         {{-- Login Card --}}
@@ -42,7 +42,7 @@
 
         {{-- Right Logo --}}
         <div class="hidden md:block flex-shrink-0">
-            <img src="{{ asset('images/prime-logo.png') }}" alt="Prime" style="width:400px;height:400px;" class="object-contain">
+            <img src="{{ asset('images/prime-logo.png') }}" alt="Prime" style="width:640px;height:640px;" class="object-contain">
         </div>
     </div>
 </div>
