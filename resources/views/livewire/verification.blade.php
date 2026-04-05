@@ -88,7 +88,7 @@
                                 <td class="px-3 py-2.5 font-mono font-bold text-emerald-500">${{ number_format($deal->fee, 2) }}</td>
                                 @if($isAdmin)
                                     <td class="px-3 py-2.5 font-mono text-xs text-crm-t2">
-                                        {{ $deal->masked_card }}
+                                        {{ $deal->masked_card ?? '--' }}
                                     </td>
                                 @endif
                                 <td class="px-3 py-2.5 text-crm-t2">{{ $users->firstWhere('id', $deal->closer)?->name ?? '--' }}</td>

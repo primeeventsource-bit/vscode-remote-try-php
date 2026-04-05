@@ -16,7 +16,7 @@
         if(this.tab==='search'&&this.query.trim().length<2){this.items=[];return;}
         this.loading=true; this.error=null;
         try {
-            const p=new URLSearchParams(); if(this.userId) p.set('user_id',this.userId); p.set('limit','20');
+            const p=new URLSearchParams(); if(this.userId!==null&&this.userId!==undefined) p.set('user_id',String(this.userId)); p.set('limit','20');
             if(!reset&&this.cursor) p.set('cursor',this.cursor);
             if(this.tab==='category'&&this.activeCategory) p.set('q',this.categories[this.activeCategory]);
             else if(this.tab==='search'&&this.query.trim().length>=2) p.set('q',this.query.trim());

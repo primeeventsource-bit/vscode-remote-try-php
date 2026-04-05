@@ -50,8 +50,8 @@
                                 <input id="fld-newDueDate" wire:model="taskForm.due_date" type="datetime-local" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
             </div>
             <div>
-                <label for="fld-newDescription" class="text-[10px] text-crm-t3 uppercase tracking-wider">Description</label>
-                                <input id="fld-newDescription" wire:model="taskForm.client_name" type="text" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400" placeholder="Client name (optional)">
+                <label for="fld-newClientName" class="text-[10px] text-crm-t3 uppercase tracking-wider">Client Name</label>
+                                <input id="fld-newClientName" wire:model="taskForm.client_name" type="text" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400" placeholder="Client name (optional)">
             </div>
         </div>
         <div class="flex justify-end mt-3">
