@@ -23,6 +23,7 @@ class User extends Authenticatable
         'password',
         'permissions',
         'avatar_path',
+        'avatar_emoji',
     ];
 
     protected $hidden = [

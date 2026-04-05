@@ -16,6 +16,7 @@ class Chat extends Model
         'type',
         'members',
         'icon_path',
+        'icon_emoji',
         'created_by',
         'pinned',
     ];

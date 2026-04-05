@@ -26,6 +26,7 @@
                 'spreadsheets' => 'Spreadsheet Settings',
                 'integrations' => 'Integrations',
                 'calling' => 'Calling / Dialer',
+                'avatar_settings' => 'Avatars & Profiles',
                 'task_settings' => 'Automatic Tasks',
                 'transfers' => 'Transfers',
                 'notes_settings' => 'Notes',
@@ -54,16 +55,68 @@
 
             @if($section === 'profile')
                 <h3 class="text-sm font-semibold mb-3">User Profile</h3>
+
+                {{-- Avatar Preview + Upload + Emoji --}}
+                <div class="mb-4 p-4 bg-crm-surface border border-crm-border rounded-lg">
+                    <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mb-3">Profile Avatar</div>
+                    <div class="flex items-start gap-4">
+                        {{-- Current avatar preview --}}
+                        <div class="flex-shrink-0">
+                            @if(auth()->user()->avatar_path)
+                                <img src="{{ asset('storage/' . auth()->user()->avatar_path) }}" class="w-16 h-16 rounded-full object-cover border-2 border-crm-border">
+                            @elseif(auth()->user()->avatar_emoji)
+                                <div class="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center text-3xl border-2 border-crm-border">{{ auth()->user()->avatar_emoji }}</div>
+                            @else
+                                <div class="w-16 h-16 rounded-full flex items-center justify-center text-lg font-bold text-white border-2 border-crm-border" style="background: {{ auth()->user()->color ?? '#3b82f6' }}">{{ auth()->user()->avatar ?? substr(auth()->user()->name, 0, 2) }}</div>
+                            @endif
+                        </div>
+
+                        <div class="flex-1 space-y-2">
+                            {{-- Upload photo --}}
+                            <div>
+                                <label class="flex items-center gap-2 cursor-pointer text-xs text-blue-600 hover:text-blue-700 font-semibold">
+                                    <input id="fld-profilePhoto" type="file" wire:model="profilePhotoUpload" accept="image/jpeg,image/png,image/webp" class="hidden">
+                                    Upload Photo (JPG, PNG, WEBP)
+                                </label>
+                                @if($profilePhotoUpload)
+                                    <span class="text-[10px] text-emerald-600 font-semibold">Photo selected — click Save Profile to apply</span>
+                                @endif
+                            </div>
+
+                            {{-- Emoji avatar picker --}}
+                            <div x-data="{ showEmojis: false }">
+                                <button @click="showEmojis = !showEmojis" type="button" class="text-xs text-purple-600 hover:text-purple-700 font-semibold">
+                                    {{ $profileEmoji ? "Emoji: {$profileEmoji} (change)" : 'Choose Emoji Avatar' }}
+                                </button>
+                                <div x-show="showEmojis" x-cloak class="mt-1 p-2 bg-white border border-crm-border rounded-lg shadow-sm">
+                                    <div class="flex flex-wrap gap-1">
+                                        @foreach(['😀','😎','🧠','💼','🚀','⭐','🔥','💎','👑','🎯','💪','🦁','🐺','🦅','🌟','💫','🎭','🎨','🏆','🤝'] as $emoji)
+                                            <button type="button" wire:click="setProfileEmoji('{{ $emoji }}')" @click="showEmojis = false"
+                                                class="w-8 h-8 text-lg rounded hover:bg-blue-50 transition {{ $profileEmoji === $emoji ? 'bg-blue-100 ring-2 ring-blue-400' : '' }}">{{ $emoji }}</button>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Remove --}}
+                            @if(auth()->user()->avatar_path || auth()->user()->avatar_emoji)
+                                <button wire:click="removeProfilePhoto" type="button" class="text-xs text-red-500 hover:text-red-600 font-semibold">Remove Avatar</button>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <input id="fld-profileName" wire:model.defer="profileName" type="text" placeholder="Name" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                     <input id="fld-profileEmail" wire:model.defer="profileEmail" type="email" placeholder="Email" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
-                    <input id="fld-profileAvatar" wire:model.defer="profileAvatar" type="text" placeholder="Avatar (2 letters)" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                    <input id="fld-profileAvatar" wire:model.defer="profileAvatar" type="text" placeholder="Avatar (2 letters fallback)" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                     <input id="fld-profileColor" wire:model.defer="profileColor" type="color" class="h-10 w-full bg-white border border-crm-border rounded-lg">
                     <input id="fld-newPassword" wire:model.defer="newPassword" type="password" placeholder="New password" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                     <input id="fld-newPasswordConfirm" wire:model.defer="newPasswordConfirm" type="password" placeholder="Confirm password" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                 </div>
                 @error('newPassword')<div class="text-xs text-red-600 mt-2">{{ $message }}</div>@enderror
-                <div class="mt-3 text-right"><button wire:click="saveProfile" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg">Save Profile</button></div>
+                @error('profilePhotoUpload')<div class="text-xs text-red-600 mt-2">{{ $message }}</div>@enderror
+                <div class="mt-3 text-right"><button wire:click="saveProfile" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">Save Profile</button></div>
             @endif
 
             @if($section === 'notifications')
@@ -451,6 +504,27 @@
 
                     <button wire:click="saveDialerSettings" class="px-5 py-2.5 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow transition">Save Dialer Settings</button>
                 </div>
+            @endif
+
+            {{-- ═══ AVATAR & PROFILE SETTINGS ═══ --}}
+            @if($section === 'avatar_settings' && $isMaster)
+                <h3 class="text-sm font-semibold mb-3">Avatars & Profiles</h3>
+                <p class="text-xs text-crm-t3 mb-4">Control avatar upload and display across the CRM and chat.</p>
+                <div class="space-y-3">
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-av-uploads" type="checkbox" wire:model="avatarSettings.user_avatar_uploads_enabled"> Enable User Avatar Uploads</label>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-av-emoji" type="checkbox" wire:model="avatarSettings.emoji_avatars_enabled"> Enable Emoji Avatars</label>
+                    <div>
+                        <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Allowed Avatar File Types</label>
+                        <input id="fld-av-types" type="text" wire:model="avatarSettings.allowed_avatar_types" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg" placeholder="jpg,jpeg,png,webp">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Max Avatar Size (MB)</label>
+                        <input id="fld-av-size" type="number" wire:model="avatarSettings.max_avatar_size_mb" min="1" max="10" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                    </div>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-av-group" type="checkbox" wire:model="avatarSettings.group_chat_avatars_enabled"> Enable Group Chat Avatars</label>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-av-groupma" type="checkbox" wire:model="avatarSettings.group_avatar_master_admin_only"> Group Chat Avatar: Master Admin Only</label>
+                </div>
+                <div class="mt-4 text-right"><button wire:click="saveAvatarSettings" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">Save Avatar Settings</button></div>
             @endif
 
             {{-- ═══ AUTOMATIC TASK SETTINGS ═══ --}}

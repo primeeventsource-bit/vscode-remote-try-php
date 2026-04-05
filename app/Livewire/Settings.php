@@ -5,14 +5,18 @@ use App\Models\MerchantAccount;
 use App\Models\Processor;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 #[Layout('components.layouts.app')]
 #[Title('Settings')]
 class Settings extends Component
 {
+    use WithFileUploads;
+
     public string $section = 'company';
 
     public string $companyName = 'PRIME CRM';
@@ -25,6 +29,8 @@ class Settings extends Component
     public string $profileEmail = '';
     public string $profileAvatar = '';
     public string $profileColor = '#3b82f6';
+    public string $profileEmoji = '';
+    public $profilePhotoUpload = null;
     public string $newPassword = '';
     public string $newPasswordConfirm = '';
 
@@ -196,6 +202,16 @@ class Settings extends Component
         'charged_green_task_assignee_mode' => 'admin_only',
     ];
 
+    // ── Avatar Settings ─────────────────────────────────────
+    public array $avatarSettings = [
+        'user_avatar_uploads_enabled' => true,
+        'emoji_avatars_enabled' => true,
+        'allowed_avatar_types' => 'jpg,jpeg,png,webp',
+        'max_avatar_size_mb' => 2,
+        'group_chat_avatars_enabled' => true,
+        'group_avatar_master_admin_only' => true,
+    ];
+
     public array $dialerSettings = [
         'enabled' => true,
         'click_action' => 'copy',
@@ -234,6 +250,7 @@ class Settings extends Component
         $this->profileEmail = (string) ($u->email ?? '');
         $this->profileAvatar = (string) ($u->avatar ?? '');
         $this->profileColor = (string) ($u->color ?? '#3b82f6');
+        $this->profileEmoji = (string) ($u->avatar_emoji ?? '');
 
         $this->notifySound = (bool) $this->getSetting('notifications.sound', true);
         $this->notifyEmailAlerts = (bool) $this->getSetting('notifications.email_alerts', false);
@@ -275,6 +292,7 @@ class Settings extends Component
         $this->documentModuleSettings = $this->loadSettingsGroup('documents', $this->documentModuleSettings);
         $this->spreadsheetModuleSettings = $this->loadSettingsGroup('spreadsheets', $this->spreadsheetModuleSettings);
         $this->dialerSettings = $this->loadSettingsGroup('dialer', $this->dialerSettings);
+        $this->avatarSettings = $this->loadSettingsGroup('avatar', $this->avatarSettings);
         $this->taskSettings = $this->loadSettingsGroup('tasks', $this->taskSettings);
         $this->transferSettings = $this->loadSettingsGroup('transfer', $this->transferSettings);
         $this->notesSettings = $this->loadSettingsGroup('notes', $this->notesSettings);
@@ -325,12 +343,33 @@ class Settings extends Component
     public function saveProfile(): void
     {
         $user = auth()->user();
-        $user->update([
+
+        $updateData = [
             'name' => $this->profileName,
             'email' => $this->profileEmail,
             'avatar' => $this->profileAvatar,
             'color' => $this->profileColor,
-        ]);
+            'avatar_emoji' => $this->profileEmoji ?: null,
+        ];
+
+        // Handle photo upload
+        if ($this->profilePhotoUpload) {
+            $this->validate(['profilePhotoUpload' => 'image|max:2048|mimes:jpg,jpeg,png,webp']);
+            if ($user->avatar_path) Storage::disk('public')->delete($user->avatar_path);
+            $path = $this->profilePhotoUpload->store('avatars', 'public');
+            $updateData['avatar_path'] = $path;
+            $updateData['avatar_emoji'] = null; // photo overrides emoji
+            $this->profilePhotoUpload = null;
+            $this->profileEmoji = '';
+        }
+
+        // If emoji is set, clear photo
+        if ($this->profileEmoji) {
+            if ($user->avatar_path) Storage::disk('public')->delete($user->avatar_path);
+            $updateData['avatar_path'] = null;
+        }
+
+        $user->update($updateData);
 
         if ($this->newPassword !== '' || $this->newPasswordConfirm !== '') {
             if ($this->newPassword !== $this->newPasswordConfirm) {
@@ -349,6 +388,21 @@ class Settings extends Component
         }
 
         session()->flash('success', 'Profile settings saved.');
+    }
+
+    public function removeProfilePhoto(): void
+    {
+        $user = auth()->user();
+        if ($user->avatar_path) {
+            Storage::disk('public')->delete($user->avatar_path);
+            $user->update(['avatar_path' => null]);
+        }
+        session()->flash('success', 'Photo removed.');
+    }
+
+    public function setProfileEmoji(string $emoji): void
+    {
+        $this->profileEmoji = $emoji;
     }
 
     public function saveNotifications(): void
@@ -565,6 +619,13 @@ class Settings extends Component
 
         $row->update(['active' => !$row->active]);
         $this->loadMerchantIntegrationData();
+    }
+
+    public function saveAvatarSettings(): void
+    {
+        if (!auth()->user()?->hasRole('master_admin')) return;
+        $this->saveSettingsGroup('avatar', $this->avatarSettings);
+        session()->flash('success', 'Avatar settings saved.');
     }
 
     public function saveTaskSettings(): void

@@ -28,6 +28,7 @@ class ChatPage extends Component
     public string $newChatError = '';
     public $avatarUpload = null;
     public $groupIconUpload = null;
+    public string $emojiAvatarPick = '';
     public bool $showManageMembers = false;
     public array $addMemberIds = [];
 
@@ -197,6 +198,8 @@ class ChatPage extends Component
     public function uploadGroupIcon(): void
     {
         if (!$this->selectedChat) return;
+        // HARD RULE: Master Admin only can change group chat avatar
+        if (!auth()->user()?->hasRole('master_admin')) return;
         $this->validate(['groupIconUpload' => 'image|max:2048|mimes:jpg,jpeg,png,webp']);
         try {
             $chat = Chat::find($this->selectedChat);
@@ -213,11 +216,33 @@ class ChatPage extends Component
     public function removeGroupIcon(): void
     {
         if (!$this->selectedChat) return;
+        if (!auth()->user()?->hasRole('master_admin')) return;
         $chat = Chat::find($this->selectedChat);
         if ($chat?->icon_path) {
             Storage::disk('public')->delete($chat->icon_path);
             $chat->update(['icon_path' => null]);
         }
+    }
+
+    public function setEmojiAvatar(string $emoji): void
+    {
+        $user = auth()->user();
+        if (!$user) return;
+        // Remove uploaded avatar if switching to emoji
+        if ($user->avatar_path) {
+            Storage::disk('public')->delete($user->avatar_path);
+        }
+        $user->update(['avatar_emoji' => $emoji, 'avatar_path' => null]);
+    }
+
+    public function setGroupEmojiIcon(string $emoji): void
+    {
+        if (!$this->selectedChat) return;
+        if (!auth()->user()?->hasRole('master_admin')) return;
+        $chat = Chat::find($this->selectedChat);
+        if (!$chat || $chat->type === 'dm') return;
+        if ($chat->icon_path) Storage::disk('public')->delete($chat->icon_path);
+        $chat->update(['icon_emoji' => $emoji, 'icon_path' => null]);
     }
 
     private function canManageGroup(): bool

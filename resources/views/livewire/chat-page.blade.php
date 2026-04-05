@@ -300,18 +300,37 @@
                                 <div class="text-[10px] text-crm-t3 capitalize">{{ $activeChat->type }} chat</div>
                             </div>
                         </div>
-                        <div class="space-y-1.5">
-                            <label class="flex items-center gap-2 cursor-pointer text-xs text-blue-600 hover:text-blue-700 font-medium">
-                                <input type="file" wire:model="groupIconUpload" accept="image/jpeg,image/png,image/webp" class="hidden">
-                                {{ $activeChat->icon_path ? 'Change icon' : 'Upload icon' }}
-                            </label>
-                            @if($groupIconUpload)
-                                <button wire:click="uploadGroupIcon" class="text-xs font-semibold text-white bg-blue-600 rounded px-2 py-1 hover:bg-blue-700">Save Icon</button>
-                            @endif
-                            @if($activeChat->icon_path)
-                                <button wire:click="removeGroupIcon" class="text-xs text-red-500 hover:text-red-600 font-medium">Remove icon</button>
-                            @endif
-                        </div>
+                        {{-- Group avatar edit: Master Admin only --}}
+                        @if(auth()->user()?->hasRole('master_admin'))
+                            <div class="space-y-1.5">
+                                <label class="flex items-center gap-2 cursor-pointer text-xs text-blue-600 hover:text-blue-700 font-medium">
+                                    <input id="fld-groupIconUpload" type="file" wire:model="groupIconUpload" accept="image/jpeg,image/png,image/webp" class="hidden">
+                                    {{ $activeChat->icon_path ? 'Change icon' : 'Upload icon' }}
+                                </label>
+                                @if($groupIconUpload)
+                                    <button wire:click="uploadGroupIcon" class="text-xs font-semibold text-white bg-blue-600 rounded px-2 py-1 hover:bg-blue-700">Save Icon</button>
+                                @endif
+                                {{-- Emoji icon for group --}}
+                                <div x-data="{ showGroupEmojis: false }">
+                                    <button @click="showGroupEmojis = !showGroupEmojis" type="button" class="text-xs text-purple-600 hover:text-purple-700 font-medium">
+                                        {{ $activeChat->icon_emoji ? "Emoji: {$activeChat->icon_emoji} (change)" : 'Set emoji icon' }}
+                                    </button>
+                                    <div x-show="showGroupEmojis" x-cloak class="mt-1 p-2 bg-white border border-crm-border rounded-lg shadow-sm">
+                                        <div class="flex flex-wrap gap-1">
+                                            @foreach(['💬','👥','🏢','📊','💼','🔥','⭐','🎯','🚀','💎','👑','🏆','📋','🔔','💡','🛡️'] as $emoji)
+                                                <button type="button" wire:click="setGroupEmojiIcon('{{ $emoji }}')" @click="showGroupEmojis = false"
+                                                    class="w-8 h-8 text-lg rounded hover:bg-blue-50 transition">{{ $emoji }}</button>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                </div>
+                                @if($activeChat->icon_path || $activeChat->icon_emoji)
+                                    <button wire:click="removeGroupIcon" class="text-xs text-red-500 hover:text-red-600 font-medium">Remove icon</button>
+                                @endif
+                            </div>
+                        @else
+                            <div class="text-[10px] text-crm-t3">Group avatar can only be changed by Master Admin</div>
+                        @endif
                     @else
                         <div class="space-y-1.5">
                             <div class="text-sm font-medium">{{ $activeChat->name ?? 'Chat' }}</div>
