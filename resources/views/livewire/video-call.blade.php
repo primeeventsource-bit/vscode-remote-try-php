@@ -56,7 +56,7 @@
             </div>
 
             {{-- Media error banner --}}
-            <div x-show="mediaError" x-cloak class="mx-4 mt-2 px-3 py-2 bg-amber-900/80 text-amber-200 text-xs rounded-lg" x-text="mediaError"></div>
+            <div x-show="!!mediaError" x-cloak class="mx-4 mt-2 px-3 py-2 bg-amber-900/80 text-amber-200 text-xs rounded-lg" x-text="mediaError || ''"></div>
 
             {{-- Video grid --}}
             <div class="p-4">
@@ -455,6 +455,6 @@ function videoCallApp() {
 </script>
 @else
 <script>
-function videoCallApp() { return { micOn: true, cameraOn: true, init() {}, toggleMic() {}, toggleCamera() {}, cleanup() {} } }
+function videoCallApp() { return { micOn: true, cameraOn: true, mediaError: '', init() {}, toggleMic() {}, toggleCamera() {}, cleanup() {} } }
 </script>
 @endif
