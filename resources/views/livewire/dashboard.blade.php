@@ -13,7 +13,7 @@
         {{-- Pipeline Stats Range Dropdown --}}
         <div class="flex items-center gap-2">
             <span class="text-xs text-crm-t3 font-semibold">View By:</span>
-            <select wire:model.live="statsRange" class="px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+            <select id="fld-dash-statsRange" wire:model.live="statsRange" class="px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                 <option value="live">Live</option>
                 <option value="daily">Daily</option>
                 <option value="weekly">Weekly</option>

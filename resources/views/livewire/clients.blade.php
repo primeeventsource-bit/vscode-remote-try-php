@@ -224,33 +224,33 @@
                             <div class="space-y-3">
                                 <div>
                                     <label class="block text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">Owner Name *</label>
-                                    <input type="text" wire:model="clientForm.owner_name" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400" required>
+                                    <input id="fld-client-owner_name" type="text" wire:model="clientForm.owner_name" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400" required>
                                 </div>
                                 <div>
                                     <label class="block text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">Email</label>
-                                    <input type="email" wire:model="clientForm.email" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                                    <input id="fld-client-email" type="email" wire:model="clientForm.email" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                                 </div>
                                 <div class="grid grid-cols-2 gap-2">
                                     <div>
                                         <label class="block text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">Primary Phone</label>
-                                        <input type="text" wire:model="clientForm.primary_phone" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                                        <input id="fld-client-primary_phone" type="text" wire:model="clientForm.primary_phone" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                                     </div>
                                     <div>
                                         <label class="block text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">Secondary Phone</label>
-                                        <input type="text" wire:model="clientForm.secondary_phone" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                                        <input id="fld-client-secondary_phone" type="text" wire:model="clientForm.secondary_phone" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                                     </div>
                                 </div>
                                 <div>
                                     <label class="block text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">Mailing Address</label>
-                                    <input type="text" wire:model="clientForm.mailing_address" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                                    <input id="fld-client-mailing_address" type="text" wire:model="clientForm.mailing_address" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                                 </div>
                                 <div>
                                     <label class="block text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">City / State / Zip</label>
-                                    <input type="text" wire:model="clientForm.city_state_zip" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                                    <input id="fld-client-city_state_zip" type="text" wire:model="clientForm.city_state_zip" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                                 </div>
                                 <div>
                                     <label class="block text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">Status</label>
-                                    <select wire:model="clientForm.status" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                                    <select id="fld-client-status" wire:model="clientForm.status" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                                         <option value="charged">Charged</option>
                                         <option value="chargeback">Chargeback</option>
                                         <option value="chargeback_won">Chargeback Won</option>
@@ -259,7 +259,7 @@
                                 </div>
                                 <div>
                                     <label class="block text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">Assigned Admin</label>
-                                    <select wire:model="clientForm.assigned_admin" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                                    <select id="fld-client-assigned_admin" wire:model="clientForm.assigned_admin" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                                         <option value="">-- None --</option>
                                         @foreach($users->filter(fn($u) => in_array($u->role, ['master_admin', 'admin'])) as $u)
                                             <option value="{{ $u->id }}">{{ $u->name }}</option>
@@ -268,7 +268,7 @@
                                 </div>
                                 <div>
                                     <label class="block text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">Notes</label>
-                                    <textarea wire:model="clientForm.notes" rows="3" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400"></textarea>
+                                    <textarea id="fld-client-notes" wire:model="clientForm.notes" rows="3" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400"></textarea>
                                 </div>
                             </div>
 
@@ -327,79 +327,79 @@
                             <div class="space-y-3">
                                 <div>
                                     <label class="block text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">Fee ($)</label>
-                                    <input type="number" step="0.01" wire:model="dealSheetForm.fee" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                                    <input id="fld-ds-fee" type="number" step="0.01" wire:model="dealSheetForm.fee" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                                 </div>
                                 <div>
                                     <label class="block text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">Resort Name</label>
-                                    <input type="text" wire:model="dealSheetForm.resort_name" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                                    <input id="fld-ds-resort_name" type="text" wire:model="dealSheetForm.resort_name" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                                 </div>
                                 <div>
                                     <label class="block text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">Resort City/State</label>
-                                    <input type="text" wire:model="dealSheetForm.resort_city_state" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                                    <input id="fld-ds-resort_city_state" type="text" wire:model="dealSheetForm.resort_city_state" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                                 </div>
                                 <div class="grid grid-cols-2 gap-2">
                                     <div>
                                         <label class="block text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">Weeks</label>
-                                        <input type="text" wire:model="dealSheetForm.weeks" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                                        <input id="fld-ds-weeks" type="text" wire:model="dealSheetForm.weeks" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                                     </div>
                                     <div>
                                         <label class="block text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">Bed/Bath</label>
-                                        <input type="text" wire:model="dealSheetForm.bed_bath" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                                        <input id="fld-ds-bed_bath" type="text" wire:model="dealSheetForm.bed_bath" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-2 gap-2">
                                     <div>
                                         <label class="block text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">Usage</label>
-                                        <input type="text" wire:model="dealSheetForm.usage" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                                        <input id="fld-ds-usage" type="text" wire:model="dealSheetForm.usage" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                                     </div>
                                     <div>
                                         <label class="block text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">Exchange Group</label>
-                                        <input type="text" wire:model="dealSheetForm.exchange_group" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                                        <input id="fld-ds-exchange_group" type="text" wire:model="dealSheetForm.exchange_group" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-2 gap-2">
                                     <div>
                                         <label class="block text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">Asking Rental</label>
-                                        <input type="text" wire:model="dealSheetForm.asking_rental" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                                        <input id="fld-ds-asking_rental" type="text" wire:model="dealSheetForm.asking_rental" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                                     </div>
                                     <div>
                                         <label class="block text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">Asking Sale Price</label>
-                                        <input type="text" wire:model="dealSheetForm.asking_sale_price" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                                        <input id="fld-ds-asking_sale_price" type="text" wire:model="dealSheetForm.asking_sale_price" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                                     </div>
                                 </div>
                                 <div>
                                     <label class="block text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">Using Timeshare</label>
-                                    <input type="text" wire:model="dealSheetForm.using_timeshare" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                                    <input id="fld-ds-using_timeshare" type="text" wire:model="dealSheetForm.using_timeshare" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                                 </div>
                                 <div>
                                     <label class="block text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">Looking to Get Out</label>
-                                    <input type="text" wire:model="dealSheetForm.looking_to_get_out" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                                    <input id="fld-ds-looking_to_get_out" type="text" wire:model="dealSheetForm.looking_to_get_out" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                                 </div>
                                 <div>
                                     <label class="block text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">Verification #</label>
-                                    <input type="text" wire:model="dealSheetForm.verification_num" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                                    <input id="fld-ds-verification_num" type="text" wire:model="dealSheetForm.verification_num" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                                 </div>
                                 <div class="grid grid-cols-2 gap-2">
                                     <div>
                                         <label class="block text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">Was VD</label>
-                                        <select wire:model="dealSheetForm.was_vd" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                                        <select id="fld-ds-was_vd" wire:model="dealSheetForm.was_vd" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                                             <option value="No">No</option>
                                             <option value="Yes">Yes</option>
                                         </select>
                                     </div>
                                     <div>
                                         <label class="block text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">SNR</label>
-                                        <input type="text" wire:model="dealSheetForm.snr" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                                        <input id="fld-ds-snr" type="text" wire:model="dealSheetForm.snr" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                                     </div>
                                 </div>
                                 <div>
                                     <label class="block text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">Merchant</label>
-                                    <input type="text" wire:model="dealSheetForm.merchant" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                                    <input id="fld-ds-merchant" type="text" wire:model="dealSheetForm.merchant" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                                 </div>
                                 <div class="grid grid-cols-2 gap-2">
                                     <div>
                                         <label class="block text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">Fronter</label>
-                                        <select wire:model="dealSheetForm.fronter" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                                        <select id="fld-ds-fronter" wire:model="dealSheetForm.fronter" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                                             <option value="">-- None --</option>
                                             @foreach($users as $u)
                                                 <option value="{{ $u->id }}">{{ $u->name }}</option>
@@ -408,7 +408,7 @@
                                     </div>
                                     <div>
                                         <label class="block text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">Closer</label>
-                                        <select wire:model="dealSheetForm.closer" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                                        <select id="fld-ds-closer" wire:model="dealSheetForm.closer" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                                             <option value="">-- None --</option>
                                             @foreach($users as $u)
                                                 <option value="{{ $u->id }}">{{ $u->name }}</option>
@@ -458,15 +458,15 @@
                             <div class="space-y-3">
                                 <div>
                                     <label class="block text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">Bank Name</label>
-                                    <input type="text" wire:model="bankingForm.bank" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                                    <input id="fld-bank-bank" type="text" wire:model="bankingForm.bank" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                                 </div>
                                 <div>
                                     <label class="block text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">Bank 2</label>
-                                    <input type="text" wire:model="bankingForm.bank2" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                                    <input id="fld-bank-bank2" type="text" wire:model="bankingForm.bank2" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                                 </div>
                                 <div>
                                     <label class="block text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">Billing Address</label>
-                                    <input type="text" wire:model="bankingForm.billing_address" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                                    <input id="fld-bank-billing_address" type="text" wire:model="bankingForm.billing_address" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                                 </div>
                             </div>
 
@@ -553,26 +553,26 @@
 
                                 <div>
                                     <label class="block text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">Name on Card</label>
-                                    <input type="text" wire:model="paymentForm.name_on_card" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                                    <input id="fld-pay-name_on_card" type="text" wire:model="paymentForm.name_on_card" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                                 </div>
                                 <div class="grid grid-cols-2 gap-2">
                                     <div>
                                         <label class="block text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">Card Type</label>
-                                        <input type="text" wire:model="paymentForm.card_type" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                                        <input id="fld-pay-card_type" type="text" wire:model="paymentForm.card_type" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                                     </div>
                                     <div>
                                         <label class="block text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">Card Brand</label>
-                                        <input type="text" wire:model="paymentForm.card_brand" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                                        <input id="fld-pay-card_brand" type="text" wire:model="paymentForm.card_brand" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-2 gap-2">
                                     <div>
                                         <label class="block text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">Exp Date</label>
-                                        <input type="text" wire:model="paymentForm.exp_date" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400" placeholder="MM/YY">
+                                        <input id="fld-pay-exp_date" type="text" wire:model="paymentForm.exp_date" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400" placeholder="MM/YY">
                                     </div>
                                     <div>
                                         <label class="block text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">Exp Date 2</label>
-                                        <input type="text" wire:model="paymentForm.exp_date2" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400" placeholder="MM/YY">
+                                        <input id="fld-pay-exp_date2" type="text" wire:model="paymentForm.exp_date2" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400" placeholder="MM/YY">
                                     </div>
                                 </div>
                             </div>
