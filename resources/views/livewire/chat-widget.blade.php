@@ -51,8 +51,23 @@
         {{-- Header --}}
         <div class="flex flex-shrink-0 cursor-grab items-center gap-2 border-b border-crm-border bg-crm-surface px-4 py-3 active:cursor-grabbing select-none" @mousedown="startDrag($event)">
             @if($selectedChat && $activeChat)
-                <button wire:click="clearChat" class="mr-1 flex h-6 w-6 items-center justify-center rounded text-crm-t3 hover:bg-crm-hover hover:text-crm-t1 transition text-sm">←</button>
+                <button wire:click="clearChat" class="mr-1 flex h-6 w-6 items-center justify-center rounded text-crm-t3 hover:bg-crm-hover hover:text-crm-t1 transition text-sm">&larr;</button>
                 <span class="flex-1 text-sm font-bold truncate">{{ $activeChat->name ?? 'Chat' }}</span>
+                {{-- DM Call Buttons --}}
+                @if($activeChat->type === 'dm')
+                    @if(isset($activeDirectCall) && $activeDirectCall)
+                        <a href="/video-call/{{ $activeDirectCall->uuid }}" class="flex items-center gap-1 px-2 py-1 text-[9px] font-bold text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 transition">
+                            <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span> Join
+                        </a>
+                    @else
+                        <button wire:click="startDirectCall" class="flex h-6 w-6 items-center justify-center rounded text-blue-600 bg-blue-50 hover:bg-blue-100 transition" title="Video call">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                        </button>
+                        <button wire:click="startDirectAudioCall" class="flex h-6 w-6 items-center justify-center rounded text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition" title="Audio call">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                        </button>
+                    @endif
+                @endif
             @else
                 <span class="text-base">💬</span>
                 <h4 class="flex-1 text-sm font-bold">Chat</h4>

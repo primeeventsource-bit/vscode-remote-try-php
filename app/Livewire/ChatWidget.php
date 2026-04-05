@@ -83,6 +83,34 @@ class ChatWidget extends Component
         $this->messageInput = '';
     }
 
+    public function startDirectCall(): void
+    {
+        if (!$this->selectedChat) return;
+        $chat = Chat::find($this->selectedChat);
+        if (!$chat || $chat->type !== 'dm') return;
+        try {
+            $room = \App\Services\VideoCall\VideoRoomService::createOrReuseDirectRoom($chat, auth()->user());
+            if ($room) {
+                \App\Services\VideoCall\VideoRoomService::joinRoom($room, auth()->user());
+                $this->redirect('/video-call/' . $room->uuid);
+            }
+        } catch (\Throwable $e) { report($e); }
+    }
+
+    public function startDirectAudioCall(): void
+    {
+        if (!$this->selectedChat) return;
+        $chat = Chat::find($this->selectedChat);
+        if (!$chat || $chat->type !== 'dm') return;
+        try {
+            $room = \App\Services\VideoCall\VideoRoomService::createOrReuseDirectRoom($chat, auth()->user(), 'audio');
+            if ($room) {
+                \App\Services\VideoCall\VideoRoomService::joinRoom($room, auth()->user());
+                $this->redirect('/video-call/' . $room->uuid);
+            }
+        } catch (\Throwable $e) { report($e); }
+    }
+
     public function toggleNewChatForm(): void
     {
         $this->showNewChatForm = !$this->showNewChatForm;
@@ -461,10 +489,18 @@ class ChatWidget extends Component
             }
         }
 
+        // Check for active direct call on current DM
+        $activeDirectCall = null;
+        if ($activeChat && $activeChat->type === 'dm') {
+            try {
+                $activeDirectCall = \App\Services\VideoCall\VideoRoomService::getActiveDirectRoom($activeChat->id);
+            } catch (\Throwable $e) {}
+        }
+
         return view('livewire.chat-widget', compact(
             'chats', 'messages', 'activeChat', 'users',
             'gifPickerSettings', 'canUseGifPicker', 'currentUserId', 'unreadCounts', 'adminUsers',
-            'searchResults', 'searchMessageResults', 'isSearching'
+            'searchResults', 'searchMessageResults', 'isSearching', 'activeDirectCall'
         ));
     }
 }
