@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? 'Prime CRM' }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -190,34 +191,54 @@
     (function() {
         let lastActivity = Date.now();
         const HEARTBEAT_MS = 30000;
-        const IDLE_MS = 300000; // 5 min
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+        const IDLE_MS = 300000;
+        let heartbeatStopped = false;
 
-        // Track activity
+        function getCsrf() {
+            return document.querySelector('meta[name="csrf-token"]')?.content || '';
+        }
+
         ['mousemove','mousedown','keydown','scroll','touchstart'].forEach(evt => {
             document.addEventListener(evt, () => { lastActivity = Date.now(); }, { passive: true, capture: true });
         });
         document.addEventListener('visibilitychange', () => { if (!document.hidden) lastActivity = Date.now(); });
 
-        // Send heartbeat
         function sendHeartbeat() {
+            if (heartbeatStopped) return;
             const isActive = (Date.now() - lastActivity) < IDLE_MS;
             fetch('/presence/heartbeat', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken || '' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': getCsrf(),
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                },
+                credentials: 'same-origin',
                 body: JSON.stringify({ active: isActive }),
                 keepalive: true
+            }).then(r => {
+                if (r.status === 419) {
+                    // CSRF expired or session gone — stop spamming, reload will fix it
+                    heartbeatStopped = true;
+                    console.warn('Heartbeat stopped: session expired (419)');
+                }
             }).catch(() => {});
         }
 
-        sendHeartbeat(); // immediate on load
+        sendHeartbeat();
         setInterval(sendHeartbeat, HEARTBEAT_MS);
 
-        // Attempt offline on unload
         window.addEventListener('beforeunload', () => {
+            if (heartbeatStopped) return;
             fetch('/presence/heartbeat', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken || '' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': getCsrf(),
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin',
                 body: JSON.stringify({ active: false }),
                 keepalive: true
             }).catch(() => {});

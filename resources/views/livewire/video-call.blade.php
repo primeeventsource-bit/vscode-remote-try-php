@@ -55,6 +55,9 @@
                 </div>
             </div>
 
+            {{-- Media error banner --}}
+            <div x-show="mediaError" x-cloak class="mx-4 mt-2 px-3 py-2 bg-amber-900/80 text-amber-200 text-xs rounded-lg" x-text="mediaError"></div>
+
             {{-- Video grid --}}
             <div class="p-4">
                 <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3" id="video-grid">
@@ -273,19 +276,75 @@ function videoCallApp() {
         userId: @json(auth()->id()),
         pollInterval: null,
 
+        mediaError: '',
+
         async init() {
+            await this.initMedia();
+            this.pollInterval = setInterval(() => this.pollForSignals(), 2000);
+        },
+
+        async initMedia() {
+            this.mediaError = '';
+
+            // Step 1: Check what devices are available
+            let hasVideo = false, hasAudio = false;
             try {
-                this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                const localVideo = document.getElementById('local-video');
-                if (localVideo) localVideo.srcObject = this.localStream;
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                hasVideo = devices.some(d => d.kind === 'videoinput');
+                hasAudio = devices.some(d => d.kind === 'audioinput');
             } catch (e) {
-                console.warn('Camera/mic permission denied:', e.message);
-                this.cameraOn = false;
-                this.micOn = false;
+                console.warn('enumerateDevices failed:', e.message);
             }
 
-            // Start polling for signals every 2 seconds
-            this.pollInterval = setInterval(() => this.pollForSignals(), 2000);
+            // Step 2: Try full video+audio
+            if (hasVideo && hasAudio) {
+                try {
+                    this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                    this.attachLocalStream();
+                    return;
+                } catch (e) {
+                    console.warn('Full media failed:', e.name, e.message);
+                }
+            }
+
+            // Step 3: Try audio-only
+            if (hasAudio) {
+                try {
+                    this.localStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+                    this.cameraOn = false;
+                    this.mediaError = 'No camera found — audio only';
+                    this.attachLocalStream();
+                    return;
+                } catch (e) {
+                    console.warn('Audio-only failed:', e.name, e.message);
+                }
+            }
+
+            // Step 4: Try video-only
+            if (hasVideo) {
+                try {
+                    this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                    this.micOn = false;
+                    this.mediaError = 'No microphone found — video only';
+                    this.attachLocalStream();
+                    return;
+                } catch (e) {
+                    console.warn('Video-only failed:', e.name, e.message);
+                }
+            }
+
+            // Step 5: Nothing works
+            this.cameraOn = false;
+            this.micOn = false;
+            this.mediaError = !hasVideo && !hasAudio
+                ? 'No camera or microphone found on this device'
+                : 'Camera/mic permission denied — you can still see and hear others';
+            console.warn('Media init: no devices available or all attempts failed');
+        },
+
+        attachLocalStream() {
+            const localVideo = document.getElementById('local-video');
+            if (localVideo && this.localStream) localVideo.srcObject = this.localStream;
         },
 
         toggleMic() {
