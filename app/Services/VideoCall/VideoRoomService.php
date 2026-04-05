@@ -135,7 +135,7 @@ class VideoRoomService
     /**
      * Create or reuse a direct 1-on-1 video room from a DM chat thread.
      */
-    public static function createOrReuseDirectRoom(\App\Models\Chat $chat, User $initiator): ?VideoRoom
+    public static function createOrReuseDirectRoom(\App\Models\Chat $chat, User $initiator, string $mediaMode = 'video'): ?VideoRoom
     {
         // Must be a DM thread
         if ($chat->type !== 'dm') return null;
@@ -158,8 +158,9 @@ class VideoRoomService
             $otherUserId = collect($memberIds)->first(fn($id) => $id !== $initiator->id);
             $otherUser = User::find($otherUserId);
 
+            $callLabel = $mediaMode === 'audio' ? 'Audio call' : 'Video call';
             $room = VideoRoom::create([
-                'name' => 'Call with ' . ($otherUser->name ?? 'User'),
+                'name' => $callLabel . ' with ' . ($otherUser->name ?? 'User'),
                 'created_by' => $initiator->id,
                 'type' => 'direct',
                 'chat_id' => $chat->id,

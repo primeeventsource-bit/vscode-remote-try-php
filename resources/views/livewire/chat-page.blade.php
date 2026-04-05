@@ -165,17 +165,22 @@
                 <span class="text-[10px] text-crm-t3">
                     {{ count($memberIds) }} member{{ count($memberIds) !== 1 ? 's' : '' }}
                 </span>
-                {{-- Direct Video Call button (DM only) --}}
+                {{-- Direct Call buttons (DM only) --}}
                 @if($activeChat->type === 'dm')
-                    @if($activeDirectCall)
-                        <a href="{{ route('video-call', ['room' => $activeDirectCall->uuid]) }}" class="ml-auto flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 transition" title="Join active call">
-                            <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span> Join Call
-                        </a>
-                    @else
-                        <button wire:click="startDirectCall" class="ml-auto flex h-7 w-7 items-center justify-center rounded-lg text-crm-t3 hover:bg-blue-50 hover:text-blue-600 transition" title="Start video call">
-                            <span class="text-sm">📹</span>
-                        </button>
-                    @endif
+                    <div class="ml-auto flex items-center gap-1">
+                        @if($activeDirectCall)
+                            <a href="{{ route('video-call', ['room' => $activeDirectCall->uuid]) }}" class="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 transition" title="Join active call">
+                                <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span> Join Call
+                            </a>
+                        @else
+                            <button wire:click="startDirectCall" class="flex h-8 w-8 items-center justify-center rounded-lg text-blue-600 bg-blue-50 hover:bg-blue-100 transition" title="Video call">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                            </button>
+                            <button wire:click="startDirectAudioCall" class="flex h-8 w-8 items-center justify-center rounded-lg text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition" title="Audio call">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                            </button>
+                        @endif
+                    </div>
                 @endif
                 <button wire:click="toggleInfoPanel" class="{{ $activeChat->type !== 'dm' ? 'ml-auto' : '' }} flex h-7 w-7 items-center justify-center rounded-lg text-crm-t3 hover:bg-crm-hover hover:text-crm-t1 transition" title="Conversation info">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
