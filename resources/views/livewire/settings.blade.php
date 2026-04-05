@@ -26,6 +26,7 @@
                 'spreadsheets' => 'Spreadsheet Settings',
                 'integrations' => 'Integrations',
                 'calling' => 'Calling / Dialer',
+                'video_call_settings' => 'Video Calls',
                 'avatar_settings' => 'Avatars & Profiles',
                 'task_settings' => 'Automatic Tasks',
                 'transfers' => 'Transfers',
@@ -504,6 +505,33 @@
 
                     <button wire:click="saveDialerSettings" class="px-5 py-2.5 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow transition">Save Dialer Settings</button>
                 </div>
+            @endif
+
+            {{-- ═══ VIDEO CALL SETTINGS ═══ --}}
+            @if($section === 'video_call_settings' && $isMaster)
+                <h3 class="text-sm font-semibold mb-3">Video Call Settings</h3>
+                <p class="text-xs text-crm-t3 mb-4">Control internal group video call behavior and permissions.</p>
+                <div class="space-y-3">
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-vc-enable" type="checkbox" wire:model="videoCallSettings.enable_group_video_calls"> Enable Group Video Calls</label>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-vc-adminonly" type="checkbox" wire:model="videoCallSettings.only_admin_can_create_group_calls"> Only Admin Can Create Group Calls</label>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-vc-ma" type="checkbox" wire:model="videoCallSettings.allow_master_admin_create_group_calls"> Allow Master Admin Create</label>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-vc-admin" type="checkbox" wire:model="videoCallSettings.allow_admin_create_group_calls"> Allow Admin Create</label>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-vc-agents" type="checkbox" wire:model="videoCallSettings.allow_agents_create_group_calls"> Allow Agents Create (default: off)</label>
+                    <div class="border-t border-crm-border pt-3 mt-3">
+                        <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mb-2">Agent Picker</div>
+                        <label class="flex items-center gap-2 text-sm"><input id="fld-vc-addall" type="checkbox" wire:model="videoCallSettings.group_call_add_all_agents_enabled"> Enable "Add All Agents" Button</label>
+                        <label class="flex items-center gap-2 text-sm mt-1"><input id="fld-vc-search" type="checkbox" wire:model="videoCallSettings.group_call_search_agents_enabled"> Enable Agent Search</label>
+                        <label class="flex items-center gap-2 text-sm mt-1"><input id="fld-vc-exbusy" type="checkbox" wire:model="videoCallSettings.exclude_busy_agents_from_add_all"> Exclude Busy Agents from Add All</label>
+                        <label class="flex items-center gap-2 text-sm mt-1"><input id="fld-vc-exoff" type="checkbox" wire:model="videoCallSettings.exclude_offline_agents_from_add_all"> Exclude Offline Agents from Add All</label>
+                        <label class="flex items-center gap-2 text-sm mt-1"><input id="fld-vc-status" type="checkbox" wire:model="videoCallSettings.show_agent_status_in_picker"> Show Agent Status in Picker</label>
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Max Group Call Participants</label>
+                        <input id="fld-vc-maxpart" type="number" wire:model="videoCallSettings.max_group_call_participants" min="2" max="50" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                    </div>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-vc-forceend" type="checkbox" wire:model="videoCallSettings.allow_admin_force_end_group_call"> Allow Admin Force End Group Call</label>
+                </div>
+                <div class="mt-4 text-right"><button wire:click="saveVideoCallSettings" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">Save Video Call Settings</button></div>
             @endif
 
             {{-- ═══ AVATAR & PROFILE SETTINGS ═══ --}}

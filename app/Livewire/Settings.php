@@ -202,6 +202,22 @@ class Settings extends Component
         'charged_green_task_assignee_mode' => 'admin_only',
     ];
 
+    // ── Video Call Settings ─────────────────────────────────
+    public array $videoCallSettings = [
+        'enable_group_video_calls' => true,
+        'only_admin_can_create_group_calls' => true,
+        'allow_master_admin_create_group_calls' => true,
+        'allow_admin_create_group_calls' => true,
+        'allow_agents_create_group_calls' => false,
+        'group_call_add_all_agents_enabled' => true,
+        'group_call_search_agents_enabled' => true,
+        'exclude_busy_agents_from_add_all' => false,
+        'exclude_offline_agents_from_add_all' => false,
+        'max_group_call_participants' => 20,
+        'show_agent_status_in_picker' => true,
+        'allow_admin_force_end_group_call' => true,
+    ];
+
     // ── Avatar Settings ─────────────────────────────────────
     public array $avatarSettings = [
         'user_avatar_uploads_enabled' => true,
@@ -292,6 +308,7 @@ class Settings extends Component
         $this->documentModuleSettings = $this->loadSettingsGroup('documents', $this->documentModuleSettings);
         $this->spreadsheetModuleSettings = $this->loadSettingsGroup('spreadsheets', $this->spreadsheetModuleSettings);
         $this->dialerSettings = $this->loadSettingsGroup('dialer', $this->dialerSettings);
+        $this->videoCallSettings = $this->loadSettingsGroup('video_call', $this->videoCallSettings);
         $this->avatarSettings = $this->loadSettingsGroup('avatar', $this->avatarSettings);
         $this->taskSettings = $this->loadSettingsGroup('tasks', $this->taskSettings);
         $this->transferSettings = $this->loadSettingsGroup('transfer', $this->transferSettings);
@@ -619,6 +636,13 @@ class Settings extends Component
 
         $row->update(['active' => !$row->active]);
         $this->loadMerchantIntegrationData();
+    }
+
+    public function saveVideoCallSettings(): void
+    {
+        if (!auth()->user()?->hasRole('master_admin')) return;
+        $this->saveSettingsGroup('video_call', $this->videoCallSettings);
+        session()->flash('success', 'Video call settings saved.');
     }
 
     public function saveAvatarSettings(): void

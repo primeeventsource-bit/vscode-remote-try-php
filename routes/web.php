@@ -28,6 +28,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/chat', \App\Livewire\ChatPage::class)->name('chat');
     Route::get('/documents', \App\Livewire\Documents::class)->name('documents');
     Route::get('/spreadsheets', \App\Livewire\Spreadsheets::class)->name('spreadsheets');
+    Route::get('/video-call/{room?}', \App\Livewire\VideoCall::class)->name('video-call');
 
     Route::post('/logout', function () {
         Auth::logout();
