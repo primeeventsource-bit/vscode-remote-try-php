@@ -9,14 +9,19 @@ use App\Services\PipelineStateService;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 #[Layout('components.layouts.app')]
 #[Title('Verification')]
 class Verification extends Component
 {
-    use SendsTransferDm;
+    use SendsTransferDm, WithPagination;
     public string $tab = 'pending';
+    public int $perPage = 25;
     public ?int $selectedDeal = null;
+
+    public function updatedTab() { $this->resetPage(); }
+    public function updatedPerPage() { $this->resetPage(); }
     public string $noteInput = '';
 
     public function selectDeal($id) { $this->selectedDeal = $this->selectedDeal === $id ? null : $id; }
@@ -120,14 +125,16 @@ class Verification extends Component
         if (!$user->hasRole('master_admin') && $isAdmin) $base->where('assigned_admin', $user->id);
         if ($user->role === 'closer') $base->where('closer', $user->id);
 
-        $tabs = ['pending' => 'pending_admin', 'verifying' => 'in_verification', 'charged' => 'charged', 'chargeback' => 'chargeback', 'cancelled' => 'cancelled'];
+        $tabs = ['pending' => 'pending_admin', 'verifying' => 'in_verification', 'charged' => 'charged', 'chargeback' => 'chargeback', 'cb' => 'chargeback', 'cancelled' => 'cancelled'];
         $query = clone $base;
         if ($this->tab !== 'all' && isset($tabs[$this->tab])) $query->where('status', $tabs[$this->tab]);
-        $deals = $query->get();
+        $deals = $query->paginate($this->perPage);
 
+        // Single aggregation query for all tab counts instead of N+1 count queries
+        $countRows = (clone $base)->selectRaw('status, COUNT(*) as cnt')->groupBy('status')->pluck('cnt', 'status');
         $counts = [];
-        foreach ($tabs as $k => $v) { $counts[$k] = (clone $base)->where('status', $v)->count(); }
-        $counts['all'] = (clone $base)->count();
+        foreach ($tabs as $k => $v) { $counts[$k] = $countRows->get($v, 0); }
+        $counts['all'] = $countRows->sum();
 
         $users = User::all()->keyBy('id');
         $activeDeal = $this->selectedDeal ? Deal::find($this->selectedDeal) : null;

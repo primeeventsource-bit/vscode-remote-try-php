@@ -13,13 +13,15 @@ use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 #[Layout('components.layouts.app')]
 #[Title('Deals')]
 class Deals extends Component
 {
-    use SendsTransferDm;
+    use SendsTransferDm, WithPagination;
     public string $statusFilter = 'all';
+    public int $perPage = 25;
     public ?int $selectedDeal = null;
     public bool $showModal = false;
     public bool $showNewDeal = false;
@@ -41,6 +43,9 @@ class Deals extends Component
     public ?int $sendNoteToChatNoteId = null;
     public string $sendNoteToChatRecipientId = '';
     public string $sendNoteToChatMessage = '';
+
+    public function updatedStatusFilter() { $this->resetPage(); }
+    public function updatedPerPage() { $this->resetPage(); }
 
     public function mount() { $this->resetForm(); }
 
@@ -520,7 +525,7 @@ class Deals extends Component
             ];
             $query->where('status', $statusMap[$this->statusFilter] ?? $this->statusFilter);
         }
-        $deals = $query->get();
+        $deals = $query->paginate($this->perPage);
         $users = User::all()->keyBy('id');
         $active = $this->selectedDeal ? Deal::find($this->selectedDeal) : null;
         $dealStatuses = [

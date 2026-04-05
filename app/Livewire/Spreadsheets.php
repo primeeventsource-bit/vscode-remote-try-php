@@ -13,15 +13,21 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithFileUploads;
+use Livewire\WithPagination;
 
 #[Layout('components.layouts.app')]
 #[Title('Spreadsheets')]
 class Spreadsheets extends Component
 {
-    use WithFileUploads;
+    use WithFileUploads, WithPagination;
 
     public string $search = '';
     public string $tab = 'all';
+    public int $perPage = 25;
+
+    public function updatedSearch() { $this->resetPage(); }
+    public function updatedTab() { $this->resetPage(); }
+    public function updatedPerPage() { $this->resetPage(); }
     public ?int $editingId = null;
     public string $editTitle = '';
     public array $editData = [];
@@ -291,7 +297,7 @@ class Spreadsheets extends Component
         if ($this->tab === 'my') $query->where('owner_id', $user->id);
         elseif ($this->tab === 'shared') $query->whereHas('permissions', fn($q) => $q->where('user_id', $user->id));
         elseif ($this->tab === 'recent') $query->where('updated_at', '>=', now()->subDays(7));
-        $sheets = $query->limit(100)->get();
+        $sheets = $query->paginate($this->perPage);
         $users = User::all();
         $canEdit = $this->canEdit();
         return view('livewire.spreadsheets', compact('sheets', 'users', 'canEdit'));

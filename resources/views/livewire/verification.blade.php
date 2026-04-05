@@ -16,12 +16,12 @@
         ] as $key => $label)
             @php
                 $count = match($key) {
-                    'pending' => $deals->where('status', 'pending_admin')->count() + $deals->whereNull('status')->count(),
-                    'verifying' => $deals->where('status', 'in_verification')->count(),
-                    'charged' => $deals->where('charged', 'yes')->where('charged_back', '!=', 'yes')->count(),
-                    'cb' => $deals->where('charged_back', 'yes')->count(),
-                    'cancelled' => $deals->where('status', 'cancelled')->count(),
-                    'all' => $deals->count(),
+                    'pending' => $counts['pending'] ?? 0,
+                    'verifying' => $counts['verifying'] ?? 0,
+                    'charged' => $counts['charged'] ?? 0,
+                    'cb' => $counts['chargeback'] ?? 0,
+                    'cancelled' => $counts['cancelled'] ?? 0,
+                    'all' => $counts['all'] ?? 0,
                 };
             @endphp
             <button wire:click="$set('tab', '{{ $key }}')"
@@ -52,17 +52,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @php
-                            $filtered = match($tab) {
-                                'pending' => $deals->filter(fn($d) => $d->status === 'pending_admin' || !$d->status),
-                                'verifying' => $deals->where('status', 'in_verification'),
-                                'charged' => $deals->where('charged', 'yes')->where('charged_back', '!=', 'yes'),
-                                'cb' => $deals->where('charged_back', 'yes'),
-                                'cancelled' => $deals->where('status', 'cancelled'),
-                                default => $deals,
-                            };
-                        @endphp
-                        @forelse($filtered as $deal)
+                        @forelse($deals as $deal)
                             <tr wire:click="selectDeal({{ $deal->id }})" class="border-b border-crm-border cursor-pointer transition {{ ($selectedDeal && $selectedDeal === $deal->id) ? 'bg-blue-50' : 'hover:bg-crm-hover' }}">
                                 <td class="px-3 py-2.5">
                                     @php
@@ -124,6 +114,21 @@
                         @endforelse
                     </tbody>
                 </table>
+            </div>
+
+            {{-- Pagination --}}
+            <div class="mt-3 flex items-center justify-between px-4">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-crm-t3">Show</span>
+                    <select wire:model.live="perPage" class="px-2 py-1 text-xs bg-white border border-crm-border rounded-lg focus:outline-none">
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                    <span class="text-xs text-crm-t3">per page</span>
+                </div>
+                <div>{{ $deals->links() }}</div>
             </div>
         </div>
 

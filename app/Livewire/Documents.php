@@ -13,15 +13,21 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithFileUploads;
+use Livewire\WithPagination;
 
 #[Layout('components.layouts.app')]
 #[Title('Documents')]
 class Documents extends Component
 {
-    use WithFileUploads;
+    use WithFileUploads, WithPagination;
 
     public string $search = '';
     public string $tab = 'all'; // all, my, shared, recent
+    public int $perPage = 25;
+
+    public function updatedSearch() { $this->resetPage(); }
+    public function updatedTab() { $this->resetPage(); }
+    public function updatedPerPage() { $this->resetPage(); }
     public ?int $editingId = null;
     public string $editTitle = '';
     public string $editContent = '';
@@ -223,7 +229,7 @@ class Documents extends Component
             $query->where('updated_at', '>=', now()->subDays(7));
         }
 
-        $documents = $query->limit(100)->get();
+        $documents = $query->paginate($this->perPage);
         $users = User::all();
         $canEdit = $this->canEdit();
 

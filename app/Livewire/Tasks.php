@@ -6,13 +6,20 @@ use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 #[Layout('components.layouts.app')]
 #[Title('Tasks')]
 class Tasks extends Component
 {
+    use WithPagination;
+
     public string $tab = 'my';
+    public int $perPage = 25;
     public ?int $selectedTask = null;
+
+    public function updatedTab() { $this->resetPage(); }
+    public function updatedPerPage() { $this->resetPage(); }
     public bool $showCreate = false;
     public string $newNote = '';
     public array $taskForm = ['title' => '', 'type' => 'notes', 'assigned_to' => '', 'client_name' => '', 'priority' => 'medium', 'due_date' => ''];
@@ -100,15 +107,28 @@ class Tasks extends Component
         elseif ($this->tab === 'completed') { if (!$isAdmin) $query->where('assigned_to', $user->id); $query->where('status', 'completed'); }
         else { if (!$isAdmin) $query->where('assigned_to', $user->id); }
 
-        $tasks = $query->orderBy('id', 'desc')->get()->map(fn($t) => (object) array_merge((array) $t, ['notes' => json_decode($t->notes ?? '[]', true)]));
+        $tasksPaginated = $query->orderBy('id', 'desc')->paginate($this->perPage);
+        // Transform paginated items to add decoded notes
+        $tasksPaginated->getCollection()->transform(fn($t) => (object) array_merge((array) $t, ['notes' => json_decode($t->notes ?? '[]', true)]));
+        $tasks = $tasksPaginated;
+
         $users = User::all()->keyBy('id');
         $activeTask = $this->selectedTask ? DB::table('tasks')->where('id', $this->selectedTask)->first() : null;
         if ($activeTask) $activeTask->notes = json_decode($activeTask->notes ?? '[]', true);
 
-        $myCt = DB::table('tasks')->where('assigned_to', $user->id)->where('status', 'open')->count();
-        $openCt = $isAdmin ? DB::table('tasks')->where('status', 'open')->count() : $myCt;
-        $completedCt = $isAdmin ? DB::table('tasks')->where('status', 'completed')->count() : DB::table('tasks')->where('assigned_to', $user->id)->where('status', 'completed')->count();
-        $allCt = $isAdmin ? DB::table('tasks')->count() : DB::table('tasks')->where('assigned_to', $user->id)->count();
+        // Single aggregation query for tab counts
+        $countBase = DB::table('tasks');
+        if (!$isAdmin) $countBase->where('assigned_to', $user->id);
+        $countRows = (clone $countBase)->selectRaw("
+            SUM(CASE WHEN assigned_to = ? AND status = 'open' THEN 1 ELSE 0 END) as my_ct,
+            SUM(CASE WHEN status = 'open' THEN 1 ELSE 0 END) as open_ct,
+            SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_ct,
+            COUNT(*) as all_ct
+        ", [$user->id])->first();
+        $myCt = (int) ($countRows->my_ct ?? 0);
+        $openCt = (int) ($countRows->open_ct ?? 0);
+        $completedCt = (int) ($countRows->completed_ct ?? 0);
+        $allCt = (int) ($countRows->all_ct ?? 0);
 
         return view('livewire.tasks', compact('tasks', 'users', 'activeTask', 'isAdmin', 'myCt', 'openCt', 'completedCt', 'allCt'));
     }

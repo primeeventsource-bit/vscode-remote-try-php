@@ -234,9 +234,15 @@ class Payroll extends Component
         $sunday = $monday->copy()->addDays(6);
         $weekLabel = $monday->format('M j') . ' - ' . $sunday->format('M j, Y');
 
-        // Get charged unfiled deals for live calculation
+        // Get charged unfiled deals — scoped to avoid loading all historical deals
         try {
-            $chargedDeals = Deal::where('charged', 'yes')->where('payroll_finalized', false)->get();
+            $chargedDeals = Deal::where('charged', 'yes')
+                ->where('payroll_finalized', false)
+                ->select(['id', 'owner_name', 'fee', 'closer', 'fronter', 'assigned_admin',
+                    'charged_back', 'was_vd', 'is_vd_deal', 'fronter_role',
+                    'closer_comm_amount', 'closer_net_pay', 'fronter_comm_amount',
+                    'snr_deduction', 'vd_deduction', 'charged_date', 'timestamp', 'status'])
+                ->get();
         } catch (\Throwable $e) {
             $chargedDeals = collect();
         }

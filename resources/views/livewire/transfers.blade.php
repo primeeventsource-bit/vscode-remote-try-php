@@ -87,6 +87,21 @@
                     </tbody>
                 </table>
             </div>
+
+            {{-- Pagination --}}
+            <div class="mt-3 flex items-center justify-between px-4">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-crm-t3">Show</span>
+                    <select wire:model.live="perPage" class="px-2 py-1 text-xs bg-white border border-crm-border rounded-lg focus:outline-none">
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                    <span class="text-xs text-crm-t3">per page</span>
+                </div>
+                <div>{{ $transfers->links() }}</div>
+            </div>
         </div>
 
         {{-- Side Detail Panel --}}

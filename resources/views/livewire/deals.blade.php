@@ -8,7 +8,7 @@
     <div class="flex items-center justify-between mb-5">
         <div>
             <h2 class="text-xl font-bold">Deals</h2>
-            <p class="text-xs text-crm-t3 mt-1">{{ $deals->count() }} deals</p>
+            <p class="text-xs text-crm-t3 mt-1">{{ $deals->total() }} deals · Page {{ $deals->currentPage() }} of {{ $deals->lastPage() }}</p>
         </div>
         @if($isAdmin)
             <button wire:click="$set('showNewDeal', true)" class="px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition">+ New Deal</button>
@@ -91,6 +91,21 @@
                     @endforelse
                 </tbody>
             </table>
+        </div>
+
+        {{-- Pagination --}}
+        <div class="mt-3 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <span class="text-xs text-crm-t3">Show</span>
+                <select wire:model.live="perPage" class="px-2 py-1 text-xs bg-white border border-crm-border rounded-lg focus:outline-none">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+                <span class="text-xs text-crm-t3">per page</span>
+            </div>
+            <div>{{ $deals->links() }}</div>
         </div>
     </div>
 

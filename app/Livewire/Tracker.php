@@ -25,7 +25,16 @@ class Tracker extends Component
         $weekLabel = $days->first()->format('M j') . ' - ' . $days->last()->format('M j, Y');
         $prevStart = $startDate->copy()->subWeek();
 
-        $charged = Deal::where('charged', 'yes')->where(fn($q) => $q->where('charged_back', '!=', 'yes')->orWhereNull('charged_back'))->get();
+        // Only load deals for the visible 2-week range (current + previous week) instead of ALL charged deals
+        $rangeStart = $prevStart->copy()->startOfDay();
+        $rangeEnd = $days->last()->copy()->endOfDay();
+        $charged = Deal::where('charged', 'yes')
+            ->where(fn($q) => $q->where('charged_back', '!=', 'yes')->orWhereNull('charged_back'))
+            ->where(function($q) use ($rangeStart, $rangeEnd) {
+                $q->whereBetween('charged_date', [$rangeStart, $rangeEnd])
+                  ->orWhereBetween('timestamp', [$rangeStart, $rangeEnd]);
+            })
+            ->get();
         $fronters = User::where('role', 'fronter')->get();
         $closers = User::where('role', 'closer')->get();
 

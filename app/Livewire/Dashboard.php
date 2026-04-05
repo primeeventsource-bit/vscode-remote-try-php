@@ -56,74 +56,90 @@ class Dashboard extends Component
         $now = now();
         $weekStart = $now->copy()->startOfWeek();
 
-        if ($isMaster || $isAdmin) {
-            // Admin/Master see company-wide deal stats
-            $deals      = Deal::all();
-            $totalLeads = Lead::count();
-            $assignedLeads = Lead::whereNotNull('assigned_to')->count();
-        } elseif ($isCloser) {
-            // Closer only sees their own deals
-            $deals      = Deal::where('closer', $user->id)->get();
-            $totalLeads = 0;
-            $assignedLeads = 0;
-        } elseif ($isFronter) {
-            // Fronter only sees leads they work
-            $deals      = collect();
-            $totalLeads = Lead::where('assigned_to', $user->id)->orWhere('original_fronter', $user->id)->count();
-            $assignedLeads = Lead::where('assigned_to', $user->id)->count();
-        } else {
-            $deals = collect();
-            $totalLeads = 0;
-            $assignedLeads = 0;
+        // ── DB aggregation instead of loading all deals into memory ──
+        $totalLeads = 0;
+        $assignedLeads = 0;
+
+        $dealScope = Deal::query();
+        if ($isCloser) {
+            $dealScope->where('closer', $user->id);
+        } elseif (!$isMaster && !$isAdmin) {
+            $dealScope->where('id', 0); // No deals for other roles
         }
 
-        $charged    = $deals->where('charged', 'yes')->where('charged_back', '!=', 'yes');
-        $chargebacks = $deals->where('charged_back', 'yes');
-        $pending    = $deals->where('charged', '!=', 'yes')->where('status', '!=', 'cancelled');
-        $cancelled  = $deals->where('status', 'cancelled');
+        if ($isFronter) {
+            $totalLeads = Lead::where('assigned_to', $user->id)->orWhere('original_fronter', $user->id)->count();
+            $assignedLeads = Lead::where('assigned_to', $user->id)->count();
+        } elseif ($isMaster || $isAdmin) {
+            $totalLeads = Lead::count();
+            $assignedLeads = Lead::whereNotNull('assigned_to')->count();
+        }
 
-        $totalRev = $charged->sum('fee');
-        $cbRev    = $chargebacks->sum('fee');
-        $pendRev  = $pending->sum('fee');
+        // Single aggregation query for deal stats
+        $stats = (clone $dealScope)->selectRaw("
+            SUM(CASE WHEN charged = 'yes' AND (charged_back != 'yes' OR charged_back IS NULL) THEN fee ELSE 0 END) as total_rev,
+            SUM(CASE WHEN charged_back = 'yes' THEN fee ELSE 0 END) as cb_rev,
+            SUM(CASE WHEN charged != 'yes' AND status != 'cancelled' THEN fee ELSE 0 END) as pend_rev,
+            SUM(CASE WHEN charged = 'yes' AND (charged_back != 'yes' OR charged_back IS NULL) THEN 1 ELSE 0 END) as charged_count,
+            SUM(CASE WHEN charged_back = 'yes' THEN 1 ELSE 0 END) as cb_count,
+            SUM(CASE WHEN charged != 'yes' AND status != 'cancelled' THEN 1 ELSE 0 END) as pending_count,
+            SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_count,
+            COUNT(*) as total_deals
+        ")->first();
 
-        $weekDeals   = $deals->filter(fn($d) => $d->timestamp && Carbon::parse($d->timestamp)->gte($weekStart));
-        $weekCharged = $weekDeals->where('charged', 'yes')->where('charged_back', '!=', 'yes');
-        $weekRev     = $weekCharged->sum('fee');
+        $totalRev = (float) ($stats->total_rev ?? 0);
+        $cbRev = (float) ($stats->cb_rev ?? 0);
+        $pendRev = (float) ($stats->pend_rev ?? 0);
+        $charged = (object) ['count' => fn() => (int) ($stats->charged_count ?? 0), 'sum' => fn($f) => $totalRev];
+        $chargebacks = (object) ['count' => fn() => (int) ($stats->cb_count ?? 0), 'sum' => fn($f) => $cbRev];
+        $pending = (object) ['count' => fn() => (int) ($stats->pending_count ?? 0), 'sum' => fn($f) => $pendRev];
+        $cancelled = (object) ['count' => fn() => (int) ($stats->cancelled_count ?? 0)];
+        $deals = (object) ['count' => fn() => (int) ($stats->total_deals ?? 0)];
 
-        // Monthly performance – last 6 months
+        // Week stats via DB
+        $weekStats = (clone $dealScope)->where('charged', 'yes')
+            ->where(function($q) { $q->where('charged_back', '!=', 'yes')->orWhereNull('charged_back'); })
+            ->where('timestamp', '>=', $weekStart)
+            ->selectRaw('SUM(fee) as rev, COUNT(*) as cnt')->first();
+        $weekRev = (float) ($weekStats->rev ?? 0);
+        $weekCharged = (object) ['count' => fn() => (int) ($weekStats->cnt ?? 0), 'sum' => fn($f) => $weekRev];
+        $weekDeals = (object) ['count' => fn() => (int) ($weekStats->cnt ?? 0)];
+
+        // Monthly performance via DB – last 6 months
         $monthlyData = collect();
         $monthlyChargebackData = collect();
         for ($i = 5; $i >= 0; $i--) {
             $month = $now->copy()->subMonths($i);
             $start = $month->copy()->startOfMonth();
-            $end   = $month->copy()->endOfMonth();
+            $end = $month->copy()->endOfMonth();
 
-            $monthCharged = $deals->filter(fn($d) =>
-                $d->timestamp && Carbon::parse($d->timestamp)->gte($start)
-                && Carbon::parse($d->timestamp)->lte($end)
-                && $d->charged === 'yes' && $d->charged_back !== 'yes'
-            );
-            $monthChargebacks = $deals->filter(fn($d) =>
-                $d->timestamp && Carbon::parse($d->timestamp)->gte($start)
-                && Carbon::parse($d->timestamp)->lte($end)
-                && $d->charged_back === 'yes'
-            );
+            $mStats = (clone $dealScope)->whereBetween('timestamp', [$start, $end])
+                ->selectRaw("
+                    SUM(CASE WHEN charged = 'yes' AND (charged_back != 'yes' OR charged_back IS NULL) THEN fee ELSE 0 END) as rev,
+                    SUM(CASE WHEN charged = 'yes' AND (charged_back != 'yes' OR charged_back IS NULL) THEN 1 ELSE 0 END) as cnt,
+                    SUM(CASE WHEN charged_back = 'yes' THEN fee ELSE 0 END) as cb_rev,
+                    SUM(CASE WHEN charged_back = 'yes' THEN 1 ELSE 0 END) as cb_cnt
+                ")->first();
 
-            $monthlyData->push(['label' => $month->format('M'), 'rev' => (float) $monthCharged->sum('fee'), 'count' => $monthCharged->count()]);
-            $monthlyChargebackData->push(['label' => $month->format('M'), 'rev' => (float) $monthChargebacks->sum('fee'), 'count' => $monthChargebacks->count()]);
+            $monthlyData->push(['label' => $month->format('M'), 'rev' => (float) ($mStats->rev ?? 0), 'count' => (int) ($mStats->cnt ?? 0)]);
+            $monthlyChargebackData->push(['label' => $month->format('M'), 'rev' => (float) ($mStats->cb_rev ?? 0), 'count' => (int) ($mStats->cb_cnt ?? 0)]);
         }
 
-        // Top closers only for master admin
+        // Top closers via DB aggregation
         $closers = collect();
         if ($isMaster) {
-            $allDeals = Deal::all();
-            $closers = User::where('role', 'closer')->get()->map(function ($u) use ($allDeals) {
-                $d = $allDeals->where('closer', $u->id)->where('charged', 'yes');
-                return ['user' => $u, 'count' => $d->count(), 'rev' => $d->sum('fee')];
-            })->sortByDesc('rev');
+            $closers = DB::table('deals')
+                ->join('users', 'deals.closer', '=', 'users.id')
+                ->where('deals.charged', 'yes')
+                ->where(function($q) { $q->where('deals.charged_back', '!=', 'yes')->orWhereNull('deals.charged_back'); })
+                ->selectRaw('users.id, users.name, users.color, users.avatar, COUNT(*) as count, SUM(deals.fee) as rev')
+                ->groupBy('users.id', 'users.name', 'users.color', 'users.avatar')
+                ->orderByDesc('rev')
+                ->get()
+                ->map(fn($r) => ['user' => (object) $r, 'count' => $r->count, 'rev' => (float) $r->rev]);
         }
 
-        $recentDeals = $deals->sortByDesc('id')->take(5);
+        $recentDeals = (clone $dealScope)->orderByDesc('id')->limit(5)->get();
 
         // Task widget — full task list for admin/master_admin
         $taskWidget = ['overdue' => 0, 'due_today' => 0, 'open' => 0, 'urgent' => 0];
