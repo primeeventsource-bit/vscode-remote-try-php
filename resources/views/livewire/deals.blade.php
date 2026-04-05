@@ -170,7 +170,7 @@
                         <div class="space-y-2">
                             <div>
                                 <label class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold">Target Closer</label>
-                                <select wire:model="transferToCloserId" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-indigo-400">
+                                <select id="fld-transferToCloserId" wire:model="transferToCloserId" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-indigo-400">
                                     <option value="">Select closer...</option>
                                     @foreach($users->filter(fn($u) => $u->role === 'closer' && $u->id !== auth()->id()) as $c)
                                         <option value="{{ $c->id }}">{{ $c->name }}</option>
@@ -179,7 +179,7 @@
                             </div>
                             <div>
                                 <label class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold">Transfer Note <span class="text-red-500">*</span></label>
-                                <textarea wire:model="transferNote" rows="2" placeholder="Why are you transferring this deal?" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-indigo-400"></textarea>
+                                <textarea id="fld-transferNote" wire:model="transferNote" rows="2" placeholder="Why are you transferring this deal?" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-indigo-400"></textarea>
                             </div>
                             <div class="flex items-center gap-2" x-data="{ get canTransfer() { return $wire.transferToCloserId && $wire.transferNote.trim().length > 0 } }">
                                 <button
