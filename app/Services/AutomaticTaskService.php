@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\Chat;
+use App\Models\Message;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -137,15 +140,107 @@ class AutomaticTaskService
         ]);
     }
 
-    // ── ADMIN-ONLY auto-tasks for Verified / Charged Green ──
+    // ══════════════════════════════════════════════════════════════
+    // CHARGED GREEN — FULFILLMENT TASK BATCH (ADMIN ONLY)
+    // ══════════════════════════════════════════════════════════════
 
     /**
-     * Auto-task when deal moves to Verified status.
-     * HARD RULE: assigned to admin ONLY.
+     * When a deal is charged green, create ALL fulfillment tasks
+     * and send a DM alert to the assigned admin.
+     *
+     * HARD RULE: All tasks assigned to admin ONLY.
+     *
+     * Tasks created:
+     * 1. Contact client to log in to app and website
+     * 2. Send offers in 60 days from charged date
+     * 3. Client needs to receive website clicks daily
+     * 4. Follow-up call in 3-5 days from charged date
      */
-    public static function onDealVerified(int $dealId, string $clientName, \App\Models\User $admin): void
+    public static function onDealChargedGreen(int $dealId, string $clientName, User $admin): void
     {
-        if (!self::isAdmin($admin)) return; // reject non-admin
+        if (!self::isAdmin($admin)) return;
+
+        $chargedDate = now();
+        $base = [
+            'created_by' => $admin->id,
+            'client_name' => $clientName,
+            'deal_id' => $dealId,
+            'auto_created' => true,
+            'related_type' => 'deal',
+            'related_id' => $dealId,
+        ];
+
+        // Task 1: Contact client to log in
+        self::createTask(array_merge($base, [
+            'title' => "Contact {$clientName} — Client needs to log in to app and website",
+            'type' => 'client_contact',
+            'assigned_to' => $admin->id,
+            'priority' => 'high',
+            'due_date' => $chargedDate->copy()->addDay()->format('Y-m-d H:i'),
+            'note' => 'Auto-created: Deal charged. Contact client to log in to app and website. If client shows no login, follow up immediately.',
+            'metadata' => ['trigger' => 'charged_green', 'task_category' => 'login_contact'],
+        ]));
+
+        // Task 2: Send offers in 60 days
+        self::createTask(array_merge($base, [
+            'title' => "Send offers to {$clientName} — 60 days from closing/charged date",
+            'type' => 'follow_up',
+            'assigned_to' => $admin->id,
+            'priority' => 'medium',
+            'due_date' => $chargedDate->copy()->addDays(60)->format('Y-m-d H:i'),
+            'note' => 'Auto-created: Client needs to be sent offers 60 days from closing/charged date.',
+            'metadata' => ['trigger' => 'charged_green', 'task_category' => 'send_offers_60d'],
+        ]));
+
+        // Task 3: Website clicks daily
+        self::createTask(array_merge($base, [
+            'title' => "{$clientName} — Needs to receive website clicks daily",
+            'type' => 'client_contact',
+            'assigned_to' => $admin->id,
+            'priority' => 'high',
+            'due_date' => $chargedDate->copy()->addDay()->format('Y-m-d H:i'),
+            'note' => 'Auto-created: Client needs to receive website clicks daily. Verify daily click activity is active.',
+            'metadata' => ['trigger' => 'charged_green', 'task_category' => 'daily_website_clicks'],
+        ]));
+
+        // Task 4: Follow-up call in 3-5 days
+        self::createTask(array_merge($base, [
+            'title' => "Follow-up call to {$clientName} — 3-5 days from charged date",
+            'type' => 'follow_up',
+            'assigned_to' => $admin->id,
+            'priority' => 'high',
+            'due_date' => $chargedDate->copy()->addDays(3)->format('Y-m-d H:i'),
+            'note' => 'Auto-created: Client needs to receive follow-up calls 3-5 days from charged date.',
+            'metadata' => ['trigger' => 'charged_green', 'task_category' => 'followup_call_3_5d'],
+        ]));
+
+        // Also assign all 4 tasks to every other admin/master_admin
+        $otherAdmins = User::whereIn('role', ['admin', 'master_admin'])
+            ->where('id', '!=', $admin->id)
+            ->pluck('id');
+
+        foreach ($otherAdmins as $otherAdminId) {
+            self::createTask(array_merge($base, [
+                'title' => "[Shared] {$clientName} — Charged green fulfillment tasks",
+                'type' => 'verification_action',
+                'assigned_to' => $otherAdminId,
+                'priority' => 'medium',
+                'due_date' => $chargedDate->copy()->addDay()->format('Y-m-d H:i'),
+                'note' => "Auto-created: Deal for {$clientName} was charged green by {$admin->name}. Review fulfillment tasks: login contact, 60-day offers, daily clicks, 3-5 day follow-up call.",
+                'metadata' => ['trigger' => 'charged_green', 'task_category' => 'shared_fulfillment_summary'],
+            ]));
+        }
+
+        // Send DM alert to the assigned admin on the deal
+        self::sendChargedGreenAlert($dealId, $clientName, $admin);
+    }
+
+    /**
+     * When deal moves to Verified status — admin-only task.
+     */
+    public static function onDealVerified(int $dealId, string $clientName, User $admin): void
+    {
+        if (!self::isAdmin($admin)) return;
 
         self::createTask([
             'title' => "Deal verified: Process {$clientName}",
@@ -164,35 +259,62 @@ class AutomaticTaskService
         ]);
     }
 
-    /**
-     * Auto-task when deal is Charged Green.
-     * HARD RULE: assigned to admin ONLY.
-     */
-    public static function onDealChargedGreen(int $dealId, string $clientName, \App\Models\User $admin): void
-    {
-        if (!self::isAdmin($admin)) return; // reject non-admin
+    // ── DM Alert ────────────────────────────────────────────
 
-        self::createTask([
-            'title' => "Deal charged green: Finalize {$clientName}",
-            'type' => 'verification_action',
-            'assigned_to' => $admin->id,
-            'created_by' => $admin->id,
-            'client_name' => $clientName,
-            'deal_id' => $dealId,
-            'priority' => 'medium',
-            'due_date' => now()->addDay()->format('Y-m-d H:i'),
-            'auto_created' => true,
-            'related_type' => 'deal',
-            'related_id' => $dealId,
-            'note' => 'Auto-created (admin-only): Deal charged green. Complete post-charge tasks and payroll.',
-            'metadata' => ['assignee_mode' => 'admin_only', 'trigger' => 'charged_green'],
-        ]);
+    /**
+     * Send a direct message alert to the admin on a charged deal
+     * with the full task list summary.
+     */
+    private static function sendChargedGreenAlert(int $dealId, string $clientName, User $admin): void
+    {
+        try {
+            // Use system user ID 0 or the admin themselves as sender
+            $senderId = $admin->id;
+
+            $chat = Chat::where('type', 'dm')->get()->first(function ($c) use ($senderId) {
+                $m = is_array($c->members) ? $c->members : json_decode($c->members ?? '[]', true);
+                $ids = array_map('intval', array_values($m));
+                return in_array($senderId, $ids);
+            });
+
+            // Find or create a DM with the admin (self-DM for alerts)
+            if (!$chat) {
+                $chat = Chat::create([
+                    'name' => 'Task Alerts',
+                    'type' => 'dm',
+                    'members' => [$senderId, $senderId],
+                    'created_by' => $senderId,
+                ]);
+            }
+
+            $text = "📋 CHARGED GREEN — Auto Tasks Created\n";
+            $text .= "Client: {$clientName}\n";
+            $text .= "Deal #{$dealId}\n\n";
+            $text .= "The following fulfillment tasks have been auto-generated:\n\n";
+            $text .= "1. Contact client to log in to app and website (Due: tomorrow)\n";
+            $text .= "2. Send offers in 60 days from charged date\n";
+            $text .= "3. Client needs to receive website clicks daily (Due: tomorrow)\n";
+            $text .= "4. Follow-up call in 3-5 days from charged date\n\n";
+            $text .= "All tasks are assigned to admin only.\n";
+            $text .= "Open the Automatic Task List to manage these tasks.";
+
+            Message::create([
+                'chat_id' => $chat->id,
+                'sender_id' => $senderId,
+                'message_type' => 'text',
+                'text' => $text,
+            ]);
+
+            $chat->update(['updated_at' => now()]);
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 
     /**
-     * Validates that a user is an admin. Used to enforce admin-only assignment.
+     * Validates that a user is an admin.
      */
-    private static function isAdmin(\App\Models\User $user): bool
+    private static function isAdmin(User $user): bool
     {
         return in_array($user->role, ['admin', 'master_admin', 'admin_limited']);
     }
