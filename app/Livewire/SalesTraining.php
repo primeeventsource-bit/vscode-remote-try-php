@@ -6,6 +6,7 @@ use App\Models\CallSession;
 use App\Models\Objection;
 use App\Models\ObjectionLog;
 use App\Models\User;
+use App\Services\AI\AIEngineService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Attributes\Layout;
@@ -38,10 +39,34 @@ class SalesTraining extends Component
 
     // ── Live Assist ─────────────────────────────────────────
 
+    public string $aiNextLine = '';
+    public string $aiStatus = '';
+
     public function detectObjections(): void
     {
-        if (!$this->ready() || !$this->searchText) return;
-        // Detection handled in render via Objection::detectFromText
+        // Detection is handled in render() — this just triggers a re-render
+    }
+
+    public function getAiNextLine(): void
+    {
+        $this->aiStatus = 'loading';
+        $this->aiNextLine = '';
+
+        try {
+            $objection = $this->selectedObjectionId ? Objection::find($this->selectedObjectionId)?->objection_text : $this->searchText;
+            $result = AIEngineService::suggestNextLine(
+                auth()->user(),
+                'closer',
+                'closer',
+                $objection,
+                'handling client objection'
+            );
+            $this->aiNextLine = $result['line'] ?? $result['text'] ?? 'No suggestion available.';
+            $this->aiStatus = 'ready';
+        } catch (\Throwable $e) {
+            $this->aiNextLine = 'AI unavailable — use rebuttals from the library.';
+            $this->aiStatus = 'error';
+        }
     }
 
     public function selectObjection(int $id): void
@@ -136,12 +161,38 @@ class SalesTraining extends Component
         if ($this->ready()) {
             $objections = Objection::where('is_active', true)->orderBy('category')->get();
 
-            if ($this->searchText) {
+            if ($this->searchText && strlen(trim($this->searchText)) >= 2) {
+                // Step 1: Local keyword match
                 $detectedObjections = Objection::detectFromText($this->searchText);
-            }
 
-            if ($this->selectedObjectionId) {
-                // keep selection
+                // Step 2: If no local match, try AI detection
+                if ($detectedObjections->isEmpty()) {
+                    try {
+                        $aiResult = AIEngineService::detectObjection(auth()->user(), $this->searchText);
+                        if (!empty($aiResult['category']) && $aiResult['category'] !== null) {
+                            // Find matching objection from library by category
+                            $aiMatch = $objections->where('category', $aiResult['category'])->first();
+                            if ($aiMatch) {
+                                $detectedObjections = collect([$aiMatch]);
+                                if (!$this->selectedObjectionId) {
+                                    $this->selectedObjectionId = $aiMatch->id;
+                                }
+                            }
+                        }
+                    } catch (\Throwable $e) {
+                        // AI failed — no problem, local results still show
+                    }
+                }
+
+                // Step 3: If still no match, show all objections so user can pick manually
+                if ($detectedObjections->isEmpty()) {
+                    $detectedObjections = $objections->take(5);
+                }
+
+                // Auto-select first match if none selected
+                if (!$this->selectedObjectionId && $detectedObjections->isNotEmpty()) {
+                    $this->selectedObjectionId = $detectedObjections->first()->id;
+                }
             }
 
             // Recent logs for active session
