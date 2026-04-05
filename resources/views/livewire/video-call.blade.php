@@ -297,60 +297,45 @@ function videoCallApp() {
         async initMedia() {
             this.mediaError = '';
 
-            // Step 1: Check what devices are available
-            let hasVideo = false, hasAudio = false;
+            // Step 1: Try full video + audio
             try {
-                const devices = await navigator.mediaDevices.enumerateDevices();
-                hasVideo = devices.some(d => d.kind === 'videoinput');
-                hasAudio = devices.some(d => d.kind === 'audioinput');
+                this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                this.attachLocalStream();
+                console.log('Media init: full video+audio OK');
+                return;
             } catch (e) {
-                console.warn('enumerateDevices failed:', e.message);
+                console.warn('Full media failed:', e.name, e.message);
             }
 
-            // Step 2: Try full video+audio
-            if (hasVideo && hasAudio) {
-                try {
-                    this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                    this.attachLocalStream();
-                    return;
-                } catch (e) {
-                    console.warn('Full media failed:', e.name, e.message);
-                }
+            // Step 2: Try audio-only (camera busy or missing)
+            try {
+                this.localStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+                this.cameraOn = false;
+                this.mediaError = 'Camera unavailable — audio only. You can still see and hear others.';
+                this.attachLocalStream();
+                console.log('Media init: audio-only OK');
+                return;
+            } catch (e) {
+                console.warn('Audio-only failed:', e.name, e.message);
             }
 
-            // Step 3: Try audio-only
-            if (hasAudio) {
-                try {
-                    this.localStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
-                    this.cameraOn = false;
-                    this.mediaError = 'No camera found — audio only';
-                    this.attachLocalStream();
-                    return;
-                } catch (e) {
-                    console.warn('Audio-only failed:', e.name, e.message);
-                }
+            // Step 3: Try video-only (no mic)
+            try {
+                this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                this.micOn = false;
+                this.mediaError = 'Microphone unavailable — video only.';
+                this.attachLocalStream();
+                console.log('Media init: video-only OK');
+                return;
+            } catch (e) {
+                console.warn('Video-only failed:', e.name, e.message);
             }
 
-            // Step 4: Try video-only
-            if (hasVideo) {
-                try {
-                    this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-                    this.micOn = false;
-                    this.mediaError = 'No microphone found — video only';
-                    this.attachLocalStream();
-                    return;
-                } catch (e) {
-                    console.warn('Video-only failed:', e.name, e.message);
-                }
-            }
-
-            // Step 5: Nothing works
+            // Step 4: Nothing works — join without media
             this.cameraOn = false;
             this.micOn = false;
-            this.mediaError = !hasVideo && !hasAudio
-                ? 'No camera or microphone found on this device'
-                : 'Camera/mic permission denied — you can still see and hear others';
-            console.warn('Media init: no devices available or all attempts failed');
+            this.mediaError = 'Camera and microphone unavailable. You can still see and hear others.';
+            console.warn('Media init: all attempts failed, joining without local media');
         },
 
         attachLocalStream() {
