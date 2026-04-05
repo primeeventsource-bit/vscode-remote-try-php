@@ -165,12 +165,11 @@
                 <span class="text-[10px] text-crm-t3">
                     {{ count($memberIds) }} member{{ count($memberIds) !== 1 ? 's' : '' }}
                 </span>
-                {{-- Call buttons --}}
-                <div class="ml-auto flex items-center gap-1">
+                {{-- Call buttons — Video + Audio --}}
+                <div class="ml-auto flex items-center gap-1.5">
                     @if($activeChat->type === 'dm')
-                        {{-- DM: direct 1-on-1 call buttons --}}
-                        @if($activeDirectCall)
-                            <a href="{{ route('video-call', ['room' => $activeDirectCall->uuid]) }}" class="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 transition" title="Join active call">
+                        @if(isset($activeDirectCall) && $activeDirectCall)
+                            <a href="/video-call/{{ $activeDirectCall->uuid }}" class="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 transition" title="Join active call">
                                 <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span> Join Call
                             </a>
                         @else
@@ -182,9 +181,8 @@
                             </button>
                         @endif
                     @else
-                        {{-- Group/Channel: link to group call page (admin only) --}}
                         @if(auth()->user()?->hasRole('master_admin', 'admin'))
-                            <a href="{{ route('video-call') }}" class="flex h-8 w-8 items-center justify-center rounded-lg text-blue-600 bg-blue-50 hover:bg-blue-100 transition" title="Start group call">
+                            <a href="/video-call" class="flex h-8 w-8 items-center justify-center rounded-lg text-blue-600 bg-blue-50 hover:bg-blue-100 transition" title="Start group call">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                             </a>
                         @endif
