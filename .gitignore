@@ -3,3 +3,6 @@
 storage/*.key
 *.log
 .phpunit.result.cache
+.env
+.env.backup
+.env.production

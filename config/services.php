@@ -1,6 +1,11 @@
 <?php
 
 return [
+    'openai' => [
+        'key' => env('OPENAI_API_KEY'),
+        'model' => env('OPENAI_MODEL', 'gpt-4o-mini'),
+    ],
+
     'gifs' => [
         'provider' => env('GIF_PROVIDER', 'giphy'),
         'timeout' => (int) env('GIF_API_TIMEOUT', 6),
