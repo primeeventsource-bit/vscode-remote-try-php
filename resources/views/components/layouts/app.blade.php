@@ -52,7 +52,8 @@
         {{-- Drawer Header --}}
         <div class="flex items-center justify-between px-4 h-12 border-b border-crm-border flex-shrink-0">
             <div class="flex items-center gap-2">
-                <div class="w-8 h-8 bg-white border border-crm-border rounded-lg flex items-center justify-center">
+                <img src="{{ asset('images/prime-logo.png') }}" alt="Prime" class="w-8 h-8 rounded-lg object-contain" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                <div class="w-8 h-8 bg-white border border-crm-border rounded-lg items-center justify-center" style="display:none">
                     <svg viewBox="0 0 100 100" class="w-5 h-5"><path d="M20 90V10h35c20 0 32 12 32 28s-12 28-32 28H38v24H20zm18-40h15c10 0 16-6 16-14s-6-14-16-14H38v28z" fill="#111" stroke="#111" stroke-width="3"/></svg>
                 </div>
                 <span class="font-extrabold text-sm tracking-widest">PRIME CRM</span>
