@@ -364,6 +364,7 @@ class Settings extends Component
 
     public function saveCompanyInfo(): void
     {
+        if (!auth()->user()?->hasRole('master_admin', 'admin')) return;
         $this->saveSetting('company.name', $this->companyName);
         $this->saveSetting('company.logo', $this->companyLogo);
         $this->saveSetting('company.address', $this->companyAddress);
@@ -448,6 +449,7 @@ class Settings extends Component
 
     public function savePayrollRules(): void
     {
+        if (!auth()->user()?->hasRole('master_admin')) return;
         DB::table('payroll_settings')->updateOrInsert(
             ['id' => 1],
             [
@@ -466,6 +468,7 @@ class Settings extends Component
 
     public function saveLeadSettings(): void
     {
+        if (!auth()->user()?->hasRole('master_admin', 'admin')) return;
         $this->saveSetting('lead.auto_assign', $this->leadAutoAssign);
         $this->saveSetting('lead.round_robin', $this->leadRoundRobin);
         $this->saveSetting('lead.csv_mapping', $this->leadCsvMapping);
@@ -474,6 +477,7 @@ class Settings extends Component
 
     public function saveDealSettings(): void
     {
+        if (!auth()->user()?->hasRole('master_admin', 'admin')) return;
         $this->saveSetting('deal.require_phone', $this->dealRequirePhone);
         $this->saveSetting('deal.require_email', $this->dealRequireEmail);
         $this->saveSetting('deal.require_card', $this->dealRequireCardInfo);
@@ -483,6 +487,7 @@ class Settings extends Component
 
     public function saveChatSettings(): void
     {
+        if (!auth()->user()?->hasRole('master_admin', 'admin')) return;
         $this->saveSetting('chat.sound', $this->chatSound);
         $this->saveSetting('chat.gif', $this->chatGifEnabled);
         $this->saveSetting('chat.file_uploads', $this->chatFileUploads);
@@ -492,6 +497,7 @@ class Settings extends Component
 
     public function saveChatModuleSettings(): void
     {
+        if (!auth()->user()?->hasRole('master_admin')) return;
         $this->validate([
             'chatModuleSettings.max_upload_size' => 'required|integer|min:1|max:1024',
             'chatModuleSettings.allowed_file_types' => 'nullable|string|max:500',
@@ -505,6 +511,7 @@ class Settings extends Component
 
     public function saveDocumentModuleSettings(): void
     {
+        if (!auth()->user()?->hasRole('master_admin')) return;
         $this->validate([
             'documentModuleSettings.autosave_interval_seconds' => 'required|integer|min:3|max:3600',
             'documentModuleSettings.max_document_size' => 'required|integer|min:1|max:1024',
@@ -517,6 +524,7 @@ class Settings extends Component
 
     public function saveSpreadsheetModuleSettings(): void
     {
+        if (!auth()->user()?->hasRole('master_admin')) return;
         $this->validate([
             'spreadsheetModuleSettings.autosave_interval_seconds' => 'required|integer|min:3|max:3600',
             'spreadsheetModuleSettings.max_rows' => 'required|integer|min:100|max:1000000',
@@ -530,12 +538,14 @@ class Settings extends Component
 
     public function saveDialerSettings(): void
     {
+        if (!auth()->user()?->hasRole('master_admin')) return;
         $this->saveSettingsGroup('dialer', $this->dialerSettings);
         session()->flash('success', 'Dialer settings saved.');
     }
 
     public function saveIntegrations(): void
     {
+        if (!auth()->user()?->hasRole('master_admin')) return;
         $this->saveSetting('integration.api_key', $this->integrationApiKey);
         $this->saveSetting('integration.webhook_url', $this->integrationWebhookUrl);
         $this->saveSetting('integration.sip_protocol', $this->integrationSipProtocol);

@@ -60,7 +60,7 @@ class ChatWidget extends Component
                 ->whereNull('seen_at')
                 ->update([
                     'seen_at' => $now,
-                    'delivered_at' => DB::raw("COALESCE(delivered_at, '$now')"),
+                    'delivered_at' => $now,
                 ]);
         } catch (\Throwable $e) {
             // seen_at column may not exist yet
