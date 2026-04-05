@@ -1,7 +1,7 @@
 <div class="p-5">
     <div class="mb-5">
         <h2 class="text-xl font-bold">Clients</h2>
-        <p class="text-xs text-crm-t3 mt-1">Charged deals and client management</p>
+        <p class="text-xs text-crm-t3 mt-1">{{ number_format($clients->total()) }} clients &middot; Page {{ $clients->currentPage() }} of {{ $clients->lastPage() }}</p>
     </div>
 
     {{-- Flash Messages --}}
@@ -11,7 +11,7 @@
         </div>
     @endif
 
-    {{-- Search + Status Tabs --}}
+    {{-- Search + Status Tabs + Per-Page --}}
     <div class="flex flex-wrap items-center gap-3 mb-4">
         <input id="fld-search" wire:model.live.debounce.300ms="search" type="text" placeholder="Search clients..." class="flex-1 min-w-[200px] px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
         <div class="flex items-center gap-1 bg-crm-card border border-crm-border rounded-lg p-0.5">
@@ -22,34 +22,38 @@
                 </button>
             @endforeach
         </div>
+        <div class="flex items-center gap-1.5">
+            <span class="text-xs text-crm-t3">Show</span>
+            <select wire:model.live="perPage" class="px-2 py-1.5 text-xs bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+            <span class="text-xs text-crm-t3">per page</span>
+        </div>
     </div>
 
-    {{-- Revenue Summary Cards --}}
+    {{-- Revenue Summary Cards (DB-aggregated, not from paginated collection) --}}
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
-        @php
-            $chargedWon = $clients->filter(fn($c) => $c->charged === 'yes' && $c->charged_back !== 'yes');
-            $cbLost = $clients->filter(fn($c) => $c->charged_back === 'yes' || in_array($c->status, ['chargeback', 'chargeback_lost']));
-            $chargedTotal = $chargedWon->sum('fee');
-            $cbTotal = $cbLost->sum('fee');
-        @endphp
         <div class="bg-crm-card border border-crm-border rounded-lg p-4 border-t-[3px] border-t-emerald-500">
             <div class="text-[10px] text-crm-t3 uppercase tracking-wider">Charged + Won</div>
-            <div class="text-2xl font-extrabold text-emerald-500 mt-1">${{ number_format($chargedTotal) }}</div>
-            <div class="text-[10px] text-crm-t3 mt-1">{{ $chargedWon->count() }} clients</div>
+            <div class="text-2xl font-extrabold text-emerald-500 mt-1">${{ number_format($totalRev) }}</div>
+            <div class="text-[10px] text-crm-t3 mt-1">{{ number_format($chargedCount) }} clients</div>
         </div>
         <div class="bg-crm-card border border-crm-border rounded-lg p-4 border-t-[3px] border-t-red-500">
             <div class="text-[10px] text-crm-t3 uppercase tracking-wider">CB + Lost</div>
-            <div class="text-2xl font-extrabold text-red-500 mt-1">${{ number_format($cbTotal) }}</div>
-            <div class="text-[10px] text-crm-t3 mt-1">{{ $cbLost->count() }} clients</div>
+            <div class="text-2xl font-extrabold text-red-500 mt-1">${{ number_format($cbRev) }}</div>
+            <div class="text-[10px] text-crm-t3 mt-1">{{ number_format($cbCount) }} clients</div>
         </div>
         <div class="bg-crm-card border border-crm-border rounded-lg p-4 border-t-[3px] border-t-blue-500">
             <div class="text-[10px] text-crm-t3 uppercase tracking-wider">Net Revenue</div>
-            <div class="text-2xl font-extrabold text-blue-500 mt-1">${{ number_format($chargedTotal - $cbTotal) }}</div>
-            <div class="text-[10px] text-crm-t3 mt-1">{{ $clients->count() }} total</div>
+            <div class="text-2xl font-extrabold text-blue-500 mt-1">${{ number_format($totalRev - $cbRev) }}</div>
+            <div class="text-[10px] text-crm-t3 mt-1">{{ number_format($totalCount) }} total</div>
         </div>
         <div class="bg-crm-card border border-crm-border rounded-lg p-4 border-t-[3px] border-t-purple-500">
             <div class="text-[10px] text-crm-t3 uppercase tracking-wider">Avg Deal Size</div>
-            <div class="text-2xl font-extrabold text-purple-500 mt-1">${{ $chargedWon->count() > 0 ? number_format($chargedTotal / $chargedWon->count()) : 0 }}</div>
+            <div class="text-2xl font-extrabold text-purple-500 mt-1">${{ $chargedCount > 0 ? number_format($totalRev / $chargedCount) : 0 }}</div>
         </div>
     </div>
 
@@ -93,6 +97,16 @@
                         <p class="text-sm text-crm-t3">No clients found</p>
                     </div>
                 @endforelse
+            </div>
+
+            {{-- Pagination Footer --}}
+            <div class="mt-3 flex items-center justify-between">
+                <div class="text-xs text-crm-t3">
+                    Showing {{ $clients->firstItem() ?? 0 }} to {{ $clients->lastItem() ?? 0 }} of {{ number_format($clients->total()) }} clients
+                </div>
+                <div>
+                    {{ $clients->links() }}
+                </div>
             </div>
         </div>
 

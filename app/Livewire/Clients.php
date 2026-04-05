@@ -13,6 +13,7 @@ use App\Services\CrmNoteService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Livewire\WithFileUploads;
+use Livewire\WithPagination;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -21,11 +22,12 @@ use Livewire\Component;
 #[Title('Clients')]
 class Clients extends Component
 {
-    use WithFileUploads;
+    use WithFileUploads, WithPagination;
 
     // ── List state ──────────────────────────────────────────────
     public string $search = '';
     public string $statusTab = 'all';
+    public int $perPage = 10;
     public ?int $selectedClient = null;
 
     // ── Detail / editing state ──────────────────────────────────
@@ -71,6 +73,11 @@ class Clients extends Component
     // ── Success / error flash ───────────────────────────────────
     public string $flashMessage = '';
     public string $flashType = 'success'; // success | error
+
+    // ── Reset page when filters change ─────────────────────────
+    public function updatedSearch()    { $this->resetPage(); }
+    public function updatedStatusTab() { $this->resetPage(); }
+    public function updatedPerPage()   { $this->resetPage(); }
 
     public function selectClient($id)
     {
@@ -781,9 +788,23 @@ class Clients extends Component
             });
         }
 
-        $clients = $query->get();
-        $totalRev = Deal::whereIn('status', ['charged', 'chargeback_won'])->sum('fee');
-        $cbRev = Deal::whereIn('status', ['chargeback', 'chargeback_lost'])->sum('fee');
+        $clients = $query->paginate($this->perPage);
+
+        // Revenue stats via DB aggregation — never load all clients into memory
+        $revStats = Deal::selectRaw("
+            SUM(CASE WHEN status IN ('charged','chargeback_won') THEN fee ELSE 0 END) as charged_total,
+            SUM(CASE WHEN status IN ('chargeback','chargeback_lost') THEN fee ELSE 0 END) as cb_total,
+            SUM(CASE WHEN status IN ('charged','chargeback_won') THEN 1 ELSE 0 END) as charged_count,
+            SUM(CASE WHEN status IN ('chargeback','chargeback_lost') THEN 1 ELSE 0 END) as cb_count,
+            COUNT(*) as total_count
+        ")->whereIn('status', ['charged', 'chargeback', 'chargeback_won', 'chargeback_lost'])->first();
+
+        $totalRev = (float) ($revStats->charged_total ?? 0);
+        $cbRev = (float) ($revStats->cb_total ?? 0);
+        $chargedCount = (int) ($revStats->charged_count ?? 0);
+        $cbCount = (int) ($revStats->cb_count ?? 0);
+        $totalCount = (int) ($revStats->total_count ?? 0);
+
         $users = User::all()->keyBy('id');
         $active = $this->selectedClient ? Deal::find($this->selectedClient) : null;
 
@@ -842,8 +863,9 @@ class Clients extends Component
         }
 
         return view('livewire.clients', compact(
-            'clients', 'users', 'active', 'totalRev', 'cbRev', 'auditLogs',
-            'clientNotes', 'canAddNote', 'canSendNoteToChat',
+            'clients', 'users', 'active', 'totalRev', 'cbRev',
+            'chargedCount', 'cbCount', 'totalCount',
+            'auditLogs', 'clientNotes', 'canAddNote', 'canSendNoteToChat',
             'chargebackCases', 'selectedCase', 'canManageCases', 'caseReadiness'
         ));
     }
