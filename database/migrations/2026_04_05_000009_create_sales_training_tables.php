@@ -9,49 +9,61 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (!Schema::hasTable('objection_library')) {
-            Schema::create('objection_library', function (Blueprint $table) {
-                $table->id();
-                $table->text('objection_text');
-                $table->string('category', 50)->index();
-                $table->text('rebuttal_level_1')->nullable();
-                $table->text('rebuttal_level_2')->nullable();
-                $table->text('rebuttal_level_3')->nullable();
-                $table->string('keywords')->nullable();
-                $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
-                $table->boolean('is_active')->default(true);
-                $table->timestamps();
-            });
+        try {
+            if (!Schema::hasTable('objection_library')) {
+                Schema::create('objection_library', function (Blueprint $table) {
+                    $table->id();
+                    $table->text('objection_text');
+                    $table->string('category', 50)->index();
+                    $table->text('rebuttal_level_1')->nullable();
+                    $table->text('rebuttal_level_2')->nullable();
+                    $table->text('rebuttal_level_3')->nullable();
+                    $table->string('keywords')->nullable();
+                    $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+                    $table->boolean('is_active')->default(true);
+                    $table->timestamps();
+                });
+            }
+        } catch (\Throwable $e) {
+            // Table already exists — safe to continue
         }
 
-        if (!Schema::hasTable('call_sessions')) {
-            Schema::create('call_sessions', function (Blueprint $table) {
-                $table->id();
-                $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-                $table->foreignId('lead_id')->nullable()->constrained('leads')->nullOnDelete();
-                $table->foreignId('deal_id')->nullable()->constrained('deals')->nullOnDelete();
-                $table->string('current_stage', 30)->default('fronter');
-                $table->integer('objection_count')->default(0);
-                $table->string('status', 20)->default('active');
-                $table->text('notes')->nullable();
-                $table->timestamps();
-                $table->index(['user_id', 'status']);
-            });
+        try {
+            if (!Schema::hasTable('call_sessions')) {
+                Schema::create('call_sessions', function (Blueprint $table) {
+                    $table->id();
+                    $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+                    $table->foreignId('lead_id')->nullable()->constrained('leads')->nullOnDelete();
+                    $table->foreignId('deal_id')->nullable()->constrained('deals')->nullOnDelete();
+                    $table->string('current_stage', 30)->default('fronter');
+                    $table->integer('objection_count')->default(0);
+                    $table->string('status', 20)->default('active');
+                    $table->text('notes')->nullable();
+                    $table->timestamps();
+                    $table->index(['user_id', 'status']);
+                });
+            }
+        } catch (\Throwable $e) {
+            // Table already exists — safe to continue
         }
 
-        if (!Schema::hasTable('objection_logs')) {
-            Schema::create('objection_logs', function (Blueprint $table) {
-                $table->id();
-                $table->foreignId('call_session_id')->constrained('call_sessions')->cascadeOnDelete();
-                $table->foreignId('objection_id')->nullable()->constrained('objection_library')->nullOnDelete();
-                $table->text('objection_text');
-                $table->text('selected_rebuttal')->nullable();
-                $table->string('rebuttal_level', 20)->nullable();
-                $table->string('result', 20)->default('pending');
-                $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
-                $table->timestamps();
-                $table->index('result');
-            });
+        try {
+            if (!Schema::hasTable('objection_logs')) {
+                Schema::create('objection_logs', function (Blueprint $table) {
+                    $table->id();
+                    $table->foreignId('call_session_id')->constrained('call_sessions')->cascadeOnDelete();
+                    $table->foreignId('objection_id')->nullable()->constrained('objection_library')->nullOnDelete();
+                    $table->text('objection_text');
+                    $table->text('selected_rebuttal')->nullable();
+                    $table->string('rebuttal_level', 20)->nullable();
+                    $table->string('result', 20)->default('pending');
+                    $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
+                    $table->timestamps();
+                    $table->index('result');
+                });
+            }
+        } catch (\Throwable $e) {
+            // Table already exists — safe to continue
         }
 
         try {

@@ -5,47 +5,90 @@ namespace App\Livewire;
 use App\Livewire\Concerns\SendsTransferDm;
 use App\Models\Deal;
 use App\Models\Lead;
+use App\Models\LeadDuplicate;
+use App\Models\LeadImportBatch;
+use App\Models\LeadImportFailure;
 use App\Models\User;
+use App\Jobs\ProcessLeadImportChunk;
+use App\Services\LeadDuplicateService;
 use App\Services\PipelineEventService;
 use App\Services\PipelineStateService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithFileUploads;
+use Livewire\WithPagination;
 
 #[Layout('components.layouts.app')]
 #[Title('Leads')]
 class Leads extends Component
 {
-    use WithFileUploads, SendsTransferDm;
+    use WithFileUploads, SendsTransferDm, WithPagination;
 
     private const MAX_IMPORT_ROWS = 10000;
+    private const IMPORT_CHUNK_SIZE = 500;
 
+    // ── Filters & Search ────────────────────────────────────
     public string $search = '';
     public string $filter = 'all';
     public string $resortFilter = 'all';
     public string $fronterFilter = 'all';
+    public string $ageFilter = 'all';
+    public string $duplicateFilter = 'all';
+    public int $perPage = 25;
+
+    // ── Lead Selection & Detail ─────────────────────────────
     public ?int $selectedLead = null;
     public string $transferCloser = '';
     public string $callbackDateTime = '';
+    public array $selectedLeads = [];
+    public string $bulkFronter = '';
+
+    // ── Add Lead ────────────────────────────────────────────
     public bool $showAddModal = false;
+    public array $newLead = ['resort' => '', 'owner_name' => '', 'phone1' => '', 'phone2' => '', 'city' => '', 'st' => '', 'zip' => '', 'resort_location' => '', 'email' => ''];
+
+    // ── Import ──────────────────────────────────────────────
     public bool $showImportModal = false;
     public string $csvText = '';
     public int $importRowsProcessed = 0;
-    public array $selectedLeads = [];
-    public string $bulkFronter = '';
-    public array $newLead = ['resort' => '', 'owner_name' => '', 'phone1' => '', 'phone2' => '', 'city' => '', 'st' => '', 'zip' => '', 'resort_location' => ''];
     public $leadFile = null;
     public string $importStatus = '';
     public string $importError = '';
+    public string $duplicateStrategy = 'flag'; // skip, flag, import_all
+
+    // ── Edit Lead ───────────────────────────────────────────
     public bool $showEditModal = false;
     public array $editForm = [];
+    public string $leadSaveMessage = '';
+
+    // ── Convert to Deal ─────────────────────────────────────
     public bool $showConvertModal = false;
     public array $convertForm = [];
     public string $transferAdmin = '';
 
+    // ── Duplicate Review ────────────────────────────────────
+    public bool $showDeleteConfirm = false;
+    public ?int $deleteTargetId = null;
+    public array $bulkDeleteIds = [];
+
+    // ── Reset page when filters change ──────────────────────
+    public function updatedSearch()    { $this->resetPage(); }
+    public function updatedFilter()    { $this->resetPage(); }
+    public function updatedResortFilter() { $this->resetPage(); }
+    public function updatedFronterFilter() { $this->resetPage(); }
+    public function updatedAgeFilter() { $this->resetPage(); }
+    public function updatedDuplicateFilter() { $this->resetPage(); }
+    public function updatedPerPage()   { $this->resetPage(); }
+
+    // ── Lead Selection ──────────────────────────────────────
+
     public function selectLead($id) { $this->selectedLead = $this->selectedLead === $id ? null : $id; }
+
+    // ── Disposition / Transfer / Convert (UNCHANGED LOGIC) ──
 
     public function setDisposition($id, $dispo, $closerId = null, $callbackDate = null)
     {
@@ -57,7 +100,6 @@ class Leads extends Component
             $closer = User::find($closerId);
 
             if ($fronter && $closer) {
-                // PipelineStateService handles: state update + event logging + transaction
                 PipelineStateService::transferLeadToCloser($lead, $fronter, $closer);
                 $this->sendTransferDm($closerId, 'Lead', $lead->id, $lead->owner_name ?? 'Unknown', 'Closer');
             }
@@ -101,7 +143,7 @@ class Leads extends Component
             'resort_city_state' => $lead->resort_location ?? '',
             'city_state_zip' => trim(($lead->city ?? '') . ' ' . ($lead->st ?? '') . ' ' . ($lead->zip ?? '')),
             'mailing_address' => '',
-            'email' => '',
+            'email' => $lead->email ?? '',
             'fee' => '',
             'weeks' => '',
             'asking_rental' => '',
@@ -161,7 +203,6 @@ class Leads extends Component
                 'verification_num' => $this->convertForm['verification_num'],
             ];
 
-            // PipelineStateService handles: deal creation + lead update + event log + transaction
             $deal = PipelineStateService::closeLeadIntoDeal($lead, $user, $dealData);
 
             $this->showConvertModal = false;
@@ -181,7 +222,6 @@ class Leads extends Component
         $lead = Lead::find($this->selectedLead);
         if (!$lead || $lead->disposition !== 'Converted to Deal') return;
 
-        // Find the deal created from this lead
         $deal = Deal::where('owner_name', $lead->owner_name)
             ->where('closer', auth()->id())
             ->orderByDesc('id')
@@ -194,7 +234,6 @@ class Leads extends Component
         $admin = User::find($adminId);
 
         if ($closer && $admin) {
-            // PipelineStateService handles: deal update + lead update + event log + transaction
             PipelineStateService::sendToVerification($deal, $closer, $admin);
             $this->sendTransferDm($adminId, 'Deal', $deal->id, $deal->owner_name ?? 'Unknown', 'Verification');
         }
@@ -203,7 +242,7 @@ class Leads extends Component
         $this->selectedLead = null;
     }
 
-    public string $leadSaveMessage = '';
+    // ── Lead Edit (UNCHANGED) ───────────────────────────────
 
     public function editLead($id): void
     {
@@ -220,6 +259,7 @@ class Leads extends Component
             'st' => $lead->st ?? '',
             'zip' => $lead->zip ?? '',
             'resort_location' => $lead->resort_location ?? '',
+            'email' => $lead->email ?? '',
         ];
         $this->showEditModal = true;
         $this->leadSaveMessage = '';
@@ -242,6 +282,7 @@ class Leads extends Component
                 'st' => $this->editForm['st'],
                 'zip' => $this->editForm['zip'],
                 'resort_location' => $this->editForm['resort_location'],
+                'email' => $this->editForm['email'] ?? null,
             ]);
             $this->leadSaveMessage = '✓ Lead saved successfully!';
         } catch (\Throwable $e) {
@@ -250,26 +291,28 @@ class Leads extends Component
         }
     }
 
+    // ── Add Lead ────────────────────────────────────────────
+
     public function saveLead()
     {
         Lead::create($this->newLead + ['source' => 'manual']);
         $this->reset('newLead', 'showAddModal');
-        $this->newLead = ['resort' => '', 'owner_name' => '', 'phone1' => '', 'phone2' => '', 'city' => '', 'st' => '', 'zip' => '', 'resort_location' => ''];
+        $this->newLead = ['resort' => '', 'owner_name' => '', 'phone1' => '', 'phone2' => '', 'city' => '', 'st' => '', 'zip' => '', 'resort_location' => '', 'email' => ''];
     }
+
+    // ── Enterprise Import (Queued / Chunked) ────────────────
 
     public function importLeads(): void
     {
         $this->importStatus = '';
         $this->importError = '';
 
-        // Determine CSV content from file upload OR pasted text
         $csvContent = '';
 
         if ($this->leadFile) {
             try {
-                $this->validate(['leadFile' => 'file|max:25600|mimes:csv,txt']);
+                $this->validate(['leadFile' => 'file|max:102400|mimes:csv,txt']);
                 $csvContent = file_get_contents($this->leadFile->getRealPath());
-                // Strip UTF-8 BOM
                 $csvContent = preg_replace('/^\xEF\xBB\xBF/', '', $csvContent);
             } catch (\Throwable $e) {
                 $this->importError = 'Invalid file: ' . $e->getMessage();
@@ -282,27 +325,47 @@ class Leads extends Component
             return;
         }
 
-        $lineCount = $this->countImportableRows($csvContent);
-        if ($lineCount === 0) {
+        $rows = $this->parseCsvToRows($csvContent);
+
+        if (empty($rows)) {
             $this->importError = 'No importable rows found in the file.';
-            return;
-        }
-        if ($lineCount > self::MAX_IMPORT_ROWS) {
-            $this->importError = "CSV has {$lineCount} rows — max is 10,000. Split the file.";
             return;
         }
 
         try {
-            $this->processCsvContent($csvContent);
+            // Create import batch record
+            $batch = LeadImportBatch::create([
+                'user_id' => auth()->id(),
+                'original_filename' => $this->leadFile?->getClientOriginalName() ?? 'pasted_csv',
+                'file_type' => 'csv',
+                'total_rows' => count($rows),
+                'status' => 'pending',
+                'duplicate_strategy' => $this->duplicateStrategy,
+            ]);
+
+            // Chunk and dispatch jobs
+            $chunks = array_chunk($rows, self::IMPORT_CHUNK_SIZE);
+            $rowOffset = 1;
+
+            foreach ($chunks as $i => $chunk) {
+                $isLast = ($i === count($chunks) - 1);
+                ProcessLeadImportChunk::dispatch(
+                    $batch->id,
+                    $chunk,
+                    $rowOffset,
+                    $isLast
+                );
+                $rowOffset += count($chunk);
+            }
+
+            $this->importStatus = "Import queued: {$batch->total_rows} rows in " . count($chunks) . " batch(es). Track progress on the Imports page.";
             $this->leadFile = null;
             $this->csvText = '';
             $this->showImportModal = false;
+
+            Log::info('Lead import queued', ['user' => auth()->id(), 'batch' => $batch->id, 'rows' => $batch->total_rows]);
         } catch (\Throwable $e) {
-            Log::error('Lead import failed', [
-                'error' => $e->getMessage(),
-                'user' => auth()->id(),
-                'file' => $this->leadFile?->getClientOriginalName(),
-            ]);
+            Log::error('Lead import failed', ['error' => $e->getMessage(), 'user' => auth()->id()]);
             $this->importError = 'Import failed: ' . $e->getMessage();
         }
     }
@@ -311,6 +374,41 @@ class Leads extends Component
     public function importCsv()
     {
         $this->importLeads();
+    }
+
+    private function parseCsvToRows(string $csv): array
+    {
+        $lines = preg_split('/\r\n|\r|\n/', trim($csv));
+        if (!$lines) return [];
+
+        $startIndex = 0;
+        $firstRow = array_map('trim', str_getcsv($lines[0]));
+        $h0 = strtolower($firstRow[0] ?? '');
+        $h1 = strtolower($firstRow[1] ?? '');
+
+        if (str_contains($h0, 'resort') || str_contains($h1, 'owner') || str_contains($h0, 'email')) {
+            $startIndex = 1;
+        }
+
+        $rows = [];
+        for ($i = $startIndex; $i < count($lines); $i++) {
+            $v = array_map('trim', str_getcsv($lines[$i]));
+            if (count($v) < 2 || ($v[0] === '' && $v[1] === '')) continue;
+
+            $rows[] = [
+                'resort' => $v[0] ?? '',
+                'owner_name' => $v[1] ?? '',
+                'phone1' => $v[2] ?? '',
+                'phone2' => $v[3] ?? '',
+                'city' => $v[4] ?? '',
+                'st' => $v[5] ?? '',
+                'zip' => $v[6] ?? '',
+                'resort_location' => $v[7] ?? '',
+                'email' => $v[8] ?? '',
+            ];
+        }
+
+        return $rows;
     }
 
     public function beginCsvImport(int $totalRows = 0): bool
@@ -378,9 +476,15 @@ class Leads extends Component
         $this->showImportModal = false;
     }
 
+    // ── Bulk Selection (UNCHANGED) ──────────────────────────
+
     public function selectAllVisibleLeads(): void
     {
-        $this->selectedLeads = $this->baseLeadsQuery()->pluck('id')->map(fn($id) => (int) $id)->toArray();
+        $this->selectedLeads = $this->baseLeadsQuery()
+            ->limit(500)
+            ->pluck('id')
+            ->map(fn($id) => (int) $id)
+            ->toArray();
     }
 
     public function clearSelectedLeads(): void
@@ -433,157 +537,270 @@ class Leads extends Component
         $this->resetErrorBag('bulkFronter');
     }
 
-    private function processCsvContent(string $csv): void
+    // ── Duplicate Actions ───────────────────────────────────
+
+    public function confirmDeleteLead(int $id): void
     {
-        $lines = preg_split('/\r\n|\r|\n/', trim($csv));
-        if (!$lines) return;
+        $user = auth()->user();
+        if (!$user || !$user->hasRole('master_admin', 'admin')) return;
 
-        $startIndex = 0;
-        $firstRow = array_map('trim', str_getcsv($lines[0]));
-        $h0 = strtolower($firstRow[0] ?? '');
-        $h1 = strtolower($firstRow[1] ?? '');
-
-        // Skip header only when it appears to be a real header row.
-        if (str_contains($h0, 'resort') || str_contains($h1, 'owner')) {
-            $startIndex = 1;
-        }
-
-        $batch = [];
-        $now = now()->toDateTimeString();
-        $imported = 0;
-        $skipped = 0;
-
-        for ($i = $startIndex; $i < count($lines); $i++) {
-            $v = array_map('trim', str_getcsv($lines[$i]));
-            if (count($v) < 2 || ($v[0] === '' && $v[1] === '')) {
-                $skipped++;
-                continue;
-            }
-
-            $batch[] = [
-                'resort' => $v[0] ?? '',
-                'owner_name' => $v[1] ?? '',
-                'phone1' => $v[2] ?? '',
-                'phone2' => $v[3] ?? '',
-                'city' => $v[4] ?? '',
-                'st' => $v[5] ?? '',
-                'zip' => $v[6] ?? '',
-                'resort_location' => $v[7] ?? '',
-                'source' => 'csv',
-                'created_at' => $now,
-                'updated_at' => $now,
-            ];
-
-            // Insert in chunks of 500 to avoid memory/timeout issues
-            if (count($batch) >= 500) {
-                Lead::insert($batch);
-                $imported += count($batch);
-                $batch = [];
-            }
-        }
-
-        // Insert remaining rows
-        if (!empty($batch)) {
-            Lead::insert($batch);
-            $imported += count($batch);
-        }
-
-        $this->importStatus = "Import complete: {$imported} leads imported, {$skipped} rows skipped.";
-        Log::info('Lead import success', ['user' => auth()->id(), 'imported' => $imported, 'skipped' => $skipped]);
+        $this->deleteTargetId = $id;
+        $this->showDeleteConfirm = true;
     }
 
-    private function countImportableRows(string $csv): int
+    public function deleteLead(): void
     {
-        $lines = preg_split('/\r\n|\r|\n/', trim($csv));
-        if (!$lines) return 0;
+        $user = auth()->user();
+        if (!$user || !$user->hasRole('master_admin', 'admin')) return;
+        if (!$this->deleteTargetId) return;
 
-        $startIndex = 0;
-        $firstRow = array_map('trim', str_getcsv($lines[0]));
-        $h0 = strtolower($firstRow[0] ?? '');
-        $h1 = strtolower($firstRow[1] ?? '');
-        if (str_contains($h0, 'resort') || str_contains($h1, 'owner')) {
-            $startIndex = 1;
+        $lead = Lead::find($this->deleteTargetId);
+        if ($lead) {
+            $lead->delete(); // Soft delete
+            LeadDuplicate::where('lead_id', $lead->id)
+                ->orWhere('duplicate_lead_id', $lead->id)
+                ->update(['review_status' => 'deleted_duplicate']);
         }
 
-        $count = 0;
-        for ($i = $startIndex; $i < count($lines); $i++) {
-            $line = trim((string) $lines[$i]);
-            if ($line === '') continue;
-            $v = array_map('trim', str_getcsv($line));
-            if (count($v) < 2) continue;
-            $count++;
-        }
-
-        return $count;
+        $this->deleteTargetId = null;
+        $this->showDeleteConfirm = false;
     }
+
+    public function cancelDelete(): void
+    {
+        $this->deleteTargetId = null;
+        $this->showDeleteConfirm = false;
+    }
+
+    public function keepBothDuplicates(int $duplicateRecordId): void
+    {
+        $dup = LeadDuplicate::find($duplicateRecordId);
+        if ($dup) {
+            $dup->update(['review_status' => 'kept_both', 'reviewed_by' => auth()->id()]);
+        }
+    }
+
+    public function ignoreDuplicate(int $duplicateRecordId): void
+    {
+        $dup = LeadDuplicate::find($duplicateRecordId);
+        if ($dup) {
+            $dup->update(['review_status' => 'ignored', 'reviewed_by' => auth()->id()]);
+        }
+    }
+
+    public function bulkKeepSelected(): void
+    {
+        if (empty($this->selectedLeads)) return;
+
+        LeadDuplicate::whereIn('lead_id', $this->selectedLeads)
+            ->orWhereIn('duplicate_lead_id', $this->selectedLeads)
+            ->where('review_status', 'pending')
+            ->update(['review_status' => 'kept_both', 'reviewed_by' => auth()->id()]);
+
+        $this->selectedLeads = [];
+    }
+
+    public function bulkDeleteSelected(): void
+    {
+        $user = auth()->user();
+        if (!$user || !$user->hasRole('master_admin', 'admin')) return;
+        if (empty($this->selectedLeads)) return;
+
+        // Soft delete selected leads
+        Lead::whereIn('id', $this->selectedLeads)->each(fn($lead) => $lead->delete());
+
+        LeadDuplicate::where(function ($q) {
+            $q->whereIn('lead_id', $this->selectedLeads)
+              ->orWhereIn('duplicate_lead_id', $this->selectedLeads);
+        })->where('review_status', 'pending')
+          ->update(['review_status' => 'deleted_duplicate', 'reviewed_by' => auth()->id()]);
+
+        $this->selectedLeads = [];
+    }
+
+    public function bulkMarkReviewed(): void
+    {
+        if (empty($this->selectedLeads)) return;
+
+        LeadDuplicate::where(function ($q) {
+            $q->whereIn('lead_id', $this->selectedLeads)
+              ->orWhereIn('duplicate_lead_id', $this->selectedLeads);
+        })->where('review_status', 'pending')
+          ->update(['review_status' => 'ignored', 'reviewed_by' => auth()->id()]);
+
+        $this->selectedLeads = [];
+    }
+
+    // ── Core Query Builder ──────────────────────────────────
 
     private function baseLeadsQuery()
     {
         $user = auth()->user();
         $isAdmin = $user->hasPerm('view_all_leads');
-        $query = Lead::query()->orderBy('id', 'desc');
+
+        // Select only columns needed for list view — avoid loading heavy data
+        $query = Lead::query()
+            ->select([
+                'id', 'resort', 'owner_name', 'phone1', 'phone2', 'email',
+                'city', 'st', 'zip', 'resort_location',
+                'assigned_to', 'original_fronter', 'disposition',
+                'source', 'created_at', 'imported_at', 'import_batch_id',
+            ])
+            ->orderBy('id', 'desc');
 
         if (!$isAdmin) {
             $query->where('assigned_to', $user->id);
         }
 
+        // Search
         if ($this->search) {
             $s = $this->search;
             $query->where(fn($q) => $q
                 ->where('owner_name', 'like', "%$s%")
                 ->orWhere('resort', 'like', "%$s%")
-                ->orWhere('phone1', 'like', "%$s%"));
+                ->orWhere('phone1', 'like', "%$s%")
+                ->orWhere('email', 'like', "%$s%"));
         }
 
+        // Resort filter
         if ($this->resortFilter !== 'all') {
             $query->where('resort', $this->resortFilter);
         }
 
+        // Fronter filter
         if ($this->fronterFilter === 'unassigned') {
             $query->whereNull('assigned_to');
         } elseif ($this->fronterFilter !== 'all') {
             $query->where('assigned_to', (int) $this->fronterFilter);
         }
 
+        // Disposition filter
         if ($this->filter === 'undisposed') {
             $query->whereNull('disposition');
+        } elseif ($this->filter === 'transferred') {
+            $query->where('disposition', 'like', 'Transferred%');
         }
 
-        if ($this->filter === 'transferred') {
-            $query->where('disposition', 'like', 'Transferred%');
+        // Age filter
+        if ($this->ageFilter !== 'all') {
+            match ($this->ageFilter) {
+                'new' => $query->where('created_at', '>=', now()->startOfDay()),
+                'this_week' => $query->where('created_at', '>=', now()->startOfWeek()),
+                'last_month' => $query->whereBetween('created_at', [
+                    now()->subMonth()->startOfMonth(),
+                    now()->subMonth()->endOfMonth(),
+                ]),
+                'old' => $query->where('created_at', '<', now()->subMonth()->startOfMonth()),
+                default => null,
+            };
+        }
+
+        // Duplicate filter
+        if ($this->duplicateFilter !== 'all') {
+            match ($this->duplicateFilter) {
+                'has_duplicates' => $query->whereIn('id', LeadDuplicate::select('lead_id')->union(LeadDuplicate::select('duplicate_lead_id'))),
+                'exact_duplicates' => $query->whereIn('id',
+                    LeadDuplicate::where('duplicate_type', 'exact')->select('lead_id')
+                        ->union(LeadDuplicate::where('duplicate_type', 'exact')->select('duplicate_lead_id'))
+                ),
+                'possible_duplicates' => $query->whereIn('id',
+                    LeadDuplicate::where('duplicate_type', 'possible')->select('lead_id')
+                        ->union(LeadDuplicate::where('duplicate_type', 'possible')->select('duplicate_lead_id'))
+                ),
+                'pending_review' => $query->whereIn('id',
+                    LeadDuplicate::where('review_status', 'pending')->select('lead_id')
+                        ->union(LeadDuplicate::where('review_status', 'pending')->select('duplicate_lead_id'))
+                ),
+                'reviewed' => $query->whereIn('id',
+                    LeadDuplicate::where('review_status', '!=', 'pending')->select('lead_id')
+                        ->union(LeadDuplicate::where('review_status', '!=', 'pending')->select('duplicate_lead_id'))
+                ),
+                default => null,
+            };
         }
 
         return $query;
     }
 
+    // ── Render ───────────────────────────────────────────────
+
     public function render()
     {
         $user = auth()->user();
         $isAdmin = $user->hasPerm('view_all_leads');
-        $leads = $this->baseLeadsQuery()->get();
+
+        // TRUE SERVER-SIDE PAGINATION — never load all leads into memory
+        $leads = $this->baseLeadsQuery()->paginate($this->perPage);
+
         $resorts = Lead::distinct()->pluck('resort')->filter()->sort();
         $closers = User::where('role', 'closer')->get();
         $fronters = User::where('role', 'fronter')->orderBy('name')->get();
         $users = User::all();
         $active = $this->selectedLead ? Lead::find($this->selectedLead) : null;
 
-        $fronterStats = [];
-        if ($isAdmin) {
-            $leadRows = Lead::query()->select(['assigned_to', 'disposition'])->get();
-            foreach ($fronters as $f) {
-                $rows = $leadRows->where('assigned_to', $f->id);
-                $fronterStats[] = [
-                    'id' => $f->id,
-                    'name' => $f->name,
-                    'total' => $rows->count(),
-                    'undisposed' => $rows->whereNull('disposition')->count(),
-                    'transferred' => $rows->filter(fn($r) => str_contains((string) ($r->disposition ?? ''), 'Transferred'))->count(),
-                    'callback' => $rows->filter(fn($r) => str_contains((string) ($r->disposition ?? ''), 'Callback'))->count(),
-                    'right_number' => $rows->filter(fn($r) => str_contains((string) ($r->disposition ?? ''), 'Right Number'))->count(),
-                ];
-            }
+        // Duplicate info for active lead
+        $activeDuplicates = null;
+        if ($active) {
+            $activeDuplicates = LeadDuplicate::where('lead_id', $active->id)
+                ->orWhere('duplicate_lead_id', $active->id)
+                ->with(['lead', 'duplicateLead'])
+                ->limit(20)
+                ->get();
         }
 
-        return view('livewire.leads', compact('leads', 'resorts', 'closers', 'fronters', 'users', 'active', 'isAdmin', 'fronterStats'));
+        // Fronter stats (admin only) — optimized with DB aggregation
+        $fronterStats = [];
+        if ($isAdmin) {
+            $fronterStats = DB::table('leads')
+                ->select('assigned_to')
+                ->selectRaw('COUNT(*) as total')
+                ->selectRaw("SUM(CASE WHEN disposition IS NULL THEN 1 ELSE 0 END) as undisposed")
+                ->selectRaw("SUM(CASE WHEN disposition LIKE 'Transferred%' THEN 1 ELSE 0 END) as transferred")
+                ->selectRaw("SUM(CASE WHEN disposition LIKE '%Callback%' THEN 1 ELSE 0 END) as callback")
+                ->selectRaw("SUM(CASE WHEN disposition LIKE '%Right Number%' THEN 1 ELSE 0 END) as right_number")
+                ->whereNotNull('assigned_to')
+                ->whereNull('deleted_at')
+                ->groupBy('assigned_to')
+                ->get()
+                ->map(function ($row) use ($fronters) {
+                    $fronter = $fronters->firstWhere('id', $row->assigned_to);
+                    if (!$fronter) return null;
+                    return [
+                        'id' => $row->assigned_to,
+                        'name' => $fronter->name,
+                        'total' => $row->total,
+                        'undisposed' => $row->undisposed,
+                        'transferred' => $row->transferred,
+                        'callback' => $row->callback,
+                        'right_number' => $row->right_number,
+                    ];
+                })
+                ->filter()
+                ->values()
+                ->toArray();
+        }
+
+        // Lazy-loaded counts for dashboard widgets
+        $totalLeads = Lead::count();
+        $duplicateCounts = null;
+        if ($isAdmin) {
+            $duplicateCounts = [
+                'total' => LeadDuplicate::count(),
+                'exact' => LeadDuplicate::where('duplicate_type', 'exact')->count(),
+                'possible' => LeadDuplicate::where('duplicate_type', 'possible')->count(),
+                'pending' => LeadDuplicate::where('review_status', 'pending')->count(),
+            ];
+        }
+
+        // Recent imports
+        $recentImports = $isAdmin
+            ? LeadImportBatch::orderByDesc('id')->limit(5)->get()
+            : LeadImportBatch::where('user_id', $user->id)->orderByDesc('id')->limit(5)->get();
+
+        return view('livewire.leads', compact(
+            'leads', 'resorts', 'closers', 'fronters', 'users', 'active',
+            'isAdmin', 'fronterStats', 'totalLeads', 'duplicateCounts',
+            'activeDuplicates', 'recentImports'
+        ));
     }
 }

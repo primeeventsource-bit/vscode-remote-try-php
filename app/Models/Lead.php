@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Lead extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $table = 'leads';
 
@@ -20,12 +21,15 @@ class Lead extends Model
         'st',
         'zip',
         'resort_location',
+        'email',
         'assigned_to',
         'original_fronter',
         'disposition',
         'transferred_to',
         'source',
         'callback_date',
+        'imported_at',
+        'import_batch_id',
         // Pipeline tracking fields
         'current_stage',
         'transferred_by_user_id',
@@ -51,6 +55,7 @@ class Lead extends Model
         'sent_to_verification_at' => 'datetime',
         'verification_received_at' => 'datetime',
         'final_outcome_at' => 'datetime',
+        'imported_at' => 'datetime',
     ];
 
     // ── Existing relationships ──────────────────────────────
@@ -117,6 +122,23 @@ class Lead extends Model
         return $this->hasMany(PipelineEvent::class);
     }
 
+    // ── Enterprise relationships ────────────────────────────
+
+    public function importBatch()
+    {
+        return $this->belongsTo(LeadImportBatch::class, 'import_batch_id');
+    }
+
+    public function duplicatesAsOriginal()
+    {
+        return $this->hasMany(LeadDuplicate::class, 'lead_id');
+    }
+
+    public function duplicatesAsDuplicate()
+    {
+        return $this->hasMany(LeadDuplicate::class, 'duplicate_lead_id');
+    }
+
     // ── Scopes ──────────────────────────────────────────────
 
     public function scopeTransferred($query)
@@ -137,5 +159,64 @@ class Lead extends Model
     public function scopeByOutcome($query, string $outcome)
     {
         return $query->where('final_outcome', $outcome);
+    }
+
+    // ── Age filter scopes ───────────────────────────────────
+
+    public function scopeNewToday($query)
+    {
+        return $query->where('created_at', '>=', now()->startOfDay());
+    }
+
+    public function scopeThisWeek($query)
+    {
+        return $query->where('created_at', '>=', now()->startOfWeek());
+    }
+
+    public function scopeLastMonth($query)
+    {
+        return $query->whereBetween('created_at', [
+            now()->subMonth()->startOfMonth(),
+            now()->subMonth()->endOfMonth(),
+        ]);
+    }
+
+    public function scopeOlderThanLastMonth($query)
+    {
+        return $query->where('created_at', '<', now()->subMonth()->startOfMonth());
+    }
+
+    // ── Duplicate scopes ────────────────────────────────────
+
+    public function scopeHasDuplicates($query)
+    {
+        return $query->whereHas('duplicatesAsOriginal');
+    }
+
+    public function scopeHasExactDuplicates($query)
+    {
+        return $query->whereHas('duplicatesAsOriginal', fn($q) => $q->where('duplicate_type', 'exact'));
+    }
+
+    public function scopeHasPossibleDuplicates($query)
+    {
+        return $query->whereHas('duplicatesAsOriginal', fn($q) => $q->where('duplicate_type', 'possible'));
+    }
+
+    // ── Helpers ─────────────────────────────────────────────
+
+    public function normalizedPhone1(): ?string
+    {
+        return $this->phone1 ? preg_replace('/[^0-9]/', '', $this->phone1) : null;
+    }
+
+    public function normalizedPhone2(): ?string
+    {
+        return $this->phone2 ? preg_replace('/[^0-9]/', '', $this->phone2) : null;
+    }
+
+    public function normalizedEmail(): ?string
+    {
+        return $this->email ? strtolower(trim($this->email)) : null;
     }
 }

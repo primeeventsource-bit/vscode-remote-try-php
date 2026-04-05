@@ -33,6 +33,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/sales-training', \App\Livewire\SalesTraining::class)->name('sales-training');
     Route::get('/daily-sales', \App\Livewire\DailySalesSystem::class)->name('daily-sales');
 
+    // Enterprise Lead Management
+    Route::get('/leads/duplicates', \App\Livewire\DuplicateReview::class)->name('duplicate-review');
+    Route::get('/leads/imports', \App\Livewire\LeadImports::class)->name('lead-imports');
+
     // Presence heartbeat
     Route::post('/presence/heartbeat', function () {
         $user = auth()->user();
