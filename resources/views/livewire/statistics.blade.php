@@ -13,7 +13,7 @@
             {{-- View By --}}
             <div class="flex items-center gap-2">
                 <span class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold">View By</span>
-                <select wire:model.live="statsRange" class="px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                <select id="fld-stats-range" wire:model.live="statsRange" class="px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                     <option value="live">Live</option>
                     <option value="daily">Daily</option>
                     <option value="weekly">Weekly</option>
@@ -24,7 +24,7 @@
             {{-- Fronter Agent --}}
             <div class="flex items-center gap-2">
                 <span class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold">Fronter Agent</span>
-                <select wire:model.live="selectedFronterId" class="px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                <select id="fld-stats-fronter" wire:model.live="selectedFronterId" class="px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                     <option value="all">All Fronters</option>
                     @foreach($fronterUsers as $fu)
                         <option value="{{ $fu->id }}">{{ $fu->name }}</option>
@@ -35,7 +35,7 @@
             {{-- Closer Agent --}}
             <div class="flex items-center gap-2">
                 <span class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold">Closer Agent</span>
-                <select wire:model.live="selectedCloserId" class="px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                <select id="fld-stats-closer" wire:model.live="selectedCloserId" class="px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                     <option value="all">All Closers</option>
                     @foreach($closerUsers as $cu)
                         <option value="{{ $cu->id }}">{{ $cu->name }}</option>
@@ -46,7 +46,7 @@
             {{-- Admin Agent --}}
             <div class="flex items-center gap-2">
                 <span class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold">Admin Agent</span>
-                <select wire:model.live="selectedAdminId" class="px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                <select id="fld-stats-admin" wire:model.live="selectedAdminId" class="px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                     <option value="all">All Admins</option>
                     @foreach($adminUsers as $au)
                         <option value="{{ $au->id }}">{{ $au->name }}</option>
