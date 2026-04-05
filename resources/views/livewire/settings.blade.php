@@ -35,6 +35,7 @@
                 'transfers' => 'Transfers',
                 'notes_settings' => 'Notes',
                 'chargebacks_settings' => 'Chargebacks',
+                'ai_settings' => 'AI Engine',
                 'stats_settings' => 'Statistics & Dashboard',
             ] as $key => $label)
                 <button wire:click="$set('section', '{{ $key }}')"
@@ -600,6 +601,45 @@
 
                     <button wire:click="saveDialerSettings" class="px-5 py-2.5 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow transition">Save Dialer Settings</button>
                 </div>
+            @endif
+
+            {{-- ═══ AI ENGINE SETTINGS ═══ --}}
+            @if($section === 'ai_settings' && $isMaster)
+                <h3 class="text-sm font-semibold mb-3">AI Engine (GPT)</h3>
+                <p class="text-xs text-crm-t3 mb-4">Control the AI-powered objection detection, rebuttal suggestions, and sales coaching. Requires OPENAI_API_KEY in .env.</p>
+                <div class="space-y-3">
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-ai-enable" type="checkbox" wire:model="aiSettings.enable_ai_engine"> Enable AI Engine (requires API key)</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-[10px] text-crm-t3 uppercase tracking-wider">AI Model</label>
+                            <select id="fld-ai-model" wire:model="aiSettings.ai_model" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                                <option value="gpt-4o-mini">GPT-4o Mini (fast, cheap)</option>
+                                <option value="gpt-4o">GPT-4o (powerful)</option>
+                                <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                                <option value="gpt-3.5-turbo">GPT-3.5 Turbo (cheapest)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-crm-t3 uppercase tracking-wider">Timeout (seconds)</label>
+                            <input id="fld-ai-timeout" type="number" wire:model="aiSettings.ai_timeout_seconds" min="5" max="60" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
+                        </div>
+                    </div>
+                    <div class="border-t border-crm-border pt-3">
+                        <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mb-2">AI Features</div>
+                        <label class="flex items-center gap-2 text-sm"><input id="fld-ai-detect" type="checkbox" wire:model="aiSettings.enable_ai_objection_detection"> AI Objection Detection</label>
+                        <label class="flex items-center gap-2 text-sm mt-1"><input id="fld-ai-nextline" type="checkbox" wire:model="aiSettings.enable_ai_next_line_suggestions"> AI Next Line Suggestions</label>
+                        <label class="flex items-center gap-2 text-sm mt-1"><input id="fld-ai-rewrite" type="checkbox" wire:model="aiSettings.enable_ai_rebuttal_rewrite"> AI Rebuttal Rewrite</label>
+                        <label class="flex items-center gap-2 text-sm mt-1"><input id="fld-ai-followup" type="checkbox" wire:model="aiSettings.enable_ai_follow_up_questions"> AI Follow-Up Questions</label>
+                    </div>
+                    <div class="border-t border-crm-border pt-3">
+                        <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mb-2">Permissions & Safety</div>
+                        <label class="flex items-center gap-2 text-sm"><input id="fld-ai-agents" type="checkbox" wire:model="aiSettings.allow_agents_to_use_ai_assist"> Agents Can Use AI Assist</label>
+                        <label class="flex items-center gap-2 text-sm mt-1"><input id="fld-ai-aggressive" type="checkbox" wire:model="aiSettings.aggressive_ai_mode_enabled"> Enable Aggressive AI Mode</label>
+                        <label class="flex items-center gap-2 text-sm mt-1"><input id="fld-ai-log" type="checkbox" wire:model="aiSettings.ai_log_all_outputs"> Log All AI Outputs</label>
+                        <label class="flex items-center gap-2 text-sm mt-1"><input id="fld-ai-redact" type="checkbox" wire:model="aiSettings.ai_redact_sensitive_data"> Redact Sensitive Data Before AI</label>
+                    </div>
+                </div>
+                <div class="mt-4 text-right"><button wire:click="saveAiSettings" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">Save AI Settings</button></div>
             @endif
 
             {{-- ═══ SALES TRAINING SETTINGS ═══ --}}

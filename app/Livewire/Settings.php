@@ -142,6 +142,23 @@ class Settings extends Component
         'activity_log_enabled' => true,
     ];
 
+    // ── AI Engine Settings ─────────────────────────────────
+    public array $aiSettings = [
+        'enable_ai_engine' => false,
+        'ai_model' => 'gpt-4o-mini',
+        'ai_timeout_seconds' => 15,
+        'ai_max_tokens_default' => 500,
+        'ai_temperature_default' => 0.7,
+        'enable_ai_objection_detection' => true,
+        'enable_ai_next_line_suggestions' => true,
+        'enable_ai_rebuttal_rewrite' => true,
+        'enable_ai_follow_up_questions' => true,
+        'allow_agents_to_use_ai_assist' => true,
+        'aggressive_ai_mode_enabled' => false,
+        'ai_log_all_outputs' => true,
+        'ai_redact_sensitive_data' => true,
+    ];
+
     // ── Transfer Settings ─────────────────────────────────────
     public array $transferSettings = [
         'closer_to_closer_enabled' => true,
@@ -343,6 +360,7 @@ class Settings extends Component
         $this->documentModuleSettings = $this->loadSettingsGroup('documents', $this->documentModuleSettings);
         $this->spreadsheetModuleSettings = $this->loadSettingsGroup('spreadsheets', $this->spreadsheetModuleSettings);
         $this->dialerSettings = $this->loadSettingsGroup('dialer', $this->dialerSettings);
+        $this->aiSettings = $this->loadSettingsGroup('ai', $this->aiSettings);
         $this->salesTrainingSettings = $this->loadSettingsGroup('sales_training', $this->salesTrainingSettings);
         $this->onboardingSettings = $this->loadSettingsGroup('onboarding', $this->onboardingSettings);
         $this->presenceSettings = $this->loadSettingsGroup('presence', $this->presenceSettings);
@@ -684,6 +702,13 @@ class Settings extends Component
 
         $row->update(['active' => !$row->active]);
         $this->loadMerchantIntegrationData();
+    }
+
+    public function saveAiSettings(): void
+    {
+        if (!auth()->user()?->hasRole('master_admin')) return;
+        $this->saveSettingsGroup('ai', $this->aiSettings);
+        session()->flash('success', 'AI engine settings saved.');
     }
 
     public function saveSalesTrainingSettings(): void
