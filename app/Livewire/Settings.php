@@ -202,6 +202,17 @@ class Settings extends Component
         'charged_green_task_assignee_mode' => 'admin_only',
     ];
 
+    // ── Sales Training Settings ─────────────────────────────
+    public array $salesTrainingSettings = [
+        'live_assist_enabled' => true,
+        'objection_library_enabled' => true,
+        'analytics_enabled' => true,
+        'aggressive_mode_enabled' => true,
+        'agents_can_view_library' => true,
+        'agents_can_use_assist' => true,
+        'admin_can_manage_rebuttals' => true,
+    ];
+
     // ── Onboarding Settings ─────────────────────────────────
     public array $onboardingSettings = [
         'onboarding_enabled' => true,
@@ -332,6 +343,7 @@ class Settings extends Component
         $this->documentModuleSettings = $this->loadSettingsGroup('documents', $this->documentModuleSettings);
         $this->spreadsheetModuleSettings = $this->loadSettingsGroup('spreadsheets', $this->spreadsheetModuleSettings);
         $this->dialerSettings = $this->loadSettingsGroup('dialer', $this->dialerSettings);
+        $this->salesTrainingSettings = $this->loadSettingsGroup('sales_training', $this->salesTrainingSettings);
         $this->onboardingSettings = $this->loadSettingsGroup('onboarding', $this->onboardingSettings);
         $this->presenceSettings = $this->loadSettingsGroup('presence', $this->presenceSettings);
         $this->videoCallSettings = $this->loadSettingsGroup('video_call', $this->videoCallSettings);
@@ -672,6 +684,13 @@ class Settings extends Component
 
         $row->update(['active' => !$row->active]);
         $this->loadMerchantIntegrationData();
+    }
+
+    public function saveSalesTrainingSettings(): void
+    {
+        if (!auth()->user()?->hasRole('master_admin')) return;
+        $this->saveSettingsGroup('sales_training', $this->salesTrainingSettings);
+        session()->flash('success', 'Sales training settings saved.');
     }
 
     public function saveOnboardingSettings(): void

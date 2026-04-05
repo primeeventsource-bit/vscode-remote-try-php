@@ -26,6 +26,7 @@
                 'spreadsheets' => 'Spreadsheet Settings',
                 'integrations' => 'Integrations',
                 'calling' => 'Calling / Dialer',
+                'sales_training_settings' => 'Sales Training',
                 'onboarding_settings' => 'Onboarding & Training',
                 'presence_settings' => 'User Presence',
                 'video_call_settings' => 'Video Calls',
@@ -599,6 +600,22 @@
 
                     <button wire:click="saveDialerSettings" class="px-5 py-2.5 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow transition">Save Dialer Settings</button>
                 </div>
+            @endif
+
+            {{-- ═══ SALES TRAINING SETTINGS ═══ --}}
+            @if($section === 'sales_training_settings' && $isMaster)
+                <h3 class="text-sm font-semibold mb-3">Sales Training & Live Assist</h3>
+                <p class="text-xs text-crm-t3 mb-4">Control the objection handling, rebuttal system, and sales analytics.</p>
+                <div class="space-y-3">
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-st-assist" type="checkbox" wire:model="salesTrainingSettings.live_assist_enabled"> Enable Live Close Assist</label>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-st-library" type="checkbox" wire:model="salesTrainingSettings.objection_library_enabled"> Enable Objection Library</label>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-st-analytics" type="checkbox" wire:model="salesTrainingSettings.analytics_enabled"> Enable Sales Analytics</label>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-st-aggressive" type="checkbox" wire:model="salesTrainingSettings.aggressive_mode_enabled"> Enable Aggressive Rebuttals</label>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-st-agentlib" type="checkbox" wire:model="salesTrainingSettings.agents_can_view_library"> Agents Can View Library</label>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-st-agentuse" type="checkbox" wire:model="salesTrainingSettings.agents_can_use_assist"> Agents Can Use Live Assist</label>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-st-adminmgr" type="checkbox" wire:model="salesTrainingSettings.admin_can_manage_rebuttals"> Admin Can Manage Rebuttals</label>
+                </div>
+                <div class="mt-4 text-right"><button wire:click="saveSalesTrainingSettings" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">Save Sales Training Settings</button></div>
             @endif
 
             {{-- ═══ ONBOARDING SETTINGS ═══ --}}

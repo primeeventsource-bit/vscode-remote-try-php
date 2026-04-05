@@ -91,6 +91,7 @@
                     ['route' => 'clients',      'icon' => '💰', 'label' => 'Clients',         'perm' => 'view_all_leads'],
                     ['route' => 'tasks',        'icon' => '☑',  'label' => 'Automatic Task List', 'perm' => null],
                     ['route' => 'video-call',   'icon' => '📹', 'label' => 'Video Calls',      'perm' => null],
+                    ['route' => 'sales-training','icon' => '🎯', 'label' => 'Sales Training',   'perm' => null],
                     ['route' => 'training',     'icon' => '📚', 'label' => 'Training & Help',  'perm' => null],
                     ['route' => 'tracker',      'icon' => '📅', 'label' => 'Tracker',         'perm' => null],
                     ['route' => 'transfers',    'icon' => '♻️',  'label' => 'Transfers',       'perm' => null],
