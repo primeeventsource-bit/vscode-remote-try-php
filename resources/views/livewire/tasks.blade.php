@@ -191,11 +191,34 @@
                     </div>
                 </div>
 
-                {{-- Complete Button --}}
+                {{-- Complete Task — requires note before submit --}}
                 @if(($activeTask->status ?? '') !== 'completed')
-                    <button wire:click="completeTask({{ $activeTask->id }})" class="w-full px-4 py-2 text-sm font-semibold text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 transition">Mark Complete</button>
+                    @if(session('task_error'))
+                        <div class="mb-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs font-medium text-red-700">{{ session('task_error') }}</div>
+                    @endif
+                    <div class="border-t border-crm-border pt-3" x-data="{ justSaved: $wire.entangle('taskJustCompleted') }">
+                        <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mb-2">Complete Task <span class="text-red-500">*</span></div>
+                        <textarea id="fld-completionNote" wire:model="completionNote" rows="2" placeholder="Leave a note before completing this task..." class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400 mb-2"></textarea>
+                        <button
+                            wire:click="completeTask({{ $activeTask->id }})"
+                            wire:loading.attr="disabled"
+                            :disabled="!$wire.completionNote || $wire.completionNote.trim().length === 0"
+                            :class="justSaved ? 'bg-emerald-500 hover:bg-emerald-600' : ($wire.completionNote && $wire.completionNote.trim().length > 0 ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-300 cursor-not-allowed')"
+                            class="w-full px-4 py-2 text-sm font-semibold text-white rounded-lg transition"
+                            x-effect="if (justSaved) setTimeout(() => { justSaved = false }, 3000)">
+                            <span x-show="justSaved" x-cloak>Saved</span>
+                            <span x-show="!justSaved" wire:loading.remove wire:target="completeTask">Submit</span>
+                            <span wire:loading wire:target="completeTask">Saving...</span>
+                        </button>
+                    </div>
                 @else
-                    <button wire:click="reopenTask({{ $activeTask->id }})" class="w-full px-4 py-2 text-sm font-semibold text-crm-t2 bg-crm-card border border-crm-border rounded-lg hover:bg-crm-hover transition">Reopen Task</button>
+                    <div class="border-t border-crm-border pt-3">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-[8px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600">Completed</span>
+                            <span class="text-[10px] text-crm-t3">{{ $activeTask->completed_at ?? '' }}</span>
+                        </div>
+                        <button wire:click="reopenTask({{ $activeTask->id }})" class="w-full px-4 py-2 text-sm font-semibold text-crm-t2 bg-crm-card border border-crm-border rounded-lg hover:bg-crm-hover transition">Reopen Task</button>
+                    </div>
                 @endif
             </div>
         @endif

@@ -42,9 +42,44 @@ class Tasks extends Component
         $this->newNote = '';
     }
 
+    public string $completionNote = '';
+    public bool $taskJustCompleted = false;
+
     public function completeTask($id)
     {
-        DB::table('tasks')->where('id', $id)->update(['status' => 'completed', 'completed_at' => now()->format('M j, Y - g:i A')]);
+        $note = trim($this->completionNote);
+        if ($note === '') {
+            session()->flash('task_error', 'A note is required before completing this task.');
+            return;
+        }
+
+        $task = DB::table('tasks')->where('id', $id)->first();
+        if (!$task) return;
+
+        // Append completion note to existing notes
+        $notes = json_decode($task->notes ?? '[]', true);
+        $notes[] = [
+            'text' => $note,
+            'by' => auth()->id(),
+            'time' => now()->format('M j, Y - g:i A'),
+        ];
+
+        $updateData = [
+            'status' => 'completed',
+            'completed_at' => now()->format('M j, Y - g:i A'),
+            'notes' => json_encode($notes),
+        ];
+
+        if (\Schema::hasColumn('tasks', 'completed_by_user_id')) {
+            $updateData['completed_by_user_id'] = auth()->id();
+        }
+
+        DB::table('tasks')->where('id', $id)->update($updateData);
+
+        $this->completionNote = '';
+        $this->taskJustCompleted = true;
+
+        // Reset green state after 3 seconds via frontend
     }
 
     public function reopenTask($id)
