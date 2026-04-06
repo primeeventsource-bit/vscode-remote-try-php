@@ -126,10 +126,16 @@ Route::middleware('auth')->group(function () {
 
         $identity = 'user-' . $user->id;
 
-        // Check Twilio credentials — fall back to env() for Azure where config cache may be stale
-        $sid = config('twilio.account_sid') ?: config('services.twilio.account_sid') ?: env('TWILIO_ACCOUNT_SID');
-        $key = config('twilio.api_key_sid') ?: config('services.twilio.api_key_sid') ?: env('TWILIO_API_KEY_SID');
-        $sec = config('twilio.api_key_secret') ?: config('services.twilio.api_key_secret') ?: env('TWILIO_API_KEY_SECRET');
+        // Read Twilio credentials directly from env — config() is unreliable on Azure
+        $sid = env('TWILIO_ACCOUNT_SID') ?: config('twilio.account_sid') ?: config('services.twilio.account_sid');
+        $key = env('TWILIO_API_KEY_SID') ?: config('twilio.api_key_sid') ?: config('services.twilio.api_key_sid');
+        $sec = env('TWILIO_API_KEY_SECRET') ?: config('twilio.api_key_secret') ?: config('services.twilio.api_key_secret');
+
+        \Illuminate\Support\Facades\Log::info('Twilio token request', [
+            'meeting' => $uuid, 'user' => $user->id,
+            'sid_set' => !empty($sid), 'key_set' => !empty($key), 'sec_set' => !empty($sec),
+        ]);
+
         if (!$sid || !$key || !$sec) {
             return response()->json([
                 'error' => 'Twilio credentials not configured. Set TWILIO_ACCOUNT_SID, TWILIO_API_KEY_SID, TWILIO_API_KEY_SECRET in Azure App Settings.',
