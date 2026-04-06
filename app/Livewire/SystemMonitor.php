@@ -46,6 +46,31 @@ class SystemMonitor extends Component
         $this->flashMsg = $result['message'] ?? 'Recovery attempted';
     }
 
+    public function runStorageCheck(): void
+    {
+        if (! auth()->user()?->hasRole('master_admin')) return;
+        \App\Services\Storage\StorageHealthService::runFullCheck();
+        $this->flashMsg = 'Storage health check completed';
+    }
+
+    public function forceStorageDisk(string $mode): void
+    {
+        if (! auth()->user()?->hasRole('master_admin')) return;
+        $status = \App\Models\StorageStatus::current();
+        if ($mode === 'auto') {
+            $status->forced_disk = null;
+        } elseif ($mode === 'primary') {
+            $status->forced_disk = $status->primary_disk;
+            $status->active_disk = $status->primary_disk;
+        } elseif ($mode === 'fallback') {
+            $status->forced_disk = $status->fallback_disk;
+            $status->active_disk = $status->fallback_disk;
+        }
+        try { $status->save(); } catch (\Throwable $e) {}
+        \App\Models\StorageEvent::log('forced_' . $mode, "Admin forced storage to {$mode}", 'warning');
+        $this->flashMsg = "Storage forced to {$mode}";
+    }
+
     public function render()
     {
         $user = auth()->user();
@@ -96,8 +121,17 @@ class SystemMonitor extends Component
             }
         } catch (\Throwable $e) {}
 
+        // Storage resilience status
+        $storageStatus = null;
+        $storageEvents = collect();
+        try {
+            $storageStatus = \App\Models\StorageStatus::current();
+            $storageEvents = \App\Models\StorageEvent::orderByDesc('created_at')->limit(15)->get();
+        } catch (\Throwable $e) {}
+
         return view('livewire.system-monitor', compact(
-            'health', 'summary', 'failedJobs', 'queuePending', 'recentBeats'
+            'health', 'summary', 'failedJobs', 'queuePending', 'recentBeats',
+            'storageStatus', 'storageEvents'
         ));
     }
 }

@@ -17,7 +17,7 @@
 
     {{-- Tabs --}}
     <div class="flex gap-1 bg-crm-card border border-crm-border rounded-lg p-0.5 mb-5">
-        @foreach(['health' => 'System Health', 'incidents' => 'Incidents ('.$summary['open'].')', 'queue' => 'Queue & Jobs', 'scheduler' => 'Scheduler'] as $k => $l)
+        @foreach(['health' => 'System Health', 'storage' => 'Storage', 'incidents' => 'Incidents ('.$summary['open'].')', 'queue' => 'Queue & Jobs', 'scheduler' => 'Scheduler'] as $k => $l)
             <button wire:click="$set('tab', '{{ $k }}')" class="px-3 py-1.5 text-xs font-semibold rounded-md transition {{ $tab === $k ? 'bg-white text-blue-600 shadow-sm' : 'text-crm-t3 hover:text-crm-t1' }}">{{ $l }}</button>
         @endforeach
     </div>
@@ -56,6 +56,88 @@
                 </div>
             @endforeach
         </div>
+    @endif
+
+    {{-- ═══ STORAGE ═══ --}}
+    @if($tab === 'storage')
+        @php $ss = $storageStatus; @endphp
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            @php
+                $stateColor = match($ss?->state ?? 'unknown') {
+                    'healthy' => 'emerald', 'degraded' => 'amber', 'failed' => 'red', 'failover_active' => 'blue', default => 'gray'
+                };
+            @endphp
+            <div class="bg-crm-card border border-crm-border rounded-lg p-4 border-t-[3px] border-t-{{ $stateColor }}-500">
+                <div class="text-[10px] text-crm-t3 uppercase">State</div>
+                <div class="text-lg font-extrabold text-{{ $stateColor }}-600 mt-1">{{ ucfirst(str_replace('_', ' ', $ss?->state ?? 'unknown')) }}</div>
+            </div>
+            <div class="bg-crm-card border border-crm-border rounded-lg p-4 border-t-[3px] border-t-blue-500">
+                <div class="text-[10px] text-crm-t3 uppercase">Active Disk</div>
+                <div class="text-lg font-extrabold text-blue-600 mt-1">{{ $ss?->active_disk ?? '-' }}</div>
+                @if($ss?->forced_disk) <div class="text-[9px] text-amber-600 font-bold">FORCED</div> @endif
+            </div>
+            <div class="bg-crm-card border border-crm-border rounded-lg p-4 border-t-[3px] {{ ($ss?->primary_healthy ?? true) ? 'border-t-emerald-500' : 'border-t-red-500' }}">
+                <div class="text-[10px] text-crm-t3 uppercase">Primary ({{ $ss?->primary_disk ?? '-' }})</div>
+                <div class="text-sm font-bold {{ ($ss?->primary_healthy ?? true) ? 'text-emerald-600' : 'text-red-600' }} mt-1">
+                    {{ ($ss?->primary_healthy ?? true) ? 'Healthy' : 'Unhealthy' }}
+                </div>
+                <div class="text-[9px] text-crm-t3">{{ $ss?->primary_latency_ms ?? '-' }}ms</div>
+            </div>
+            <div class="bg-crm-card border border-crm-border rounded-lg p-4 border-t-[3px] {{ ($ss?->fallback_healthy ?? true) ? 'border-t-emerald-500' : 'border-t-red-500' }}">
+                <div class="text-[10px] text-crm-t3 uppercase">Fallback ({{ $ss?->fallback_disk ?? '-' }})</div>
+                <div class="text-sm font-bold {{ ($ss?->fallback_healthy ?? true) ? 'text-emerald-600' : 'text-red-600' }} mt-1">
+                    {{ ($ss?->fallback_healthy ?? true) ? 'Healthy' : 'Unhealthy' }}
+                </div>
+                <div class="text-[9px] text-crm-t3">{{ $ss?->fallback_latency_ms ?? '-' }}ms</div>
+            </div>
+        </div>
+
+        {{-- Admin Controls --}}
+        @if(auth()->user()->hasRole('master_admin'))
+            <div class="flex flex-wrap gap-2 mb-4">
+                <button wire:click="runStorageCheck" class="px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700">Run Check Now</button>
+                <button wire:click="forceStorageDisk('primary')" class="px-3 py-1.5 text-xs font-semibold text-crm-t2 bg-gray-100 rounded-lg hover:bg-gray-200">Force Primary</button>
+                <button wire:click="forceStorageDisk('fallback')" class="px-3 py-1.5 text-xs font-semibold text-crm-t2 bg-gray-100 rounded-lg hover:bg-gray-200">Force Fallback</button>
+                <button wire:click="forceStorageDisk('auto')" class="px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100">Auto Mode</button>
+            </div>
+        @endif
+
+        {{-- Info --}}
+        <div class="text-[10px] text-crm-t3 mb-4 space-y-0.5">
+            <div>Last check: {{ $ss?->last_checked_at?->diffForHumans() ?? 'Never' }}</div>
+            <div>Failures: {{ $ss?->failure_count ?? 0 }} · Recoveries: {{ $ss?->recovery_count ?? 0 }}</div>
+            @if($ss?->last_failover_at) <div>Last failover: {{ $ss->last_failover_at->diffForHumans() }}</div> @endif
+            @if($ss?->last_recovery_at) <div>Last recovery: {{ $ss->last_recovery_at->diffForHumans() }}</div> @endif
+        </div>
+
+        {{-- Recent Events --}}
+        @if($storageEvents->isNotEmpty())
+            <div class="bg-crm-card border border-crm-border rounded-lg overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-crm-border bg-crm-surface">
+                            <th class="text-left px-4 py-2 text-[10px] uppercase text-crm-t3 font-semibold">Event</th>
+                            <th class="text-left px-3 py-2 text-[10px] uppercase text-crm-t3 font-semibold">Message</th>
+                            <th class="text-center px-3 py-2 text-[10px] uppercase text-crm-t3 font-semibold">Severity</th>
+                            <th class="text-right px-4 py-2 text-[10px] uppercase text-crm-t3 font-semibold">When</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($storageEvents as $evt)
+                            @php $sevColor = match($evt->severity) { 'critical' => 'red', 'warning' => 'amber', default => 'gray' }; @endphp
+                            <tr class="border-b border-crm-border">
+                                <td class="px-4 py-2 text-xs font-mono">{{ $evt->event_type }}</td>
+                                <td class="px-3 py-2 text-xs truncate max-w-[200px]">{{ $evt->message }}</td>
+                                <td class="text-center px-3 py-2"><span class="text-[9px] font-bold px-2 py-0.5 rounded bg-{{ $sevColor }}-50 text-{{ $sevColor }}-600">{{ $evt->severity }}</span></td>
+                                <td class="text-right px-4 py-2 text-xs text-crm-t3">{{ $evt->created_at?->diffForHumans() }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @else
+            <p class="text-xs text-crm-t3 text-center py-6">No storage events recorded yet. Run a health check to start monitoring.</p>
+        @endif
     @endif
 
     {{-- ═══ INCIDENTS ═══ --}}

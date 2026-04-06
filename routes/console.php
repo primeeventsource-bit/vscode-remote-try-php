@@ -25,6 +25,22 @@ Schedule::command('monitor:health')
     ->withoutOverlapping()
     ->runInBackground();
 
+// ─── Storage health checks (every 5 minutes) ────────────────
+Schedule::command('storage:health-check')
+    ->everyFiveMinutes()
+    ->withoutOverlapping()
+    ->runInBackground();
+
+// ─── Clean old storage events (weekly) ───────────────────────
+Schedule::call(function () {
+    try {
+        $days = config('storage_resilience.retention_days_for_logs', 30);
+        \Illuminate\Support\Facades\DB::table('storage_events')
+            ->where('created_at', '<', now()->subDays($days))
+            ->delete();
+    } catch (\Throwable $e) {}
+})->weeklyOn(0, '04:30');
+
 // ─── Clean old health check records (daily) ──────────────────
 Schedule::call(function () {
     try {
