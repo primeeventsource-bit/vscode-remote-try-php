@@ -327,6 +327,28 @@ trait ChatEngine
     // GIF SETTINGS — single source for both UIs
     // ═══════════════════════════════════════════════════════
 
+    // ═══════════════════════════════════════════════════════
+    // PENDING CALL INVITES — single source for both UIs
+    // ═══════════════════════════════════════════════════════
+
+    protected function loadPendingCallInvite(): ?object
+    {
+        try {
+            return \App\Models\VideoRoomParticipant::where('user_id', auth()->id())
+                ->where('invite_status', 'pending')
+                ->whereHas('room', fn ($q) => $q->whereIn('status', ['waiting', 'active']))
+                ->with(['room.creator'])
+                ->latest()
+                ->first();
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // GIF SETTINGS — single source for both UIs
+    // ═══════════════════════════════════════════════════════
+
     protected function loadGifSettings(): array
     {
         $get = function (string $key, mixed $default) {

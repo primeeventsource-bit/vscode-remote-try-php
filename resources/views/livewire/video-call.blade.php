@@ -308,12 +308,29 @@ function videoCallApp() {
         roomId: @json($roomId),
         userId: @json(auth()->id()),
         pollInterval: null,
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
 
         mediaError: '',
 
         async init() {
+            await this.fetchIceServers();
             await this.initMedia();
             this.pollInterval = setInterval(() => this.pollForSignals(), 2000);
+        },
+
+        async fetchIceServers() {
+            try {
+                const r = await fetch('/api/ice-servers', { credentials: 'same-origin', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+                if (r.ok) {
+                    const data = await r.json();
+                    if (data.iceServers && data.iceServers.length) {
+                        this.iceServers = data.iceServers;
+                        console.log('ICE servers loaded from Twilio:', this.iceServers.length, 'servers');
+                    }
+                }
+            } catch (e) {
+                console.warn('Failed to fetch ICE servers, using fallback STUN:', e.message);
+            }
         },
 
         async initMedia() {
@@ -437,7 +454,7 @@ function videoCallApp() {
             if (this.peers[remoteUserId]) return this.peers[remoteUserId];
 
             const pc = new RTCPeerConnection({
-                iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+                iceServers: this.iceServers
             });
 
             pc.onicecandidate = (e) => {

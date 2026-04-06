@@ -6,6 +6,12 @@ return [
         'model' => env('OPENAI_MODEL', 'gpt-4o-mini'),
     ],
 
+    'twilio' => [
+        'account_sid' => env('TWILIO_ACCOUNT_SID'),
+        'api_key_sid' => env('TWILIO_API_KEY_SID'),
+        'api_key_secret' => env('TWILIO_API_KEY_SECRET'),
+    ],
+
     'gifs' => [
         'provider' => env('GIF_PROVIDER', 'giphy'),
         'timeout' => (int) env('GIF_API_TIMEOUT', 6),
