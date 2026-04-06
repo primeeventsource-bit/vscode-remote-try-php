@@ -1,6 +1,8 @@
 <?php
+
 namespace App\Livewire;
 
+use App\Livewire\Concerns\ChatEngine;
 use App\Models\Chat;
 use App\Models\Message;
 use App\Models\User;
@@ -12,20 +14,33 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
+/**
+ * Full-page sidebar chat — uses shared ChatEngine trait
+ * for all thread/message/unread/send/GIF/search logic.
+ *
+ * Only contains sidebar-specific features:
+ * - info panel / shared media
+ * - group member management
+ * - avatar/icon uploads
+ * - emoji avatar selection
+ */
 #[Layout('components.layouts.app')]
 #[Title('Chat')]
 class ChatPage extends Component
 {
-    use WithFileUploads;
+    use ChatEngine, WithFileUploads;
 
+    // Shared state (used by ChatEngine trait)
     public ?int $selectedChat = null;
     public string $messageInput = '';
     public bool $showNewChatForm = false;
-    public bool $showInfoPanel = false;
     public string $newChatType = 'dm';
     public string $newChatName = '';
     public array $newChatMembers = [];
     public string $newChatError = '';
+
+    // Sidebar-only state
+    public bool $showInfoPanel = false;
     public $avatarUpload = null;
     public $groupIconUpload = null;
     public string $emojiAvatarPick = '';
@@ -41,173 +56,27 @@ class ChatPage extends Component
                 $this->redirectRoute('dashboard');
                 session()->flash('error', 'Chat module is disabled or you do not have access.');
             }
-        } catch (\Throwable $e) {
-            // crm_settings table may not exist yet — allow access by default
-        }
+        } catch (\Throwable $e) {}
     }
 
-    public function selectChat($id)
+    // Override selectChat to also close sidebar-only panels
+    public function selectChat($id): void
     {
         $this->selectedChat = (int) $id;
+        $this->messageInput = '';
         $this->showNewChatForm = false;
         $this->showInfoPanel = false;
         $this->markChatAsSeen();
     }
 
-    /**
-     * Mark all incoming messages in the active chat as seen.
-     * Identical to ChatWidget logic — single source of truth for read status.
-     */
-    private function markChatAsSeen(): void
-    {
-        if (! $this->selectedChat) return;
-
-        try {
-            $now = now()->toDateTimeString();
-            Message::where('chat_id', $this->selectedChat)
-                ->where('sender_id', '!=', auth()->id())
-                ->whereNull('seen_at')
-                ->update([
-                    'seen_at'      => $now,
-                    'delivered_at' => $now,
-                ]);
-        } catch (\Throwable $e) {
-            // seen_at column may not exist yet
-        }
-    }
-
-    /**
-     * Called by wire:poll to refresh without full re-render.
-     * Also re-marks active chat as seen on each poll cycle.
-     */
-    public function refreshUnreadCounts(): void
-    {
-        $this->markChatAsSeen();
-    }
+    // ── Sidebar-only: Info Panel ─────────────────────────
 
     public function toggleInfoPanel(): void
     {
         $this->showInfoPanel = !$this->showInfoPanel;
     }
 
-    public function toggleNewChatForm(): void
-    {
-        $this->showNewChatForm = !$this->showNewChatForm;
-        if ($this->showNewChatForm) {
-            $this->selectedChat = null;
-            $this->newChatType = 'dm';
-            $this->newChatName = '';
-            $this->newChatMembers = [];
-            $this->newChatError = '';
-        }
-    }
-
-    public function createNewChat(): void
-    {
-        $user = auth()->user();
-        if (!$user) return;
-
-        $this->newChatError = '';
-        $selectedMembers = array_values(array_unique(array_map('intval', $this->newChatMembers)));
-        if (empty($selectedMembers)) {
-            $this->newChatError = $this->newChatType === 'dm'
-                ? 'Select one person to start a direct message.'
-                : 'Select at least one member to create a group chat.';
-            return;
-        }
-
-        if ($this->newChatType === 'dm') {
-            $selectedMembers = [reset($selectedMembers)];
-            $otherUser = User::find($selectedMembers[0]);
-            if (!$otherUser) {
-                $this->newChatError = 'The selected user could not be found.';
-                return;
-            }
-            $name = $otherUser->name ?? 'Direct Message';
-
-            // Prevent duplicate DMs
-            $existing = Chat::where('type', 'dm')->get()->first(function ($c) use ($user, $selectedMembers) {
-                $m = is_array($c->members) ? $c->members : json_decode($c->members ?? '[]', true);
-                $ids = array_map('intval', array_values($m));
-                sort($ids);
-                $t = [$user->id, $selectedMembers[0]];
-                sort($t);
-                return $ids === $t;
-            });
-            if ($existing) {
-                $this->selectedChat = $existing->id;
-                $this->showNewChatForm = false;
-                $this->newChatMembers = [];
-                return;
-            }
-        } else {
-            $name = trim($this->newChatName) ?: 'Group Chat';
-        }
-
-        try {
-            $members = array_values(array_unique(array_merge($selectedMembers, [$user->id])));
-            $chat = Chat::create([
-                'name' => $name,
-                'type' => $this->newChatType,
-                'members' => $members,
-                'created_by' => $user->id,
-            ]);
-            $this->selectedChat = $chat->id;
-            $this->showNewChatForm = false;
-            $this->newChatName = '';
-            $this->newChatMembers = [];
-            $this->messageInput = '';
-            $this->newChatError = '';
-        } catch (\Throwable $e) {
-            Log::error('Chat creation failed', ['error' => $e->getMessage()]);
-            $this->newChatError = 'Failed to create chat. Please try again.';
-        }
-    }
-
-    public function sendMessage()
-    {
-        $text = trim($this->messageInput);
-        if ($text === '' || !$this->selectedChat) return;
-
-        try {
-            $msgData = [
-                'chat_id'      => $this->selectedChat,
-                'message_type' => 'text',
-                'sender_id'    => auth()->id(),
-                'text'         => $text,
-            ];
-
-            // Sender sees own message as delivered immediately (matches bubble chat)
-            try { $msgData['seen_at'] = now(); $msgData['delivered_at'] = now(); } catch (\Throwable $e) {}
-
-            Message::create($msgData);
-            Chat::where('id', $this->selectedChat)->update(['updated_at' => now()]);
-            $this->messageInput = '';
-        } catch (\Throwable $e) {
-            Log::error('Message send failed', ['error' => $e->getMessage()]);
-        }
-    }
-
-    public function sendGif(array $gif): void
-    {
-        if (!$this->selectedChat || empty($gif['url'])) return;
-
-        try {
-            Message::create([
-                'chat_id' => $this->selectedChat,
-                'message_type' => 'gif',
-                'sender_id' => auth()->id(),
-                'gif_url' => $gif['url'],
-                'gif_preview_url' => $gif['preview_url'] ?? $gif['url'],
-                'gif_provider' => $gif['provider'] ?? 'giphy',
-                'gif_external_id' => $gif['id'] ?? null,
-                'gif_title' => $gif['title'] ?? 'GIF',
-            ]);
-            Chat::where('id', $this->selectedChat)->update(['updated_at' => now()]);
-        } catch (\Throwable $e) {
-            Log::error('GIF send failed', ['error' => $e->getMessage()]);
-        }
-    }
+    // ── Sidebar-only: Avatar / Icon Uploads ──────────────
 
     public function uploadAvatar(): void
     {
@@ -235,7 +104,6 @@ class ChatPage extends Component
     public function uploadGroupIcon(): void
     {
         if (!$this->selectedChat) return;
-        // HARD RULE: Master Admin only can change group chat avatar
         if (!auth()->user()?->hasRole('master_admin')) return;
         $this->validate(['groupIconUpload' => 'image|max:2048|mimes:jpg,jpeg,png,webp']);
         try {
@@ -265,10 +133,7 @@ class ChatPage extends Component
     {
         $user = auth()->user();
         if (!$user) return;
-        // Remove uploaded avatar if switching to emoji
-        if ($user->avatar_path) {
-            Storage::disk('public')->delete($user->avatar_path);
-        }
+        if ($user->avatar_path) Storage::disk('public')->delete($user->avatar_path);
         $user->update(['avatar_emoji' => $emoji, 'avatar_path' => null]);
     }
 
@@ -282,44 +147,11 @@ class ChatPage extends Component
         $chat->update(['icon_emoji' => $emoji, 'icon_path' => null]);
     }
 
-    public function startDirectCall(): void
-    {
-        if (!$this->selectedChat) return;
-        $chat = Chat::find($this->selectedChat);
-        if (!$chat || $chat->type !== 'dm') return;
-
-        try {
-            $room = \App\Services\VideoCall\VideoRoomService::createOrReuseDirectRoom($chat, auth()->user());
-            if ($room) {
-                \App\Services\VideoCall\VideoRoomService::joinRoom($room, auth()->user());
-                $this->redirect(route('video-call', ['room' => $room->uuid]));
-            }
-        } catch (\Throwable $e) {
-            report($e);
-        }
-    }
-
-    public function startDirectAudioCall(): void
-    {
-        if (!$this->selectedChat) return;
-        $chat = Chat::find($this->selectedChat);
-        if (!$chat || $chat->type !== 'dm') return;
-
-        try {
-            $room = \App\Services\VideoCall\VideoRoomService::createOrReuseDirectRoom($chat, auth()->user(), 'audio');
-            if ($room) {
-                \App\Services\VideoCall\VideoRoomService::joinRoom($room, auth()->user());
-                $this->redirect(route('video-call', ['room' => $room->uuid]));
-            }
-        } catch (\Throwable $e) {
-            report($e);
-        }
-    }
+    // ── Sidebar-only: Group Member Management ────────────
 
     private function canManageGroup(): bool
     {
-        $user = auth()->user();
-        return $user && $user->hasRole('master_admin', 'admin');
+        return auth()->user()?->hasRole('master_admin', 'admin') ?? false;
     }
 
     public function toggleManageMembers(): void
@@ -348,14 +180,10 @@ class ChatPage extends Component
             }
         }
 
-        if (empty($added)) {
-            $this->addMemberIds = [];
-            return;
-        }
+        if (empty($added)) { $this->addMemberIds = []; return; }
 
         $chat->update(['members' => array_values(array_unique($members))]);
 
-        // System message
         $actorName = auth()->user()->name ?? 'Admin';
         foreach ($added as $name) {
             try {
@@ -368,7 +196,6 @@ class ChatPage extends Component
             } catch (\Throwable $e) {}
         }
         $chat->update(['updated_at' => now()]);
-
         $this->addMemberIds = [];
         $this->showManageMembers = false;
     }
@@ -382,10 +209,7 @@ class ChatPage extends Component
 
         $members = is_array($chat->members) ? $chat->members : json_decode($chat->members ?? '[]', true);
         $members = array_map('intval', $members);
-
         if (!in_array($userId, $members)) return;
-
-        // Don't allow removing chat creator
         if ($chat->created_by === $userId) return;
 
         $members = array_values(array_filter($members, fn($m) => $m !== $userId));
@@ -393,87 +217,37 @@ class ChatPage extends Component
 
         $removedUser = User::find($userId);
         $actorName = auth()->user()->name ?? 'Admin';
-        $removedName = $removedUser->name ?? 'User';
-
         try {
             Message::create([
                 'chat_id' => $chat->id,
                 'message_type' => 'text',
                 'sender_id' => auth()->id(),
-                'text' => "📌 {$removedName} was removed from the group by {$actorName}",
+                'text' => "📌 " . ($removedUser->name ?? 'User') . " was removed from the group by {$actorName}",
             ]);
         } catch (\Throwable $e) {}
-
         $chat->update(['updated_at' => now()]);
 
-        // If removed user was viewing this chat, they'll lose access on next render
-        if ($userId === auth()->id()) {
-            $this->selectedChat = null;
-        }
+        if ($userId === auth()->id()) $this->selectedChat = null;
     }
+
+    // ── Render ───────────────────────────────────────────
 
     public function render()
     {
         $user = auth()->user();
 
-        // Get chats — simple, no fancy queries
-        try {
-            $chats = Chat::orderBy('updated_at', 'desc')->get()->filter(function ($c) use ($user) {
-                $members = is_array($c->members) ? $c->members : json_decode($c->members ?? '[]', true);
-                return in_array($user->id, $members) || in_array((string) $user->id, $members);
-            });
-        } catch (\Throwable $e) {
-            $chats = collect();
+        $chats = $this->loadThreadsForUser($user);
+
+        if ($this->selectedChat) {
+            $this->markChatAsSeen();
         }
 
-        // Unread counts — skip gracefully if columns don't exist
-        $unreadCounts = collect();
-        if ($chats->isNotEmpty()) {
-            try {
-                $unreadCounts = DB::table('messages')
-                    ->whereIn('chat_id', $chats->pluck('id'))
-                    ->where('sender_id', '!=', $user->id)
-                    ->whereNull('seen_at')
-                    ->selectRaw('chat_id, count(*) as cnt')
-                    ->groupBy('chat_id')
-                    ->pluck('cnt', 'chat_id');
-            } catch (\Throwable $e) {
-                // seen_at column might not exist yet — that's OK
-            }
-        }
-
-        // Messages for selected chat
-        try {
-            $messages = $this->selectedChat
-                ? Message::where('chat_id', $this->selectedChat)->orderBy('id')->limit(200)->get()
-                : collect();
-        } catch (\Throwable $e) {
-            $messages = collect();
-        }
-
+        $unreadCounts = $this->computeUnreadCounts($chats, $user->id);
+        $messages = $this->loadMessages(200);
         $activeChat = $this->selectedChat ? Chat::find($this->selectedChat) : null;
         $users = User::all()->keyBy('id');
-
-        // GIF settings — read from DB with safe fallbacks
-        $getSetting = function (string $key, mixed $default) {
-            try {
-                $raw = DB::table('crm_settings')->where('key', $key)->value('value');
-                return $raw === null ? $default : json_decode($raw, true);
-            } catch (\Throwable $e) {
-                return $default;
-            }
-        };
-        $canUseGifPicker = (bool) $getSetting('gifs.module_enabled', true);
-        $gifPickerSettings = [
-            'module_enabled' => (bool) $getSetting('gifs.module_enabled', true),
-            'trending_enabled' => (bool) $getSetting('gifs.trending_enabled', true),
-            'movies_enabled' => (bool) $getSetting('gifs.movies_enabled', true),
-            'search_enabled' => (bool) $getSetting('gifs.search_enabled', true),
-            'recent_enabled' => (bool) $getSetting('gifs.recent_enabled', true),
-            'favorites_enabled' => (bool) $getSetting('gifs.favorites_enabled', true),
-            'provider' => (string) $getSetting('gifs.provider', 'giphy'),
-            'results_limit' => (int) $getSetting('gifs.results_limit', 24),
-        ];
+        $gifPickerSettings = $this->loadGifSettings();
+        $canUseGifPicker = $gifPickerSettings['module_enabled'];
         $currentUserId = (int) auth()->id();
 
         $sharedMedia = collect();
@@ -488,25 +262,22 @@ class ChatPage extends Component
             } catch (\Throwable $e) {}
         }
 
-        // Check for active direct call on current DM
         $activeDirectCall = null;
         if ($activeChat && $activeChat->type === 'dm') {
-            try {
-                $activeDirectCall = \App\Services\VideoCall\VideoRoomService::getActiveDirectRoom($activeChat->id);
-            } catch (\Throwable $e) {}
+            try { $activeDirectCall = \App\Services\VideoCall\VideoRoomService::getActiveDirectRoom($activeChat->id); } catch (\Throwable $e) {}
         }
 
         return view('livewire.chat-page', [
-            'chats' => $chats,
-            'messages' => $messages,
-            'activeChat' => $activeChat,
-            'users' => $users,
+            'chats'             => $chats,
+            'messages'          => $messages,
+            'activeChat'        => $activeChat,
+            'users'             => $users,
             'gifPickerSettings' => $gifPickerSettings,
-            'canUseGifPicker' => $canUseGifPicker,
-            'currentUserId' => $currentUserId,
-            'sharedMedia' => $sharedMedia,
-            'unreadCounts' => $unreadCounts,
-            'activeDirectCall' => $activeDirectCall,
+            'canUseGifPicker'   => $canUseGifPicker,
+            'currentUserId'     => $currentUserId,
+            'sharedMedia'       => $sharedMedia,
+            'unreadCounts'      => $unreadCounts,
+            'activeDirectCall'  => $activeDirectCall,
         ]);
     }
 }
