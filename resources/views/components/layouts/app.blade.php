@@ -131,7 +131,8 @@
                         <span class="text-[9px] text-crm-t3 uppercase tracking-widest font-bold">{{ $section['title'] }}</span>
                     </div>
                     @foreach($visibleItems as $item)
-                        <a href="{{ route($item['route']) }}" @click="drawerOpen = false"
+                        @php try { $navHref = route($item['route']); } catch (\Throwable $e) { $navHref = '/' . $item['route']; } @endphp
+                        <a href="{{ $navHref }}" @click="drawerOpen = false"
                            class="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition
                                   {{ request()->routeIs($item['route']) ? 'bg-blue-50 text-blue-600' : 'text-crm-t2 hover:bg-crm-hover' }}">
                             <span class="w-5 text-center text-sm">{{ $item['icon'] }}</span>
