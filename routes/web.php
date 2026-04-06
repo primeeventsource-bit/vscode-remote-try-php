@@ -3,6 +3,23 @@
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
+// Temporary Twilio diagnostic — REMOVE after debugging
+Route::get('/twilio-check', function () {
+    return response()->json([
+        'env_sid' => env('TWILIO_ACCOUNT_SID') ? substr(env('TWILIO_ACCOUNT_SID'), 0, 8) . '...' : null,
+        'env_key' => env('TWILIO_API_KEY_SID') ? substr(env('TWILIO_API_KEY_SID'), 0, 8) . '...' : null,
+        'env_sec' => env('TWILIO_API_KEY_SECRET') ? 'SET' : null,
+        'cfg_sid' => config('twilio.account_sid') ? substr(config('twilio.account_sid'), 0, 8) . '...' : null,
+        'cfg_key' => config('twilio.api_key_sid') ? substr(config('twilio.api_key_sid'), 0, 8) . '...' : null,
+        'cfg_sec' => config('twilio.api_key_secret') ? 'SET' : null,
+        'svc_sid' => config('services.twilio.account_sid') ? substr(config('services.twilio.account_sid'), 0, 8) . '...' : null,
+        'svc_key' => config('services.twilio.api_key_sid') ? substr(config('services.twilio.api_key_sid'), 0, 8) . '...' : null,
+        'svc_sec' => config('services.twilio.api_key_secret') ? 'SET' : null,
+        'dotenv_exists' => file_exists(base_path('.env')),
+        'config_cached' => file_exists(base_path('bootstrap/cache/config.php')),
+    ]);
+});
+
 // Deploy helper — runs migrations + clears cache
 // Auth: master admin session OR APP_KEY as ?key= query param for CI/CD
 Route::get('/deploy-now', function (\Illuminate\Http\Request $request) {
