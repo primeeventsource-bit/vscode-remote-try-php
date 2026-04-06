@@ -376,19 +376,23 @@ function videoCallApp() {
         },
 
         async handleSignal(sig) {
-            const fromId = sig.from;
-            if (sig.type === 'offer') {
-                const pc = this.getOrCreatePeer(fromId);
-                await pc.setRemoteDescription(JSON.parse(sig.payload));
-                const answer = await pc.createAnswer();
-                await pc.setLocalDescription(answer);
-                this.$wire.sendSignal(fromId, 'answer', JSON.stringify(answer));
-            } else if (sig.type === 'answer') {
-                const pc = this.peers[fromId];
-                if (pc) await pc.setRemoteDescription(JSON.parse(sig.payload));
-            } else if (sig.type === 'ice') {
-                const pc = this.peers[fromId];
-                if (pc) await pc.addIceCandidate(JSON.parse(sig.payload));
+            try {
+                const fromId = sig.from;
+                if (sig.type === 'offer') {
+                    const pc = this.getOrCreatePeer(fromId);
+                    await pc.setRemoteDescription(JSON.parse(sig.payload));
+                    const answer = await pc.createAnswer();
+                    await pc.setLocalDescription(answer);
+                    this.$wire.sendSignal(fromId, 'answer', JSON.stringify(answer));
+                } else if (sig.type === 'answer') {
+                    const pc = this.peers[fromId];
+                    if (pc) await pc.setRemoteDescription(JSON.parse(sig.payload));
+                } else if (sig.type === 'ice') {
+                    const pc = this.peers[fromId];
+                    if (pc) await pc.addIceCandidate(JSON.parse(sig.payload));
+                }
+            } catch (e) {
+                console.warn('Signal handling error:', e.message);
             }
         },
 

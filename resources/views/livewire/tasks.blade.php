@@ -217,8 +217,8 @@
                         <button
                             wire:click="completeTask({{ $activeTask->id }})"
                             wire:loading.attr="disabled"
-                            :disabled="!$wire.completionNote || $wire.completionNote.trim().length === 0"
-                            :class="justSaved ? 'bg-emerald-500 hover:bg-emerald-600' : ($wire.completionNote && $wire.completionNote.trim().length > 0 ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-300 cursor-not-allowed')"
+                            :disabled="!$wire.completionNote || ($wire.completionNote || '').trim().length === 0"
+                            :class="justSaved ? 'bg-emerald-500 hover:bg-emerald-600' : (($wire.completionNote || '').trim().length > 0 ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-300 cursor-not-allowed')"
                             class="w-full px-4 py-2 text-sm font-semibold text-white rounded-lg transition"
                             x-effect="if (justSaved) setTimeout(() => { justSaved = false }, 3000)">
                             <span x-show="justSaved" x-cloak>Saved</span>

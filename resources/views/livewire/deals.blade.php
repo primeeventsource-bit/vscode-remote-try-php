@@ -196,7 +196,7 @@
                                 <label class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold">Transfer Note <span class="text-red-500">*</span></label>
                                 <textarea id="fld-transferNote" wire:model="transferNote" rows="2" placeholder="Why are you transferring this deal?" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-indigo-400"></textarea>
                             </div>
-                            <div class="flex items-center gap-2" x-data="{ get canTransfer() { return $wire.transferToCloserId && $wire.transferNote.trim().length > 0 } }">
+                            <div class="flex items-center gap-2" x-data="{ get canTransfer() { return $wire.transferToCloserId && ($wire.transferNote || '').trim().length > 0 } }">
                                 <button
                                     wire:click="transferDealToCloser"
                                     wire:loading.attr="disabled"
