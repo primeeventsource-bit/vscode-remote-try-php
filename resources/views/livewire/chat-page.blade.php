@@ -4,7 +4,7 @@
     .badge-blink-red { animation: pulse-badge 1.5s ease-in-out infinite; background: #ef4444; }
     .msg-unread { background: rgba(59,130,246,0.06); border-left: 3px solid #3b82f6; }
 </style>
-<div class="flex h-[calc(100vh-3rem)]" wire:poll.30s>
+<div class="flex h-[calc(100vh-3rem)]" wire:poll.15s="refreshUnreadCounts">
     {{-- Left Panel: Chat List --}}
     <div class="w-72 border-r border-crm-border bg-crm-surface flex flex-col flex-shrink-0">
         {{-- Header --}}

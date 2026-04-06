@@ -51,6 +51,38 @@ class ChatPage extends Component
         $this->selectedChat = (int) $id;
         $this->showNewChatForm = false;
         $this->showInfoPanel = false;
+        $this->markChatAsSeen();
+    }
+
+    /**
+     * Mark all incoming messages in the active chat as seen.
+     * Identical to ChatWidget logic — single source of truth for read status.
+     */
+    private function markChatAsSeen(): void
+    {
+        if (! $this->selectedChat) return;
+
+        try {
+            $now = now()->toDateTimeString();
+            Message::where('chat_id', $this->selectedChat)
+                ->where('sender_id', '!=', auth()->id())
+                ->whereNull('seen_at')
+                ->update([
+                    'seen_at'      => $now,
+                    'delivered_at' => $now,
+                ]);
+        } catch (\Throwable $e) {
+            // seen_at column may not exist yet
+        }
+    }
+
+    /**
+     * Called by wire:poll to refresh without full re-render.
+     * Also re-marks active chat as seen on each poll cycle.
+     */
+    public function refreshUnreadCounts(): void
+    {
+        $this->markChatAsSeen();
     }
 
     public function toggleInfoPanel(): void
@@ -138,12 +170,17 @@ class ChatPage extends Component
         if ($text === '' || !$this->selectedChat) return;
 
         try {
-            Message::create([
-                'chat_id' => $this->selectedChat,
+            $msgData = [
+                'chat_id'      => $this->selectedChat,
                 'message_type' => 'text',
-                'sender_id' => auth()->id(),
-                'text' => $text,
-            ]);
+                'sender_id'    => auth()->id(),
+                'text'         => $text,
+            ];
+
+            // Sender sees own message as delivered immediately (matches bubble chat)
+            try { $msgData['seen_at'] = now(); $msgData['delivered_at'] = now(); } catch (\Throwable $e) {}
+
+            Message::create($msgData);
             Chat::where('id', $this->selectedChat)->update(['updated_at' => now()]);
             $this->messageInput = '';
         } catch (\Throwable $e) {
