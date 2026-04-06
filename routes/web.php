@@ -66,3 +66,9 @@ Route::middleware('auth')->group(function () {
         return redirect('/login');
     })->name('logout');
 });
+
+// ─── Twilio Webhooks (public, CSRF-exempt, signature-validated) ──
+Route::prefix('webhooks/twilio')->middleware(\App\Http\Middleware\ValidateTwilioWebhook::class)->group(function () {
+    Route::post('/messages/inbound', [\App\Http\Controllers\Webhooks\TwilioWebhookController::class, 'inboundMessage']);
+    Route::post('/messages/status', [\App\Http\Controllers\Webhooks\TwilioWebhookController::class, 'messageStatus']);
+});

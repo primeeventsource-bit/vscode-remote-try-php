@@ -16,9 +16,15 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // Register named middleware aliases
         $middleware->alias([
-            'auth.token' => \App\Http\Middleware\AuthenticateApiToken::class,
-            'role'       => \App\Http\Middleware\RequireRole::class,
-            'permission' => \App\Http\Middleware\RequirePermission::class,
+            'auth.token'     => \App\Http\Middleware\AuthenticateApiToken::class,
+            'role'           => \App\Http\Middleware\RequireRole::class,
+            'permission'     => \App\Http\Middleware\RequirePermission::class,
+            'twilio.webhook' => \App\Http\Middleware\ValidateTwilioWebhook::class,
+        ]);
+
+        // Exempt Twilio webhooks from CSRF verification
+        $middleware->validateCsrfTokens(except: [
+            'webhooks/twilio/*',
         ]);
 
         // Web middleware additions
