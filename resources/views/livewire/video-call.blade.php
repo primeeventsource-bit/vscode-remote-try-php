@@ -48,7 +48,7 @@
          ACTIVE ROOM VIEW
          ═══════════════════════════════════════════════ --}}
     @if($roomId && $room && !$room->isEnded())
-        <div class="bg-gray-900 rounded-xl overflow-hidden" style="min-height: 70vh;" wire:poll.3s>
+        <div class="bg-gray-900 rounded-xl overflow-hidden" style="min-height: 70vh;">
             {{-- Room header --}}
             <div class="flex items-center justify-between px-4 py-3 bg-gray-800">
                 <div class="flex items-center gap-3">
@@ -143,9 +143,10 @@
                     class="w-12 h-12 rounded-full flex items-center justify-center text-white text-lg transition">
                     <span x-text="cameraOn ? '📹' : '📷'"></span>
                 </button>
-                <button @click="$wire.leaveRoom(); cleanup();"
-                    class="w-12 h-12 rounded-full bg-red-600 hover:bg-red-700 flex items-center justify-center text-white text-lg transition">
-                    📴
+                <button @click="$wire.leaveRoom(); cleanup(); window.location.href='/video-call';"
+                    class="w-14 h-14 rounded-full bg-red-600 hover:bg-red-700 flex items-center justify-center text-white transition shadow-lg"
+                    title="Leave Call">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.517l2.257-1.13a1 1 0 00.502-1.21L9.228 3.683A1 1 0 008.279 3H5z"/></svg>
                 </button>
             </div>
         </div>
@@ -315,6 +316,19 @@ function videoCallApp() {
         async init() {
             await this.fetchIceServers();
             await this.initMedia();
+
+            // Auto-join: mark this user as joined in DB
+            try { await this.$wire.joinRoom(); } catch(e) {}
+
+            // Auto-initiate: send WebRTC offers to all other joined participants
+            try {
+                const otherIds = await this.$wire.getOtherJoinedParticipantIds();
+                console.log('Other joined participants:', otherIds);
+                for (const uid of otherIds) {
+                    await this.initiateCallTo(uid);
+                }
+            } catch(e) { console.warn('Auto-initiate failed:', e.message); }
+
             this.pollInterval = setInterval(() => this.pollForSignals(), 2000);
         },
 

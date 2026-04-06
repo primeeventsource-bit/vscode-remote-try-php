@@ -206,6 +206,22 @@ class VideoCall extends Component
         return $result;
     }
 
+    /**
+     * Called by JS after media is ready. Returns IDs of other joined participants
+     * so the caller can initiate WebRTC offers to each one.
+     */
+    public function getOtherJoinedParticipantIds(): array
+    {
+        if (! $this->roomId) return [];
+
+        return VideoRoomParticipant::where('room_id', $this->roomId)
+            ->where('user_id', '!=', auth()->id())
+            ->whereNotNull('joined_at')
+            ->whereNull('left_at')
+            ->pluck('user_id')
+            ->toArray();
+    }
+
     // ── Helpers ──────────────────────────────────────────────
 
     private function getRoom(): ?VideoRoom
