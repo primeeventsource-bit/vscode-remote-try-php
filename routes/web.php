@@ -39,6 +39,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/leads/duplicates', \App\Livewire\DuplicateReview::class)->name('duplicate-review');
     Route::get('/leads/imports', \App\Livewire\LeadImports::class)->name('lead-imports');
 
+    // Twilio ICE servers for video calls (web route — session-authenticated)
+    Route::get('/ice-servers', function () {
+        return response()->json([
+            'iceServers' => \App\Services\TwilioIceService::getIceServers(),
+        ]);
+    })->name('ice-servers');
+
     // Presence heartbeat
     Route::post('/presence/heartbeat', function () {
         $user = auth()->user();

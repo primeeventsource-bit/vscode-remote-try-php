@@ -109,10 +109,4 @@ Route::middleware(['auth.token'])->group(function () {
     Route::post('/dialer/prepare', [\App\Http\Controllers\DialerController::class, 'prepare']);
     Route::post('/dialer/outcome', [\App\Http\Controllers\DialerController::class, 'saveOutcome']);
 
-    // Twilio TURN/ICE servers for video calls
-    Route::get('/ice-servers', function () {
-        return response()->json([
-            'iceServers' => \App\Services\TwilioIceService::getIceServers(),
-        ]);
-    });
 });

@@ -320,7 +320,7 @@ function videoCallApp() {
 
         async fetchIceServers() {
             try {
-                const r = await fetch('/api/ice-servers', { credentials: 'same-origin', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+                const r = await fetch('/ice-servers', { credentials: 'same-origin', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '' } });
                 if (r.ok) {
                     const data = await r.json();
                     if (data.iceServers && data.iceServers.length) {
