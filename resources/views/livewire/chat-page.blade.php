@@ -106,9 +106,8 @@
                         $isDm = $chat->type === 'dm';
                         $displayName = $isDm ? ($other?->name ?? $chat->name ?? 'DM') : ($chat->name ?? 'Group');
                         $memberCount = count($members);
-                        // Last message preview
-                        $lastMsg = null;
-                        try { $lastMsg = \App\Models\Message::where('chat_id', $chat->id)->orderByDesc('id')->first(); } catch (\Throwable $e) {}
+                        // Last message preview (pre-loaded in render, no N+1)
+                        $lastMsg = ($lastMessages ?? collect())->get($chat->id);
                     @endphp
                     <button wire:key="chat-{{ $chat->id }}" wire:click="selectChat({{ $chat->id }})"
                         class="flex w-full items-center gap-3 border-b border-crm-border px-3 py-2.5 text-left transition {{ $isSelected ? 'bg-blue-50 border-l-2 border-l-blue-500' : ($chatUnread > 0 ? ($isDm ? 'bg-blue-50/40' : 'bg-red-50/40') : 'hover:bg-crm-hover') }}">

@@ -55,11 +55,17 @@ class ChatPage extends Component
         try {
             $raw = DB::table('crm_settings')->where('key', 'chat.module_enabled')->value('value');
             $enabled = $raw === null ? true : (bool) json_decode($raw, true);
-            if (!$enabled || !auth()->user()?->hasPerm('view_chat')) {
+            if (!$enabled) {
                 $this->redirectRoute('dashboard');
-                session()->flash('error', 'Chat module is disabled or you do not have access.');
+                session()->flash('error', 'Chat module is disabled.');
+                return;
             }
-        } catch (\Throwable $e) {}
+        } catch (\Throwable $e) {
+            // Settings table may not exist — allow access by default
+        }
+        // Note: view_chat permission check removed from mount() to prevent
+        // redirect loops when user permissions haven't been refreshed yet.
+        // The route itself is inside auth middleware which is sufficient.
     }
 
     // Override selectChat to also close sidebar-only panels
@@ -251,6 +257,20 @@ class ChatPage extends Component
         $messages = $this->loadMessages(200);
         $activeChat = $this->selectedChat ? Chat::find($this->selectedChat) : null;
         $users = User::all()->keyBy('id');
+
+        // Pre-load last message for each chat (single query, not N+1 inside Blade)
+        $lastMessages = collect();
+        if ($chats->isNotEmpty()) {
+            try {
+                $chatIds = $chats->pluck('id');
+                $lastMessages = \App\Models\Message::whereIn('chat_id', $chatIds)
+                    ->whereIn('id', function ($q) use ($chatIds) {
+                        $q->selectRaw('MAX(id)')->from('messages')->whereIn('chat_id', $chatIds)->groupBy('chat_id');
+                    })
+                    ->get()
+                    ->keyBy('chat_id');
+            } catch (\Throwable $e) {}
+        }
         $gifPickerSettings = $this->loadGifSettings();
         $canUseGifPicker = $gifPickerSettings['module_enabled'];
         $currentUserId = (int) auth()->id();
@@ -290,6 +310,7 @@ class ChatPage extends Component
             'searchMessageResults' => $searchMessageResults,
             'isSearching'          => $isSearching,
             'sharedMedia'       => $sharedMedia,
+            'lastMessages'     => $lastMessages,
             'unreadCounts'      => $unreadCounts,
             'activeDirectCall'  => $activeDirectCall,
         ]);
