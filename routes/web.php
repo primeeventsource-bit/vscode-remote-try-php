@@ -3,6 +3,25 @@
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
+// One-time deploy helper — master admin only, runs migrations + clears cache
+Route::get('/deploy-now', function () {
+    if (! auth()->check() || auth()->user()->role !== 'master_admin') {
+        return response('Unauthorized', 403);
+    }
+    $output = [];
+    try {
+        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+        $output[] = 'Migrations: ' . \Illuminate\Support\Facades\Artisan::output();
+    } catch (\Throwable $e) { $output[] = 'Migration error: ' . $e->getMessage(); }
+    try {
+        \Illuminate\Support\Facades\Artisan::call('config:clear');
+        \Illuminate\Support\Facades\Artisan::call('route:clear');
+        \Illuminate\Support\Facades\Artisan::call('view:clear');
+        $output[] = 'Caches cleared';
+    } catch (\Throwable $e) { $output[] = 'Cache clear error: ' . $e->getMessage(); }
+    return response()->json(['status' => 'done', 'output' => $output]);
+})->middleware('auth');
+
 // Guest routes
 Route::middleware('guest')->group(function () {
     Route::get('/login', \App\Livewire\Auth\Login::class)->name('login');
