@@ -16,6 +16,11 @@ class AuthenticateApiToken
 {
     public function handle(Request $request, Closure $next): Response
     {
+        // If user is already authenticated via web session (Livewire/Blade fetch calls), allow through
+        if (auth()->check()) {
+            return $next($request);
+        }
+
         $token = $request->bearerToken();
 
         if (! $token) {

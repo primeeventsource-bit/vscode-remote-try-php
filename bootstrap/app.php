@@ -26,7 +26,10 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Middleware\HandleCors::class,
         ]);
 
-        // API middleware additions
+        // API middleware additions — include session so browser fetch() calls work
+        $middleware->api(prepend: [
+            \Illuminate\Session\Middleware\StartSession::class,
+        ]);
         $middleware->api(append: [
             \Illuminate\Http\Middleware\HandleCors::class,
         ]);
