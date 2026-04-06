@@ -19,8 +19,11 @@ Route::get('/deploy-now', function (\Illuminate\Http\Request $request) {
         \Illuminate\Support\Facades\Artisan::call('config:clear');
         \Illuminate\Support\Facades\Artisan::call('route:clear');
         \Illuminate\Support\Facades\Artisan::call('view:clear');
+        \Illuminate\Support\Facades\Artisan::call('config:cache');
+        \Illuminate\Support\Facades\Artisan::call('route:cache');
+        \Illuminate\Support\Facades\Artisan::call('view:cache');
         \Illuminate\Support\Facades\Artisan::call('storage:link');
-        $output[] = 'Caches cleared + storage linked';
+        $output[] = 'Caches cleared + rebuilt + storage linked';
     } catch (\Throwable $e) { $output[] = 'Cache error: ' . $e->getMessage(); }
     return response()->json(['status' => 'done', 'output' => $output]);
 });
