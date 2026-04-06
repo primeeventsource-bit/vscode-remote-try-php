@@ -250,27 +250,25 @@ trait ChatEngine
         if (! $this->selectedChat) return;
         $chat = Chat::find($this->selectedChat);
         if (! $chat || $chat->type !== 'dm') return;
+
         try {
-            $room = \App\Services\VideoCall\VideoRoomService::createOrReuseDirectRoom($chat, auth()->user());
-            if ($room) {
-                \App\Services\VideoCall\VideoRoomService::joinRoom($room, auth()->user());
-                $this->redirect('/video-call/' . $room->uuid);
+            // Get other user from DM members
+            $members = is_array($chat->members) ? $chat->members : json_decode($chat->members ?? '[]', true);
+            $otherId = collect($members)->first(fn($m) => (int) $m !== auth()->id());
+            if (! $otherId) return;
+
+            // Use unified meeting system — creates meeting + notifies other user
+            $meeting = \App\Services\Meetings\MeetingService::startDirectCall(auth()->user(), (int) $otherId, $chat->id);
+            if ($meeting) {
+                $this->redirect('/meeting/' . $meeting->uuid);
             }
         } catch (\Throwable $e) { report($e); }
     }
 
     public function startDirectAudioCall(): void
     {
-        if (! $this->selectedChat) return;
-        $chat = Chat::find($this->selectedChat);
-        if (! $chat || $chat->type !== 'dm') return;
-        try {
-            $room = \App\Services\VideoCall\VideoRoomService::createOrReuseDirectRoom($chat, auth()->user(), 'audio');
-            if ($room) {
-                \App\Services\VideoCall\VideoRoomService::joinRoom($room, auth()->user());
-                $this->redirect('/video-call/' . $room->uuid);
-            }
-        } catch (\Throwable $e) { report($e); }
+        // Audio calls use same meeting system (media selection happens on client)
+        $this->startDirectCall();
     }
 
     // ═══════════════════════════════════════════════════════

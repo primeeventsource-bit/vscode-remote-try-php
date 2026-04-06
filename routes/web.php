@@ -67,6 +67,82 @@ Route::middleware('auth')->group(function () {
         ]);
     })->name('video-token');
 
+    // ─── Meetings API (session-authenticated) ───────────────
+    Route::post('/meetings/start-direct', function () {
+        $user = auth()->user();
+        $otherUserId = (int) request()->input('other_user_id');
+        $chatId = request()->input('chat_id') ? (int) request()->input('chat_id') : null;
+        if (! $otherUserId) return response()->json(['error' => 'Missing other_user_id'], 400);
+
+        $meeting = \App\Services\Meetings\MeetingService::startDirectCall($user, $otherUserId, $chatId);
+        if (! $meeting) return response()->json(['error' => 'Failed to create meeting'], 500);
+
+        return response()->json(['meeting_uuid' => $meeting->uuid, 'room_name' => $meeting->provider_room_name]);
+    });
+
+    Route::post('/meetings/start-group', function () {
+        $user = auth()->user();
+        $participantIds = request()->input('participant_ids', []);
+        $title = request()->input('title');
+        $chatId = request()->input('chat_id') ? (int) request()->input('chat_id') : null;
+
+        $meeting = \App\Services\Meetings\MeetingService::startGroupMeeting($user, $participantIds, $title, $chatId);
+        if (! $meeting) return response()->json(['error' => 'Failed to create meeting'], 500);
+
+        return response()->json(['meeting_uuid' => $meeting->uuid, 'room_name' => $meeting->provider_room_name]);
+    });
+
+    Route::post('/meetings/{uuid}/token', function (string $uuid) {
+        $user = auth()->user();
+        $meeting = \App\Models\Meeting::where('uuid', $uuid)->first();
+        if (! $meeting) return response()->json(['error' => 'Meeting not found'], 404);
+        if ($meeting->isEnded()) return response()->json(['error' => 'Meeting has ended'], 410);
+
+        $participant = $meeting->participants()->where('user_id', $user->id)->first();
+        if (! $participant) return response()->json(['error' => 'Not a participant'], 403);
+
+        $identity = 'user-' . $user->id;
+        $token = \App\Services\Twilio\TwilioVideoTokenService::generateToken($identity, $meeting->provider_room_name);
+        if (! $token) return response()->json(['error' => 'Token generation failed'], 500);
+
+        // Mark as joined
+        \App\Services\Meetings\MeetingService::joinRoom($meeting, $user);
+
+        return response()->json([
+            'token'    => $token,
+            'identity' => $identity,
+            'room'     => $meeting->provider_room_name,
+            'meeting'  => ['uuid' => $meeting->uuid, 'title' => $meeting->title, 'type' => $meeting->type, 'status' => $meeting->status],
+        ]);
+    });
+
+    Route::post('/meetings/{uuid}/accept', function (string $uuid) {
+        $meeting = \App\Models\Meeting::where('uuid', $uuid)->first();
+        if ($meeting) \App\Services\Meetings\MeetingService::accept($meeting, auth()->user());
+        return response()->json(['ok' => true]);
+    });
+
+    Route::post('/meetings/{uuid}/decline', function (string $uuid) {
+        $meeting = \App\Models\Meeting::where('uuid', $uuid)->first();
+        if ($meeting) \App\Services\Meetings\MeetingService::decline($meeting, auth()->user());
+        return response()->json(['ok' => true]);
+    });
+
+    Route::post('/meetings/{uuid}/leave', function (string $uuid) {
+        $meeting = \App\Models\Meeting::where('uuid', $uuid)->first();
+        if ($meeting) \App\Services\Meetings\MeetingService::leave($meeting, auth()->user());
+        return response()->json(['ok' => true]);
+    });
+
+    Route::post('/meetings/{uuid}/end', function (string $uuid) {
+        $meeting = \App\Models\Meeting::where('uuid', $uuid)->first();
+        if ($meeting) \App\Services\Meetings\MeetingService::endMeeting($meeting, auth()->user());
+        return response()->json(['ok' => true]);
+    });
+
+    // Meeting room page
+    Route::get('/meeting/{uuid}', \App\Livewire\MeetingRoom::class)->name('meeting-room');
+
     // Presence heartbeat
     Route::post('/presence/heartbeat', function () {
         $user = auth()->user();
