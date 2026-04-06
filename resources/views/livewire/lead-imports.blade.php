@@ -9,7 +9,7 @@
 
     {{-- Filters --}}
     <div class="flex items-center gap-3 mb-4">
-        <select wire:model.live="statusFilter" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
+        <select id="fld-statusFilter" wire:model.live="statusFilter" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
             <option value="all">All Statuses</option>
             <option value="pending">Pending</option>
             <option value="processing">Processing</option>
@@ -17,7 +17,7 @@
             <option value="failed">Failed</option>
             <option value="cancelled">Cancelled</option>
         </select>
-        <select wire:model.live="perPage" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
+        <select id="fld-perPage" wire:model.live="perPage" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
             <option value="25">25 per page</option>
             <option value="50">50 per page</option>
         </select>
@@ -150,7 +150,7 @@
         <div class="border-t border-crm-border pt-4">
             <div class="flex items-center justify-between mb-3">
                 <h4 class="text-sm font-semibold">Issues ({{ $failures->count() }} shown)</h4>
-                <select wire:model.live="failureFilter" class="px-2 py-1 text-xs bg-white border border-crm-border rounded-lg">
+                <select id="fld-failureFilter" wire:model.live="failureFilter" class="px-2 py-1 text-xs bg-white border border-crm-border rounded-lg">
                     <option value="all">All Issues</option>
                     <option value="validation">Validation</option>
                     <option value="duplicate">Duplicates</option>

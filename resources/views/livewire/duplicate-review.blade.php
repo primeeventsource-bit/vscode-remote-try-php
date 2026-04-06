@@ -33,20 +33,20 @@
 
     {{-- Filters --}}
     <div class="flex flex-wrap items-center gap-3 mb-4">
-        <input wire:model.live.debounce.300ms="search" type="text" placeholder="Search by name or phone..." class="flex-1 min-w-[200px] px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
-        <select wire:model.live="typeFilter" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
+        <input id="fld-dup-search" wire:model.live.debounce.300ms="search" type="text" placeholder="Search by name or phone..." class="flex-1 min-w-[200px] px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+        <select id="fld-typeFilter" wire:model.live="typeFilter" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
             <option value="all">All Types</option>
             <option value="exact">Exact</option>
             <option value="possible">Possible</option>
         </select>
-        <select wire:model.live="statusFilter" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
+        <select id="fld-statusFilter" wire:model.live="statusFilter" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
             <option value="all">All Statuses</option>
             <option value="pending">Pending</option>
             <option value="kept_both">Kept Both</option>
             <option value="deleted_duplicate">Deleted</option>
             <option value="ignored">Ignored</option>
         </select>
-        <select wire:model.live="perPage" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
+        <select id="fld-perPage" wire:model.live="perPage" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
             <option value="25">25 per page</option>
             <option value="50">50 per page</option>
             <option value="100">100 per page</option>
@@ -81,7 +81,7 @@
                 <div class="flex items-start gap-3">
                     {{-- Checkbox --}}
                     @if($dup->review_status === 'pending')
-                    <input type="checkbox" wire:model.live="selectedIds" value="{{ $dup->id }}" class="mt-1 h-4 w-4 rounded border-crm-border">
+                    <input id="fld-dup-sel-{{ $dup->id }}" type="checkbox" wire:model.live="selectedIds" value="{{ $dup->id }}" class="mt-1 h-4 w-4 rounded border-crm-border">
                     @endif
 
                     <div class="flex-1">

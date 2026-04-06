@@ -58,15 +58,12 @@ class GifProviderService
 
     private function giphyApiKey(): string
     {
-        // Try config first, then env directly, then hardcoded fallback
         $key = (string) config('services.gifs.giphy.api_key');
+
         if ($key === '') {
-            $key = (string) env('GIPHY_API_KEY');
+            throw new RuntimeException('GIPHY_API_KEY is not configured. Set it in .env');
         }
-        if ($key === '') {
-            // Fallback to the key provided by the user
-            $key = 'BdTfn7gBYzhPwesTx4GitLl7Q8buMpUh';
-        }
+
         return $key;
     }
 

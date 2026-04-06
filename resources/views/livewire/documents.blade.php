@@ -8,7 +8,7 @@
                     <button wire:click="createDocument" class="px-2.5 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">+ New</button>
                     <label class="px-2.5 py-1.5 text-xs font-semibold text-crm-t2 bg-crm-card border border-crm-border rounded-lg hover:bg-crm-hover transition cursor-pointer">
                         Upload
-                        <input type="file" wire:model="fileUpload" accept=".pdf,.doc,.docx,.txt,.rtf" class="hidden">
+                        <input id="fld-fileUpload" type="file" wire:model="fileUpload" accept=".pdf,.doc,.docx,.txt,.rtf" class="hidden">
                     </label>
                 </div>
             @endif
@@ -63,7 +63,7 @@
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2">
                         <span class="text-xs text-crm-t3">Show</span>
-                        <select wire:model.live="perPage" class="px-2 py-1 text-xs bg-white border border-crm-border rounded-lg focus:outline-none">
+                        <select id="fld-perPage" wire:model.live="perPage" class="px-2 py-1 text-xs bg-white border border-crm-border rounded-lg focus:outline-none">
                             <option value="10">10</option>
                             <option value="25">25</option>
                             <option value="50">50</option>
@@ -149,7 +149,7 @@
                     @foreach($users as $u)
                         @if($u->id !== auth()->id())
                             <label class="flex items-center gap-3 border-b border-crm-border px-3 py-2.5 last:border-0 cursor-pointer hover:bg-crm-hover text-sm">
-                                <input type="checkbox" wire:model="shareUserIds" value="{{ $u->id }}" class="h-4 w-4 rounded">
+                                <input id="fld-doc-share-{{ $u->id }}" type="checkbox" wire:model="shareUserIds" value="{{ $u->id }}" class="h-4 w-4 rounded">
                                 <span>{{ $u->name }}</span>
                                 <span class="ml-auto text-[10px] text-crm-t3 capitalize">{{ str_replace('_', ' ', $u->role ?? '') }}</span>
                             </label>

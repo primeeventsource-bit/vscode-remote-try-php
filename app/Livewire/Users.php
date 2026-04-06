@@ -18,9 +18,15 @@ class Users extends Component
 
     public function saveUser()
     {
+        $user = auth()->user();
+        if (!$user || !$user->hasRole('master_admin', 'admin')) return;
+
         $this->validate([
-            'newUser.name' => 'required', 'newUser.username' => 'required|unique:users,username',
-            'newUser.password' => 'required|min:8', 'newUser.email' => 'required',
+            'newUser.name' => 'required|string|max:255',
+            'newUser.username' => 'required|string|max:100|unique:users,username',
+            'newUser.password' => 'required|string|min:8',
+            'newUser.email' => 'required|email|max:255',
+            'newUser.role' => 'required|string|in:master_admin,admin,fronter,fronter_panama,closer,closer_panama,agent',
         ]);
         $roleDefaults = [
             'master_admin' => ['view_dashboard','view_stats','view_leads','view_all_leads','assign_leads','view_pipeline','view_deals','create_deals','view_verification','toggle_charged','toggle_chargeback','view_payroll','view_users','edit_users','delete_users','view_chat','view_documents','view_spreadsheets','master_override','import_csv','add_leads','disposition_leads','upload_files','view_login_info','create_chats'],
@@ -31,13 +37,15 @@ class Users extends Component
         ];
         $avatar = strtoupper(collect(explode(' ', $this->newUser['name']))->map(fn($w) => substr($w, 0, 1))->join(''));
         $colors = ['#3b82f6','#10b981','#ec4899','#f59e0b','#8b5cf6','#14b8a6','#ef4444','#6366f1'];
-        User::create([
+        $newUser = User::create([
             'name' => $this->newUser['name'], 'email' => $this->newUser['email'],
             'username' => $this->newUser['username'], 'password' => Hash::make($this->newUser['password']),
-            'role' => $this->newUser['role'], 'avatar' => $this->newUser['avatar'] ?: substr($avatar, 0, 2),
+            'avatar' => $this->newUser['avatar'] ?: substr($avatar, 0, 2),
             'color' => $this->newUser['color'] ?: $colors[array_rand($colors)], 'status' => 'online',
-            'permissions' => json_encode($roleDefaults[$this->newUser['role']] ?? $roleDefaults['fronter']),
         ]);
+        $newUser->role = $this->newUser['role'];
+        $newUser->permissions = $roleDefaults[$this->newUser['role']] ?? $roleDefaults['fronter'];
+        $newUser->save();
         $this->newUser = ['name' => '', 'email' => '', 'username' => '', 'password' => '', 'role' => 'fronter', 'avatar' => '', 'color' => '#3b82f6'];
         $this->showAddModal = false;
     }
@@ -88,15 +96,30 @@ class Users extends Component
 
     public function updateRole($id, $role)
     {
+        $currentUser = auth()->user();
+        if (!$currentUser || !$currentUser->hasRole('master_admin')) return;
+
         $roleDefaults = ['master_admin' => ['view_dashboard','view_stats','view_leads','view_all_leads','assign_leads','view_pipeline','view_deals','create_deals','view_verification','toggle_charged','toggle_chargeback','view_payroll','view_users','edit_users','delete_users','view_chat','view_documents','view_spreadsheets','master_override','import_csv','add_leads','disposition_leads','upload_files','view_login_info','create_chats'], 'fronter' => ['view_leads','view_pipeline','view_chat','view_documents','view_spreadsheets','disposition_leads','create_chats','view_payroll'], 'fronter_panama' => ['view_leads','view_pipeline','view_chat','view_documents','view_spreadsheets','disposition_leads','create_chats'], 'closer' => ['view_dashboard','view_leads','view_pipeline','view_deals','view_verification','view_chat','view_documents','view_spreadsheets','disposition_leads','create_deals','create_chats','view_login_info','view_payroll']];
         $roleDefaults['admin'] = array_filter($roleDefaults['master_admin'], fn($p) => $p !== 'master_override');
-        User::where('id', $id)->update(['role' => $role, 'permissions' => json_encode($roleDefaults[$role] ?? $roleDefaults['fronter'])]);
+
+        $target = User::find($id);
+        if (!$target) return;
+        $target->role = $role;
+        $target->permissions = $roleDefaults[$role] ?? $roleDefaults['fronter'];
+        $target->save();
     }
 
     public function deleteUser($id)
     {
+        $currentUser = auth()->user();
+        if (!$currentUser || !$currentUser->hasRole('master_admin', 'admin')) return;
         if ($id == auth()->id()) return;
-        User::where('id', $id)->delete();
+
+        $target = User::find($id);
+        if (!$target) return;
+        if ($target->role === 'master_admin' && !$currentUser->hasRole('master_admin')) return;
+
+        $target->delete();
     }
 
     public function render()

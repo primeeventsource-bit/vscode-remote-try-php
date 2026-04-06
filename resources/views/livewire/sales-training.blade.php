@@ -156,7 +156,12 @@
                 @forelse($scripts as $script)
                     <button wire:click="$set('selectedScriptId', {{ $script->id }})"
                         class="w-full text-left px-3 py-2.5 rounded-lg text-sm transition {{ $selectedScriptId === $script->id ? 'bg-blue-50 text-blue-600 border border-blue-200' : 'bg-crm-card border border-crm-border hover:bg-crm-hover' }}">
-                        <div class="font-semibold">{{ $script->name }}</div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="font-semibold">{{ $script->name }}</span>
+                            @if($script->is_default)
+                                <span class="text-[8px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 uppercase">Default</span>
+                            @endif
+                        </div>
                         <div class="text-[10px] text-crm-t3">{{ ucfirst($script->category) }} {{ $script->stage ? '· ' . ucfirst($script->stage) : '' }}</div>
                     </button>
                 @empty
@@ -167,14 +172,22 @@
             </div>
             <div class="lg:col-span-2">
                 @if($selectedScript)
-                    <div class="bg-crm-card border border-crm-border rounded-lg p-5">
-                        <div class="flex items-center justify-between mb-4">
-                            <div>
-                                <div class="text-sm font-bold">{{ $selectedScript->name }}</div>
+                    <div class="bg-crm-card border border-crm-border rounded-lg">
+                        <div class="sticky top-0 bg-crm-card border-b border-crm-border rounded-t-lg px-5 py-3 z-10">
+                            <div class="text-sm font-bold">{{ $selectedScript->name }}</div>
+                            <div class="flex items-center gap-1.5 mt-1">
                                 <span class="text-[9px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-600">{{ ucfirst($selectedScript->category) }}</span>
+                                @if($selectedScript->stage)
+                                    <span class="text-[9px] font-bold px-2 py-0.5 rounded bg-gray-100 text-gray-600">{{ ucfirst($selectedScript->stage) }} Stage</span>
+                                @endif
+                                @if($selectedScript->is_default)
+                                    <span class="text-[9px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700">Default</span>
+                                @endif
                             </div>
                         </div>
-                        <div class="prose prose-sm max-w-none text-crm-t1 whitespace-pre-wrap leading-relaxed">{{ $selectedScript->content }}</div>
+                        <div class="px-5 py-4 max-h-[75vh] overflow-y-auto">
+                            <div class="text-sm text-crm-t1 whitespace-pre-wrap leading-relaxed">{{ $selectedScript->content }}</div>
+                        </div>
                     </div>
                 @else
                     <div class="bg-crm-card border border-crm-border rounded-lg p-12 text-center">

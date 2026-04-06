@@ -132,7 +132,7 @@
                             @foreach($users as $u)
                                 @if($u->id !== auth()->id())
                                     <label class="flex items-center gap-3 border-b border-crm-border px-4 py-3 last:border-0 cursor-pointer hover:bg-crm-hover text-sm">
-                                        <input type="checkbox" wire:model="newChatMembers" value="{{ $u->id }}"
+                                        <input id="fld-newmember-{{ $u->id }}" type="checkbox" wire:model="newChatMembers" value="{{ $u->id }}"
                                                @if($newChatType === 'dm' && count($newChatMembers) > 0 && !in_array($u->id, $newChatMembers)) disabled @endif
                                                class="h-4 w-4 rounded border-crm-border">
                                         <div class="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
@@ -382,7 +382,7 @@
                                 @foreach($users as $u)
                                     @if($u->id !== auth()->id() && !in_array($u->id, array_map('intval', $memberIds)))
                                         <label class="flex items-center gap-2 border-b border-crm-border px-2 py-1.5 last:border-0 cursor-pointer hover:bg-crm-hover text-xs">
-                                            <input type="checkbox" wire:model="addMemberIds" value="{{ $u->id }}" class="h-3 w-3 rounded">
+                                            <input id="fld-addmember-{{ $u->id }}" type="checkbox" wire:model="addMemberIds" value="{{ $u->id }}" class="h-3 w-3 rounded">
                                             <span class="truncate">{{ $u->name }}</span>
                                             <span class="ml-auto text-[9px] text-crm-t3">{{ $u->role }}</span>
                                         </label>
@@ -433,7 +433,7 @@
                         @endif
                         <div class="flex-1 space-y-1">
                             <label class="flex items-center gap-1 cursor-pointer text-xs text-blue-600 hover:text-blue-700 font-medium">
-                                <input type="file" wire:model="avatarUpload" accept="image/jpeg,image/png,image/webp" class="hidden">
+                                <input id="fld-avatarUpload" type="file" wire:model="avatarUpload" accept="image/jpeg,image/png,image/webp" class="hidden">
                                 {{ auth()->user()->avatar_path ? 'Change photo' : 'Upload photo' }}
                             </label>
                             @if($avatarUpload)

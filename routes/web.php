@@ -32,6 +32,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/training', \App\Livewire\Onboarding::class)->name('training');
     Route::get('/sales-training', \App\Livewire\SalesTraining::class)->name('sales-training');
     Route::get('/daily-sales', \App\Livewire\DailySalesSystem::class)->name('daily-sales');
+    Route::get('/script-editor/{id?}', \App\Livewire\ScriptEditor::class)->name('script-editor');
+    Route::get('/system-monitor', \App\Livewire\SystemMonitor::class)->name('system-monitor');
 
     // Enterprise Lead Management
     Route::get('/leads/duplicates', \App\Livewire\DuplicateReview::class)->name('duplicate-review');

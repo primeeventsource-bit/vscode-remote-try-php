@@ -24,7 +24,7 @@
         </div>
         <div class="flex items-center gap-1.5">
             <span class="text-xs text-crm-t3">Show</span>
-            <select wire:model.live="perPage" class="px-2 py-1.5 text-xs bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+            <select id="fld-perPage" wire:model.live="perPage" class="px-2 py-1.5 text-xs bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                 <option value="10">10</option>
                 <option value="25">25</option>
                 <option value="50">50</option>

@@ -12,19 +12,19 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [
+    'allowed_origins' => array_filter([
         'https://crmprime.online',
         'https://www.crmprime.online',
-        'http://localhost:5173',
-    ],
+        env('APP_ENV') === 'local' ? 'http://localhost:5173' : null,
+    ]),
 
     'allowed_origins_patterns' => [],
 
-    'allowed_headers' => ['*'],
+    'allowed_headers' => ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
 
     'exposed_headers' => [],
 
-    'max_age' => 0,
+    'max_age' => 600,
 
     'supports_credentials' => true,
 

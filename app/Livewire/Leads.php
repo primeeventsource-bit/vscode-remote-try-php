@@ -95,6 +95,11 @@ class Leads extends Component
         $lead = Lead::find($id);
         if (!$lead) return;
 
+        $user = auth()->user();
+        if (!$user) return;
+        // Only assigned user, admins, or closers can set disposition
+        if (!$user->hasRole('master_admin', 'admin', 'closer') && $lead->assigned_to !== $user->id) return;
+
         if ($dispo === 'Transferred to Closer' && $closerId) {
             $fronter = User::find($lead->original_fronter ?? $lead->assigned_to);
             $closer = User::find($closerId);
@@ -295,6 +300,20 @@ class Leads extends Component
 
     public function saveLead()
     {
+        $user = auth()->user();
+        if (!$user || !$user->hasPerm('add_leads')) return;
+
+        $this->validate([
+            'newLead.owner_name' => 'required|string|max:255',
+            'newLead.resort'     => 'nullable|string|max:255',
+            'newLead.phone1'     => 'nullable|string|max:50',
+            'newLead.phone2'     => 'nullable|string|max:50',
+            'newLead.city'       => 'nullable|string|max:100',
+            'newLead.st'         => 'nullable|string|max:10',
+            'newLead.zip'        => 'nullable|string|max:20',
+            'newLead.email'      => 'nullable|email|max:255',
+        ]);
+
         Lead::create($this->newLead + ['source' => 'manual']);
         $this->reset('newLead', 'showAddModal');
         $this->newLead = ['resort' => '', 'owner_name' => '', 'phone1' => '', 'phone2' => '', 'city' => '', 'st' => '', 'zip' => '', 'resort_location' => '', 'email' => ''];

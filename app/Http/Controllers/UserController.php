@@ -5,137 +5,135 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
-    /**
-     * GET /api/users
-     * List all users
-     */
+    private const VALID_ROLES = [
+        'master_admin', 'admin', 'fronter', 'closer',
+        'fronter_panama', 'closer_panama', 'agent',
+    ];
+
     public function index(Request $request)
     {
-        try {
-            $users = User::select('id', 'name', 'email', 'username', 'role', 'avatar', 'color', 'status', 'permissions', 'created_at', 'updated_at')
-                ->orderBy('name')
-                ->get();
+        $users = User::select(
+            'id', 'name', 'email', 'username', 'role',
+            'avatar', 'color', 'status', 'permissions',
+            'created_at', 'updated_at'
+        )->orderBy('name')->get();
 
-            return response()->json(['users' => $users]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Server error: ' . $e->getMessage()], 500);
-        }
+        return response()->json(['users' => $users]);
     }
 
-    /**
-     * POST /api/users
-     * Create a new user
-     */
     public function store(Request $request)
     {
-        try {
-            $data = $request->only(['name', 'email', 'username', 'password', 'role', 'avatar', 'color', 'status', 'permissions']);
+        $data = $request->validate([
+            'name'     => 'required|string|max:255',
+            'email'    => 'nullable|email|max:255|unique:users,email',
+            'username' => 'required|string|max:100|unique:users,username',
+            'password' => 'required|string|min:8',
+            'role'     => ['required', 'string', Rule::in(self::VALID_ROLES)],
+            'avatar'   => 'nullable|string|max:255',
+            'color'    => 'nullable|string|max:50',
+            'status'   => 'nullable|string|max:50',
+        ]);
 
-            if (empty($data['username']) || empty($data['password'])) {
-                return response()->json(['error' => 'Username and password are required'], 400);
-            }
-
-            // Check for duplicate username
-            if (User::where('username', $data['username'])->exists()) {
-                return response()->json(['error' => 'Username already exists'], 400);
-            }
-
-            // Check for duplicate email if provided
-            if (!empty($data['email']) && User::where('email', $data['email'])->exists()) {
-                return response()->json(['error' => 'Email already exists'], 400);
-            }
-
-            $data['password'] = Hash::make($data['password']);
-
-            if (isset($data['permissions']) && is_string($data['permissions'])) {
-                $data['permissions'] = json_decode($data['permissions'], true);
-            }
-
-            $user = User::create($data);
-
-            return response()->json([
-                'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'username' => $user->username,
-                    'role' => $user->role,
-                    'avatar' => $user->avatar,
-                    'color' => $user->color,
-                    'status' => $user->status,
-                    'permissions' => $user->permissions,
-                ],
-            ], 201);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Server error: ' . $e->getMessage()], 500);
+        // Only master_admin can create other master_admins
+        if ($data['role'] === 'master_admin' && $request->user()->role !== 'master_admin') {
+            return response()->json(['error' => 'Only master admins can create master admin accounts'], 403);
         }
+
+        $data['password'] = Hash::make($data['password']);
+
+        // Extract role (not mass-assignable)
+        $role = $data['role'];
+        unset($data['role']);
+
+        $user = User::create($data);
+        $user->role = $role;
+
+        // Permissions: only master_admin can set permissions
+        if ($request->user()->role === 'master_admin' && $request->has('permissions')) {
+            $perms = $request->input('permissions');
+            $user->permissions = is_string($perms) ? json_decode($perms, true) : $perms;
+        }
+
+        $user->save();
+
+        return response()->json(['user' => $this->formatUser($user)], 201);
     }
 
-    /**
-     * PUT /api/users/{id}
-     * Update a user
-     */
     public function update(Request $request, $id)
     {
-        try {
-            $user = User::find($id);
+        $user = User::findOrFail($id);
 
-            if (!$user) {
-                return response()->json(['error' => 'User not found'], 404);
-            }
+        $data = $request->validate([
+            'name'     => 'sometimes|string|max:255',
+            'email'    => ['sometimes', 'nullable', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'username' => ['sometimes', 'string', 'max:100', Rule::unique('users', 'username')->ignore($user->id)],
+            'password' => 'sometimes|string|min:8',
+            'role'     => ['sometimes', 'string', Rule::in(self::VALID_ROLES)],
+            'avatar'   => 'nullable|string|max:255',
+            'color'    => 'nullable|string|max:50',
+            'status'   => 'nullable|string|max:50',
+        ]);
 
-            $data = $request->only(['name', 'email', 'username', 'role', 'avatar', 'color', 'status', 'permissions']);
-
-            // If password is provided, hash it
-            if ($request->filled('password')) {
-                $data['password'] = Hash::make($request->input('password'));
-            }
-
-            if (isset($data['permissions']) && is_string($data['permissions'])) {
-                $data['permissions'] = json_decode($data['permissions'], true);
-            }
-
-            $user->update($data);
-
-            return response()->json([
-                'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'username' => $user->username,
-                    'role' => $user->role,
-                    'avatar' => $user->avatar,
-                    'color' => $user->color,
-                    'status' => $user->status,
-                    'permissions' => $user->permissions,
-                ],
-            ]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Server error: ' . $e->getMessage()], 500);
+        if (isset($data['password'])) {
+            $data['password'] = Hash::make($data['password']);
         }
+
+        // Extract role (not mass-assignable) — only master_admin can change
+        if (isset($data['role'])) {
+            if ($request->user()->role === 'master_admin') {
+                $user->role = $data['role'];
+            }
+            unset($data['role']);
+        }
+
+        // Permissions: only master_admin can modify
+        if ($request->user()->role === 'master_admin' && $request->has('permissions')) {
+            $perms = $request->input('permissions');
+            $user->permissions = is_string($perms) ? json_decode($perms, true) : $perms;
+        }
+
+        $user->fill($data);
+        $user->save();
+
+        return response()->json(['user' => $this->formatUser($user->fresh())]);
     }
 
-    /**
-     * DELETE /api/users/{id}
-     * Delete a user
-     */
     public function destroy($id)
     {
-        try {
-            $user = User::find($id);
+        $user = User::findOrFail($id);
 
-            if (!$user) {
-                return response()->json(['error' => 'User not found'], 404);
-            }
-
-            $user->delete();
-
-            return response()->json(['ok' => true]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Server error: ' . $e->getMessage()], 500);
+        // Prevent deleting yourself
+        if ($user->id === auth()->id()) {
+            return response()->json(['error' => 'Cannot delete your own account'], 400);
         }
+
+        // Only master_admin can delete master_admins
+        if ($user->role === 'master_admin' && auth()->user()->role !== 'master_admin') {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
+
+        $user->delete();
+
+        return response()->json(['ok' => true]);
+    }
+
+    private function formatUser(User $user): array
+    {
+        return [
+            'id'          => $user->id,
+            'name'        => $user->name,
+            'email'       => $user->email,
+            'username'    => $user->username,
+            'role'        => $user->role,
+            'avatar'      => $user->avatar,
+            'color'       => $user->color,
+            'status'      => $user->status,
+            'permissions' => $user->permissions,
+        ];
     }
 }

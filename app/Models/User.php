@@ -16,13 +16,11 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
-        'role',
         'avatar',
         'color',
         'status',
         'username',
         'password',
-        'permissions',
         'avatar_path',
         'avatar_emoji',
         'presence_status',
@@ -30,6 +28,9 @@ class User extends Authenticatable
         'last_active_at',
         'idle_since_at',
     ];
+
+    // role and permissions are NOT in $fillable — set them explicitly:
+    // $user->role = 'admin'; $user->permissions = [...]; $user->save();
 
     protected $hidden = [
         'password',

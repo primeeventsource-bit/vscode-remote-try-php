@@ -26,6 +26,8 @@ class Tasks extends Component
 
     public function createTask()
     {
+        $user = auth()->user();
+        if (!$user || !$user->hasRole('master_admin', 'admin')) return;
         if (!$this->taskForm['title'] || !$this->taskForm['assigned_to']) return;
         DB::table('tasks')->insert([
             'title' => $this->taskForm['title'], 'type' => $this->taskForm['type'],
@@ -43,6 +45,10 @@ class Tasks extends Component
         if (!$this->newNote || !$this->selectedTask) return;
         $task = DB::table('tasks')->where('id', $this->selectedTask)->first();
         if (!$task) return;
+        $user = auth()->user();
+        if (!$user) return;
+        // Only assigned user or admins can add notes
+        if ($task->assigned_to !== $user->id && !$user->hasRole('master_admin', 'admin')) return;
         $notes = json_decode($task->notes ?? '[]', true);
         $notes[] = ['text' => $this->newNote, 'by' => auth()->id(), 'time' => now()->format('M j, Y - g:i A')];
         DB::table('tasks')->where('id', $this->selectedTask)->update(['notes' => json_encode($notes)]);
@@ -62,6 +68,9 @@ class Tasks extends Component
 
         $task = DB::table('tasks')->where('id', $id)->first();
         if (!$task) return;
+        $user = auth()->user();
+        if (!$user) return;
+        if ($task->assigned_to !== $user->id && !$user->hasRole('master_admin', 'admin')) return;
 
         // Append completion note to existing notes
         $notes = json_decode($task->notes ?? '[]', true);
@@ -91,6 +100,8 @@ class Tasks extends Component
 
     public function reopenTask($id)
     {
+        $user = auth()->user();
+        if (!$user || !$user->hasRole('master_admin', 'admin')) return;
         DB::table('tasks')->where('id', $id)->update(['status' => 'open', 'completed_at' => null]);
     }
 

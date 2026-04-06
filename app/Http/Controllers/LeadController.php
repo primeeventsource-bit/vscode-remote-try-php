@@ -3,202 +3,174 @@
 namespace App\Http\Controllers;
 
 use App\Models\Lead;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class LeadController extends Controller
 {
-    /**
-     * GET /api/leads
-     * List leads with optional filters: assigned_to, disposition, source
-     */
     public function index(Request $request)
     {
-        try {
-            $query = Lead::query();
+        $query = Lead::query();
+        $user = $request->user();
 
-            if ($request->filled('assigned_to')) {
-                $query->where('assigned_to', $request->input('assigned_to'));
-            }
-
-            if ($request->filled('disposition')) {
-                $query->where('disposition', $request->input('disposition'));
-            }
-
-            if ($request->filled('source')) {
-                $query->where('source', $request->input('source'));
-            }
-
-            $leads = $query->orderBy('created_at', 'desc')->get();
-
-            return response()->json(['leads' => $leads]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Server error: ' . $e->getMessage()], 500);
+        // Non-admin users only see their own leads
+        if (! $user->hasRole('master_admin', 'admin') && ! $user->hasPerm('view_all_leads')) {
+            $query->where('assigned_to', $user->id);
         }
+
+        if ($request->filled('assigned_to')) {
+            $query->where('assigned_to', $request->input('assigned_to'));
+        }
+        if ($request->filled('disposition')) {
+            $query->where('disposition', $request->input('disposition'));
+        }
+        if ($request->filled('source')) {
+            $query->where('source', $request->input('source'));
+        }
+
+        $leads = $query->orderBy('created_at', 'desc')->paginate(50);
+
+        return response()->json($leads);
     }
 
-    /**
-     * POST /api/leads
-     * Create a new lead
-     */
     public function store(Request $request)
     {
-        try {
-            $data = $request->only([
-                'resort', 'owner_name', 'phone1', 'phone2',
-                'city', 'st', 'zip', 'resort_location',
-                'assigned_to', 'original_fronter', 'disposition',
-                'transferred_to', 'source', 'callback_date',
-            ]);
+        $data = $request->validate([
+            'resort'           => 'nullable|string|max:255',
+            'owner_name'       => 'required|string|max:255',
+            'phone1'           => 'nullable|string|max:50',
+            'phone2'           => 'nullable|string|max:50',
+            'city'             => 'nullable|string|max:100',
+            'st'               => 'nullable|string|max:10',
+            'zip'              => 'nullable|string|max:20',
+            'resort_location'  => 'nullable|string|max:255',
+            'assigned_to'      => 'nullable|integer|exists:users,id',
+            'original_fronter' => 'nullable|integer|exists:users,id',
+            'disposition'      => 'nullable|string|max:100',
+            'source'           => 'nullable|string|max:100',
+            'callback_date'    => 'nullable|date',
+        ]);
 
-            $lead = Lead::create($data);
+        $data['source'] = $data['source'] ?? 'manual';
 
-            return response()->json(['lead' => $lead], 201);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Server error: ' . $e->getMessage()], 500);
-        }
+        $lead = Lead::create($data);
+
+        return response()->json(['lead' => $lead], 201);
     }
 
-    /**
-     * POST /api/leads/import
-     * Bulk CSV import of leads
-     */
     public function import(Request $request)
     {
-        try {
-            $leads = $request->input('leads', []);
+        $request->validate([
+            'leads'              => 'required|array|min:1|max:5000',
+            'leads.*.owner_name' => 'required|string|max:255',
+            'leads.*.resort'     => 'nullable|string|max:255',
+            'leads.*.phone1'     => 'nullable|string|max:50',
+            'leads.*.phone2'     => 'nullable|string|max:50',
+            'leads.*.city'       => 'nullable|string|max:100',
+            'leads.*.st'         => 'nullable|string|max:10',
+            'leads.*.zip'        => 'nullable|string|max:20',
+        ]);
 
-            if (empty($leads) || !is_array($leads)) {
-                return response()->json(['error' => 'leads array is required'], 400);
-            }
+        $leads = $request->input('leads');
+        $imported = 0;
+        $errors = [];
 
-            $imported = 0;
-            $errors = [];
-
+        DB::transaction(function () use ($leads, &$imported, &$errors) {
             foreach ($leads as $index => $row) {
                 try {
                     Lead::create([
-                        'resort' => $row['resort'] ?? null,
-                        'owner_name' => $row['owner_name'] ?? $row['ownerName'] ?? null,
-                        'phone1' => $row['phone1'] ?? null,
-                        'phone2' => $row['phone2'] ?? null,
-                        'city' => $row['city'] ?? null,
-                        'st' => $row['st'] ?? $row['state'] ?? null,
-                        'zip' => $row['zip'] ?? null,
-                        'resort_location' => $row['resort_location'] ?? $row['resortLocation'] ?? null,
-                        'assigned_to' => $row['assigned_to'] ?? $row['assignedTo'] ?? null,
+                        'resort'           => $row['resort'] ?? null,
+                        'owner_name'       => $row['owner_name'] ?? $row['ownerName'] ?? null,
+                        'phone1'           => $row['phone1'] ?? null,
+                        'phone2'           => $row['phone2'] ?? null,
+                        'city'             => $row['city'] ?? null,
+                        'st'               => $row['st'] ?? $row['state'] ?? null,
+                        'zip'              => $row['zip'] ?? null,
+                        'resort_location'  => $row['resort_location'] ?? $row['resortLocation'] ?? null,
+                        'assigned_to'      => $row['assigned_to'] ?? $row['assignedTo'] ?? null,
                         'original_fronter' => $row['original_fronter'] ?? $row['originalFronter'] ?? null,
-                        'disposition' => $row['disposition'] ?? 'New',
-                        'source' => $row['source'] ?? 'Import',
+                        'disposition'      => $row['disposition'] ?? 'New',
+                        'source'           => $row['source'] ?? 'Import',
                     ]);
                     $imported++;
                 } catch (\Exception $e) {
-                    $errors[] = "Row {$index}: " . $e->getMessage();
+                    $errors[] = "Row {$index}: Invalid data";
                 }
             }
+        });
 
-            return response()->json([
-                'ok' => true,
-                'imported' => $imported,
-                'errors' => $errors,
-            ]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Server error: ' . $e->getMessage()], 500);
-        }
+        return response()->json([
+            'ok'       => true,
+            'imported' => $imported,
+            'errors'   => $errors,
+        ]);
     }
 
-    /**
-     * PUT /api/leads/{id}
-     * Update a lead
-     */
     public function update(Request $request, $id)
     {
-        try {
-            $lead = Lead::find($id);
+        $lead = Lead::findOrFail($id);
 
-            if (!$lead) {
-                return response()->json(['error' => 'Lead not found'], 404);
-            }
+        $data = $request->validate([
+            'resort'           => 'nullable|string|max:255',
+            'owner_name'       => 'sometimes|string|max:255',
+            'phone1'           => 'nullable|string|max:50',
+            'phone2'           => 'nullable|string|max:50',
+            'city'             => 'nullable|string|max:100',
+            'st'               => 'nullable|string|max:10',
+            'zip'              => 'nullable|string|max:20',
+            'resort_location'  => 'nullable|string|max:255',
+            'disposition'      => 'nullable|string|max:100',
+            'callback_date'    => 'nullable|date',
+            'source'           => 'nullable|string|max:100',
+        ]);
 
-            $data = $request->only([
-                'resort', 'owner_name', 'phone1', 'phone2',
-                'city', 'st', 'zip', 'resort_location',
-                'assigned_to', 'original_fronter', 'disposition',
-                'transferred_to', 'source', 'callback_date',
-            ]);
-
-            $lead->update($data);
-
-            return response()->json(['lead' => $lead]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Server error: ' . $e->getMessage()], 500);
+        // Only admins can reassign leads
+        if ($request->has('assigned_to') && $request->user()->hasRole('master_admin', 'admin', 'closer')) {
+            $request->validate(['assigned_to' => 'nullable|integer|exists:users,id']);
+            $data['assigned_to'] = $request->input('assigned_to');
         }
+
+        $lead->update($data);
+
+        return response()->json(['lead' => $lead->fresh()]);
     }
 
-    /**
-     * PUT /api/leads/{id}/disposition
-     * Set disposition: {disposition, transferredTo}
-     */
     public function disposition(Request $request, $id)
     {
-        try {
-            $lead = Lead::find($id);
+        $lead = Lead::findOrFail($id);
 
-            if (!$lead) {
-                return response()->json(['error' => 'Lead not found'], 404);
-            }
+        $data = $request->validate([
+            'disposition'     => 'required|string|max:100',
+            'transferred_to'  => 'nullable|integer|exists:users,id',
+        ]);
 
-            $lead->update([
-                'disposition' => $request->input('disposition'),
-                'transferred_to' => $request->input('transferredTo', $request->input('transferred_to')),
-            ]);
+        $lead->update([
+            'disposition'     => $data['disposition'],
+            'transferred_to'  => $data['transferred_to'] ?? $lead->transferred_to,
+        ]);
 
-            return response()->json(['lead' => $lead]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Server error: ' . $e->getMessage()], 500);
-        }
+        return response()->json(['lead' => $lead->fresh()]);
     }
 
-    /**
-     * PUT /api/leads/{id}/assign
-     * Reassign lead: {assignedTo}
-     */
     public function assign(Request $request, $id)
     {
-        try {
-            $lead = Lead::find($id);
+        $lead = Lead::findOrFail($id);
 
-            if (!$lead) {
-                return response()->json(['error' => 'Lead not found'], 404);
-            }
+        $data = $request->validate([
+            'assigned_to' => 'required|integer|exists:users,id',
+        ]);
 
-            $lead->update([
-                'assigned_to' => $request->input('assignedTo', $request->input('assigned_to')),
-            ]);
+        $lead->update(['assigned_to' => $data['assigned_to']]);
 
-            return response()->json(['lead' => $lead]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Server error: ' . $e->getMessage()], 500);
-        }
+        return response()->json(['lead' => $lead->fresh()]);
     }
 
-    /**
-     * DELETE /api/leads/{id}
-     * Delete a lead
-     */
     public function destroy($id)
     {
-        try {
-            $lead = Lead::find($id);
+        $lead = Lead::findOrFail($id);
+        $lead->delete();
 
-            if (!$lead) {
-                return response()->json(['error' => 'Lead not found'], 404);
-            }
-
-            $lead->delete();
-
-            return response()->json(['ok' => true]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Server error: ' . $e->getMessage()], 500);
-        }
+        return response()->json(['ok' => true]);
     }
 }

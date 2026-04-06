@@ -351,12 +351,36 @@ class SalesTraining extends Component
 
         $selectedObjection = $this->selectedObjectionId ? Objection::find($this->selectedObjectionId) : null;
 
-        // Scripts
+        // Ensure full PDF scripts exist in DB (self-healing)
+        \App\Services\ScriptSeeder::ensureScriptsExist();
+
+        // Scripts — load all active, defaults first
         $scripts = collect();
         $selectedScript = null;
         try {
-            $scripts = \App\Models\SalesScript::where('is_active', true)->orderBy('order_index')->get();
-            $selectedScript = $this->selectedScriptId ? \App\Models\SalesScript::find($this->selectedScriptId) : null;
+            $scripts = \App\Models\SalesScript::where('is_active', true)
+                ->orderBy('order_index')
+                ->get();
+
+            // Sort defaults first if column exists
+            if (\App\Models\SalesScript::hasDefaultColumn()) {
+                $scripts = $scripts->sortByDesc('is_default')->values();
+            }
+
+            if ($this->selectedScriptId) {
+                $selectedScript = \App\Models\SalesScript::find($this->selectedScriptId);
+            } else {
+                // Auto-select the default script for the user's stage
+                $userStage = in_array($user->role, ['fronter', 'fronter_panama']) ? 'fronter' : 'closer';
+                $default = \App\Models\SalesScript::defaultForStage($userStage);
+                if ($default) {
+                    $this->selectedScriptId = $default->id;
+                    $selectedScript = $default;
+                } elseif ($scripts->isNotEmpty()) {
+                    $this->selectedScriptId = $scripts->first()->id;
+                    $selectedScript = $scripts->first();
+                }
+            }
         } catch (\Throwable $e) {}
 
         // Training modules

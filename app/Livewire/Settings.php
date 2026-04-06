@@ -781,5 +781,53 @@ class Settings extends Component
         session()->flash('success', 'Statistics & Dashboard settings saved.');
     }
 
-    public function render() { return view('livewire.settings'); }
+    // ── Script Management ──────────────────────────────────
+
+    public function setDefaultScript(int $scriptId): void
+    {
+        if (!auth()->user()?->hasRole('master_admin')) return;
+
+        $script = \App\Models\SalesScript::find($scriptId);
+        if (!$script) return;
+
+        $script->makeDefault();
+        session()->flash('success', "{$script->name} is now the default for {$script->stage} stage.");
+    }
+
+    public function toggleScriptActive(int $scriptId): void
+    {
+        if (!auth()->user()?->hasRole('master_admin')) return;
+
+        $script = \App\Models\SalesScript::find($scriptId);
+        if (!$script) return;
+
+        // Don't deactivate the default — must set another default first
+        if ($script->is_default && $script->is_active) {
+            session()->flash('error', 'Cannot deactivate the default script. Set another default first.');
+            return;
+        }
+
+        $script->update(['is_active' => !$script->is_active]);
+    }
+
+    public function render()
+    {
+        $viewData = [];
+
+        // Load scripts for management section
+        if ($this->section === 'scripts' && auth()->user()?->hasRole('master_admin')) {
+            try {
+                $viewData['allScripts'] = \App\Models\SalesScript::orderByDefault()
+                    ->orderBy('stage')
+                    ->orderBy('order_index')
+                    ->get();
+            } catch (\Throwable $e) {
+                $viewData['allScripts'] = \App\Models\SalesScript::orderBy('stage')
+                    ->orderBy('order_index')
+                    ->get();
+            }
+        }
+
+        return view('livewire.settings', $viewData);
+    }
 }

@@ -12,42 +12,56 @@ use App\Http\Controllers\ChargebackController;
 use App\Http\Controllers\GifController;
 
 // ─── Public routes ───────────────────────────────────────────
-Route::post('/login', [AuthController::class, 'login']);
-Route::get('/health', fn () => response()->json(['status' => 'ok', 'time' => now()->toIso8601String()]));
+Route::post('/login', [AuthController::class, 'login'])
+    ->middleware('throttle:5,1');   // 5 attempts per minute
 
-// ─── Payroll (matches existing /api/payroll?action=XXX format) ──
-Route::match(['get', 'post', 'options'], '/payroll', [PayrollController::class, 'handle']);
+Route::get('/health', function () {
+    $results = \App\Services\Monitor\HealthCheckRunner::runAll();
+    $overall = collect($results)->contains('status', 'critical') ? 'critical' : 'healthy';
+    return response()->json([
+        'status'     => $overall,
+        'time'       => now()->toIso8601String(),
+        'components' => collect($results)->map(fn ($r) => $r['status']),
+    ], $overall === 'critical' ? 503 : 200);
+});
 
-// ─── Auth-optional routes (CRM works with session/token) ─────
-// Using a simple token middleware — or no auth for initial deployment
-Route::middleware([])->group(function () {
+// ─── Authenticated routes ────────────────────────────────────
+Route::middleware(['auth.token'])->group(function () {
 
     // Auth
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
 
-    // Users
-    Route::get('/users', [UserController::class, 'index']);
-    Route::post('/users', [UserController::class, 'store']);
-    Route::put('/users/{id}', [UserController::class, 'update']);
-    Route::delete('/users/{id}', [UserController::class, 'destroy']);
+    // Users — admin only
+    Route::middleware(['role:master_admin,admin'])->group(function () {
+        Route::get('/users', [UserController::class, 'index']);
+        Route::post('/users', [UserController::class, 'store']);
+        Route::put('/users/{id}', [UserController::class, 'update']);
+        Route::delete('/users/{id}', [UserController::class, 'destroy']);
+    });
 
     // Leads
     Route::get('/leads', [LeadController::class, 'index']);
     Route::post('/leads', [LeadController::class, 'store']);
-    Route::post('/leads/import', [LeadController::class, 'import']);
+    Route::post('/leads/import', [LeadController::class, 'import'])
+        ->middleware(['role:master_admin,admin', 'throttle:10,1']);
     Route::put('/leads/{id}', [LeadController::class, 'update']);
     Route::put('/leads/{id}/disposition', [LeadController::class, 'disposition']);
-    Route::put('/leads/{id}/assign', [LeadController::class, 'assign']);
-    Route::delete('/leads/{id}', [LeadController::class, 'destroy']);
+    Route::put('/leads/{id}/assign', [LeadController::class, 'assign'])
+        ->middleware('role:master_admin,admin,closer');
+    Route::delete('/leads/{id}', [LeadController::class, 'destroy'])
+        ->middleware('role:master_admin,admin');
 
     // Deals
     Route::get('/deals', [DealController::class, 'index']);
     Route::post('/deals', [DealController::class, 'store']);
     Route::put('/deals/{id}', [DealController::class, 'update']);
-    Route::put('/deals/{id}/charge', [DealController::class, 'toggleCharged']);
-    Route::put('/deals/{id}/chargeback', [DealController::class, 'toggleChargeback']);
-    Route::delete('/deals/{id}', [DealController::class, 'destroy']);
+    Route::put('/deals/{id}/charge', [DealController::class, 'toggleCharged'])
+        ->middleware('role:master_admin,admin');
+    Route::put('/deals/{id}/chargeback', [DealController::class, 'toggleChargeback'])
+        ->middleware('role:master_admin,admin');
+    Route::delete('/deals/{id}', [DealController::class, 'destroy'])
+        ->middleware('role:master_admin,admin');
 
     // Chat
     Route::get('/chats', [ChatController::class, 'index']);
@@ -56,12 +70,13 @@ Route::middleware([])->group(function () {
     Route::post('/chats/{id}/messages', [ChatController::class, 'sendMessage']);
     Route::post('/chats/{id}/messages/{msgId}/react', [ChatController::class, 'react']);
     Route::put('/chats/{id}/pin', [ChatController::class, 'togglePin']);
-    Route::delete('/chats/{id}', [ChatController::class, 'destroy']);
+    Route::delete('/chats/{id}', [ChatController::class, 'destroy'])
+        ->middleware('role:master_admin,admin');
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index']);
 
-    // Chargeback dashboard analytics
+    // Chargeback analytics
     Route::get('/dashboard/chargebacks/summary', [ChargebackController::class, 'summary']);
     Route::get('/dashboard/chargebacks/trends', [ChargebackController::class, 'trends']);
     Route::get('/dashboard/chargebacks/breakdowns', [ChargebackController::class, 'breakdowns']);
@@ -70,9 +85,16 @@ Route::middleware([])->group(function () {
     Route::get('/chargebacks/filter-options', [ChargebackController::class, 'filterOptions']);
     Route::get('/chargebacks', [ChargebackController::class, 'index']);
     Route::get('/chargebacks/{id}', [ChargebackController::class, 'show']);
-    Route::post('/chargebacks', [ChargebackController::class, 'store']);
-    Route::patch('/chargebacks/{id}', [ChargebackController::class, 'update']);
-    Route::post('/chargebacks/{id}/events', [ChargebackController::class, 'storeEvent']);
+    Route::post('/chargebacks', [ChargebackController::class, 'store'])
+        ->middleware('role:master_admin,admin');
+    Route::patch('/chargebacks/{id}', [ChargebackController::class, 'update'])
+        ->middleware('role:master_admin,admin');
+    Route::post('/chargebacks/{id}/events', [ChargebackController::class, 'storeEvent'])
+        ->middleware('role:master_admin,admin');
+
+    // Payroll — admin only
+    Route::match(['get', 'post'], '/payroll', [PayrollController::class, 'handle'])
+        ->middleware('role:master_admin,admin');
 
     // GIFs
     Route::get('/gifs/trending', [GifController::class, 'trending']);

@@ -26,6 +26,7 @@
                 'spreadsheets' => 'Spreadsheet Settings',
                 'integrations' => 'Integrations',
                 'calling' => 'Calling / Dialer',
+                'scripts' => 'Script Management',
                 'sales_training_settings' => 'Sales Training',
                 'onboarding_settings' => 'Onboarding & Training',
                 'presence_settings' => 'User Presence',
@@ -219,10 +220,10 @@
             @if($section === 'notifications')
                 <h3 class="text-sm font-semibold mb-3">Notification Preferences</h3>
                 <div class="space-y-2 text-sm">
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="notifySound"> Message sound on/off</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="notifyEmailAlerts"> Email alerts</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="notifyMentionDing"> @mention ding</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="notifyTransferDing"> Transfer ding</label>
+                    <label class="flex items-center gap-2"><input id="fld-notifySound" type="checkbox" wire:model="notifySound"> Message sound on/off</label>
+                    <label class="flex items-center gap-2"><input id="fld-notifyEmailAlerts" type="checkbox" wire:model="notifyEmailAlerts"> Email alerts</label>
+                    <label class="flex items-center gap-2"><input id="fld-notifyMentionDing" type="checkbox" wire:model="notifyMentionDing"> @mention ding</label>
+                    <label class="flex items-center gap-2"><input id="fld-notifyTransferDing" type="checkbox" wire:model="notifyTransferDing"> Transfer ding</label>
                 </div>
                 <div class="mt-3 text-right"><button wire:click="saveNotifications" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg">Save Notifications</button></div>
             @endif
@@ -247,8 +248,8 @@
             @if($section === 'leads')
                 <h3 class="text-sm font-semibold mb-3">Lead Settings</h3>
                 <div class="space-y-3">
-                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" wire:model="leadAutoAssign"> Auto-assign rules enabled</label>
-                    <label for="fld-leadCsvMapping" class="flex items-center gap-2 text-sm"><input type="checkbox" wire:model="leadRoundRobin"> Round-robin assignment</label>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-leadAutoAssign" type="checkbox" wire:model="leadAutoAssign"> Auto-assign rules enabled</label>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-leadRoundRobin" type="checkbox" wire:model="leadRoundRobin"> Round-robin assignment</label>
                                 <textarea id="fld-leadCsvMapping" wire:model.defer="leadCsvMapping" rows="4" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg" placeholder="CSV column mapping"></textarea>
                 </div>
                 <div class="mt-3 text-right"><button wire:click="saveLeadSettings" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg">Save Lead Settings</button></div>
@@ -257,10 +258,10 @@
             @if($section === 'deals')
                 <h3 class="text-sm font-semibold mb-3">Deal Settings</h3>
                 <div class="space-y-2 text-sm">
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="dealRequirePhone"> Require phone</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="dealRequireEmail"> Require email</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="dealRequireCardInfo"> Require card info</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="dealAutoStartVerification"> Auto-start verification</label>
+                    <label class="flex items-center gap-2"><input id="fld-dealRequirePhone" type="checkbox" wire:model="dealRequirePhone"> Require phone</label>
+                    <label class="flex items-center gap-2"><input id="fld-dealRequireEmail" type="checkbox" wire:model="dealRequireEmail"> Require email</label>
+                    <label class="flex items-center gap-2"><input id="fld-dealRequireCardInfo" type="checkbox" wire:model="dealRequireCardInfo"> Require card info</label>
+                    <label class="flex items-center gap-2"><input id="fld-dealAutoStartVerification" type="checkbox" wire:model="dealAutoStartVerification"> Auto-start verification</label>
                 </div>
                 <div class="mt-3 text-right"><button wire:click="saveDealSettings" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg">Save Deal Settings</button></div>
             @endif
@@ -268,30 +269,30 @@
             @if($section === 'chat')
                 <h3 class="text-sm font-semibold mb-3">Chat Settings</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm mb-3">
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.module_enabled"> Enable Chat Module</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.direct_messages_enabled"> Enable Direct Messages</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.group_chats_enabled"> Enable Group Chats</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.channels_enabled"> Enable Channels</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.private_channels_enabled"> Enable Private Channels</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.public_channels_enabled"> Enable Public Channels</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.thread_replies_enabled"> Enable Threaded Replies</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.read_receipts_enabled"> Enable Read Receipts</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.typing_indicators_enabled"> Enable Typing Indicators</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.online_status_enabled"> Enable Online Status</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.reactions_enabled"> Enable Emoji Reactions</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.file_attachments_enabled"> Enable File Attachments</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.image_attachments_enabled"> Enable Image Attachments</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.voice_notes_enabled"> Enable Voice Notes</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.edit_message_enabled"> Enable Edit Message</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.delete_message_enabled"> Enable Delete Message</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.pin_messages_enabled"> Enable Pin Messages</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.search_enabled"> Enable Message Search</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.mentions_enabled"> Enable Mentions</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.notifications_enabled"> Enable Notifications</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.desktop_notifications_enabled"> Enable Desktop Notifications</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.mobile_notifications_enabled"> Enable Mobile Notifications</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.admin_delete_any_message"> Allow Admin Delete Any Message</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="chatModuleSettings.manager_channel_moderation"> Allow Managers Moderate Channels</label>
+                    <label class="flex items-center gap-2"><input id="fld-chat-module_enabled" type="checkbox" wire:model="chatModuleSettings.module_enabled"> Enable Chat Module</label>
+                    <label class="flex items-center gap-2"><input id="fld-chat-direct_messages" type="checkbox" wire:model="chatModuleSettings.direct_messages_enabled"> Enable Direct Messages</label>
+                    <label class="flex items-center gap-2"><input id="fld-chat-group_chats" type="checkbox" wire:model="chatModuleSettings.group_chats_enabled"> Enable Group Chats</label>
+                    <label class="flex items-center gap-2"><input id="fld-chat-channels" type="checkbox" wire:model="chatModuleSettings.channels_enabled"> Enable Channels</label>
+                    <label class="flex items-center gap-2"><input id="fld-chat-private_channels" type="checkbox" wire:model="chatModuleSettings.private_channels_enabled"> Enable Private Channels</label>
+                    <label class="flex items-center gap-2"><input id="fld-chat-public_channels" type="checkbox" wire:model="chatModuleSettings.public_channels_enabled"> Enable Public Channels</label>
+                    <label class="flex items-center gap-2"><input id="fld-chat-thread_replies" type="checkbox" wire:model="chatModuleSettings.thread_replies_enabled"> Enable Threaded Replies</label>
+                    <label class="flex items-center gap-2"><input id="fld-chat-read_receipts" type="checkbox" wire:model="chatModuleSettings.read_receipts_enabled"> Enable Read Receipts</label>
+                    <label class="flex items-center gap-2"><input id="fld-chat-typing_indicators" type="checkbox" wire:model="chatModuleSettings.typing_indicators_enabled"> Enable Typing Indicators</label>
+                    <label class="flex items-center gap-2"><input id="fld-chat-online_status" type="checkbox" wire:model="chatModuleSettings.online_status_enabled"> Enable Online Status</label>
+                    <label class="flex items-center gap-2"><input id="fld-chat-reactions" type="checkbox" wire:model="chatModuleSettings.reactions_enabled"> Enable Emoji Reactions</label>
+                    <label class="flex items-center gap-2"><input id="fld-chat-file_attachments" type="checkbox" wire:model="chatModuleSettings.file_attachments_enabled"> Enable File Attachments</label>
+                    <label class="flex items-center gap-2"><input id="fld-chat-image_attachments" type="checkbox" wire:model="chatModuleSettings.image_attachments_enabled"> Enable Image Attachments</label>
+                    <label class="flex items-center gap-2"><input id="fld-chat-voice_notes" type="checkbox" wire:model="chatModuleSettings.voice_notes_enabled"> Enable Voice Notes</label>
+                    <label class="flex items-center gap-2"><input id="fld-chat-edit_message" type="checkbox" wire:model="chatModuleSettings.edit_message_enabled"> Enable Edit Message</label>
+                    <label class="flex items-center gap-2"><input id="fld-chat-delete_message" type="checkbox" wire:model="chatModuleSettings.delete_message_enabled"> Enable Delete Message</label>
+                    <label class="flex items-center gap-2"><input id="fld-chat-pin_messages" type="checkbox" wire:model="chatModuleSettings.pin_messages_enabled"> Enable Pin Messages</label>
+                    <label class="flex items-center gap-2"><input id="fld-chat-search" type="checkbox" wire:model="chatModuleSettings.search_enabled"> Enable Message Search</label>
+                    <label class="flex items-center gap-2"><input id="fld-chat-mentions" type="checkbox" wire:model="chatModuleSettings.mentions_enabled"> Enable Mentions</label>
+                    <label class="flex items-center gap-2"><input id="fld-chat-notifications" type="checkbox" wire:model="chatModuleSettings.notifications_enabled"> Enable Notifications</label>
+                    <label class="flex items-center gap-2"><input id="fld-chat-desktop_notif" type="checkbox" wire:model="chatModuleSettings.desktop_notifications_enabled"> Enable Desktop Notifications</label>
+                    <label class="flex items-center gap-2"><input id="fld-chat-mobile_notif" type="checkbox" wire:model="chatModuleSettings.mobile_notifications_enabled"> Enable Mobile Notifications</label>
+                    <label class="flex items-center gap-2"><input id="fld-chat-admin_delete" type="checkbox" wire:model="chatModuleSettings.admin_delete_any_message"> Allow Admin Delete Any Message</label>
+                    <label class="flex items-center gap-2"><input id="fld-chatModuleSettings-manager_channel_moderation" type="checkbox" wire:model="chatModuleSettings.manager_channel_moderation"> Allow Managers Moderate Channels</label>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
@@ -334,22 +335,22 @@
             @if($section === 'documents')
                 <h3 class="text-sm font-semibold mb-3">Document Settings</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm mb-3">
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="documentModuleSettings.module_enabled"> Enable Document Module</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="documentModuleSettings.creation_enabled"> Enable Document Creation</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="documentModuleSettings.realtime_collaboration_enabled"> Enable Real-Time Collaboration</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="documentModuleSettings.autosave_enabled"> Enable Auto Save</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="documentModuleSettings.version_history_enabled"> Enable Version History</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="documentModuleSettings.comments_enabled"> Enable Comments</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="documentModuleSettings.suggestions_enabled"> Enable Suggestions Mode</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="documentModuleSettings.share_permissions_enabled"> Enable Share Permissions</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="documentModuleSettings.folders_enabled"> Enable Folder Organization</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="documentModuleSettings.export_pdf_enabled"> Enable Export PDF</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="documentModuleSettings.export_docx_enabled"> Enable Export DOCX</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="documentModuleSettings.manager_manage_shared_enabled"> Managers Manage Shared Docs</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="documentModuleSettings.admin_view_all_enabled"> Admin View All Documents</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="documentModuleSettings.templates_enabled"> Enable Templates</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="documentModuleSettings.restore_version_enabled"> Enable Restore Previous Version</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="documentModuleSettings.activity_log_enabled"> Enable Activity Log</label>
+                    <label class="flex items-center gap-2"><input id="fld-documentModuleSettings-module_enabled" type="checkbox" wire:model="documentModuleSettings.module_enabled"> Enable Document Module</label>
+                    <label class="flex items-center gap-2"><input id="fld-documentModuleSettings-creation_enabled" type="checkbox" wire:model="documentModuleSettings.creation_enabled"> Enable Document Creation</label>
+                    <label class="flex items-center gap-2"><input id="fld-documentModuleSettings-realtime_collaboration_enabled" type="checkbox" wire:model="documentModuleSettings.realtime_collaboration_enabled"> Enable Real-Time Collaboration</label>
+                    <label class="flex items-center gap-2"><input id="fld-documentModuleSettings-autosave_enabled" type="checkbox" wire:model="documentModuleSettings.autosave_enabled"> Enable Auto Save</label>
+                    <label class="flex items-center gap-2"><input id="fld-documentModuleSettings-version_history_enabled" type="checkbox" wire:model="documentModuleSettings.version_history_enabled"> Enable Version History</label>
+                    <label class="flex items-center gap-2"><input id="fld-documentModuleSettings-comments_enabled" type="checkbox" wire:model="documentModuleSettings.comments_enabled"> Enable Comments</label>
+                    <label class="flex items-center gap-2"><input id="fld-documentModuleSettings-suggestions_enabled" type="checkbox" wire:model="documentModuleSettings.suggestions_enabled"> Enable Suggestions Mode</label>
+                    <label class="flex items-center gap-2"><input id="fld-documentModuleSettings-share_permissions_enabled" type="checkbox" wire:model="documentModuleSettings.share_permissions_enabled"> Enable Share Permissions</label>
+                    <label class="flex items-center gap-2"><input id="fld-documentModuleSettings-folders_enabled" type="checkbox" wire:model="documentModuleSettings.folders_enabled"> Enable Folder Organization</label>
+                    <label class="flex items-center gap-2"><input id="fld-documentModuleSettings-export_pdf_enabled" type="checkbox" wire:model="documentModuleSettings.export_pdf_enabled"> Enable Export PDF</label>
+                    <label class="flex items-center gap-2"><input id="fld-documentModuleSettings-export_docx_enabled" type="checkbox" wire:model="documentModuleSettings.export_docx_enabled"> Enable Export DOCX</label>
+                    <label class="flex items-center gap-2"><input id="fld-documentModuleSettings-manager_manage_shared_enabled" type="checkbox" wire:model="documentModuleSettings.manager_manage_shared_enabled"> Managers Manage Shared Docs</label>
+                    <label class="flex items-center gap-2"><input id="fld-documentModuleSettings-admin_view_all_enabled" type="checkbox" wire:model="documentModuleSettings.admin_view_all_enabled"> Admin View All Documents</label>
+                    <label class="flex items-center gap-2"><input id="fld-documentModuleSettings-templates_enabled" type="checkbox" wire:model="documentModuleSettings.templates_enabled"> Enable Templates</label>
+                    <label class="flex items-center gap-2"><input id="fld-documentModuleSettings-restore_version_enabled" type="checkbox" wire:model="documentModuleSettings.restore_version_enabled"> Enable Restore Previous Version</label>
+                    <label class="flex items-center gap-2"><input id="fld-documentModuleSettings-activity_log_enabled" type="checkbox" wire:model="documentModuleSettings.activity_log_enabled"> Enable Activity Log</label>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
@@ -385,21 +386,21 @@
             @if($section === 'spreadsheets')
                 <h3 class="text-sm font-semibold mb-3">Spreadsheet Settings</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm mb-3">
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="spreadsheetModuleSettings.module_enabled"> Enable Spreadsheet Module</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="spreadsheetModuleSettings.creation_enabled"> Enable Spreadsheet Creation</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="spreadsheetModuleSettings.realtime_collaboration_enabled"> Enable Real-Time Collaboration</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="spreadsheetModuleSettings.autosave_enabled"> Enable Auto Save</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="spreadsheetModuleSettings.csv_import_enabled"> Enable CSV Import</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="spreadsheetModuleSettings.csv_export_enabled"> Enable CSV Export</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="spreadsheetModuleSettings.excel_export_enabled"> Enable Excel Export</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="spreadsheetModuleSettings.formulas_enabled"> Enable Formula Support</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="spreadsheetModuleSettings.sorting_enabled"> Enable Sorting</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="spreadsheetModuleSettings.filtering_enabled"> Enable Filtering</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="spreadsheetModuleSettings.cell_formatting_enabled"> Enable Cell Formatting</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="spreadsheetModuleSettings.multi_tab_enabled"> Enable Multiple Sheet Tabs</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="spreadsheetModuleSettings.manager_manage_shared_enabled"> Managers Manage Shared Sheets</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="spreadsheetModuleSettings.admin_view_all_enabled"> Admin View All Sheets</label>
-                    <label class="flex items-center gap-2"><input type="checkbox" wire:model="spreadsheetModuleSettings.activity_log_enabled"> Enable Activity Log</label>
+                    <label class="flex items-center gap-2"><input id="fld-spreadsheetModuleSettings-module_enabled" type="checkbox" wire:model="spreadsheetModuleSettings.module_enabled"> Enable Spreadsheet Module</label>
+                    <label class="flex items-center gap-2"><input id="fld-spreadsheetModuleSettings-creation_enabled" type="checkbox" wire:model="spreadsheetModuleSettings.creation_enabled"> Enable Spreadsheet Creation</label>
+                    <label class="flex items-center gap-2"><input id="fld-spreadsheetModuleSettings-realtime_collaboration_enabled" type="checkbox" wire:model="spreadsheetModuleSettings.realtime_collaboration_enabled"> Enable Real-Time Collaboration</label>
+                    <label class="flex items-center gap-2"><input id="fld-spreadsheetModuleSettings-autosave_enabled" type="checkbox" wire:model="spreadsheetModuleSettings.autosave_enabled"> Enable Auto Save</label>
+                    <label class="flex items-center gap-2"><input id="fld-spreadsheetModuleSettings-csv_import_enabled" type="checkbox" wire:model="spreadsheetModuleSettings.csv_import_enabled"> Enable CSV Import</label>
+                    <label class="flex items-center gap-2"><input id="fld-spreadsheetModuleSettings-csv_export_enabled" type="checkbox" wire:model="spreadsheetModuleSettings.csv_export_enabled"> Enable CSV Export</label>
+                    <label class="flex items-center gap-2"><input id="fld-spreadsheetModuleSettings-excel_export_enabled" type="checkbox" wire:model="spreadsheetModuleSettings.excel_export_enabled"> Enable Excel Export</label>
+                    <label class="flex items-center gap-2"><input id="fld-spreadsheetModuleSettings-formulas_enabled" type="checkbox" wire:model="spreadsheetModuleSettings.formulas_enabled"> Enable Formula Support</label>
+                    <label class="flex items-center gap-2"><input id="fld-spreadsheetModuleSettings-sorting_enabled" type="checkbox" wire:model="spreadsheetModuleSettings.sorting_enabled"> Enable Sorting</label>
+                    <label class="flex items-center gap-2"><input id="fld-spreadsheetModuleSettings-filtering_enabled" type="checkbox" wire:model="spreadsheetModuleSettings.filtering_enabled"> Enable Filtering</label>
+                    <label class="flex items-center gap-2"><input id="fld-spreadsheetModuleSettings-cell_formatting_enabled" type="checkbox" wire:model="spreadsheetModuleSettings.cell_formatting_enabled"> Enable Cell Formatting</label>
+                    <label class="flex items-center gap-2"><input id="fld-spreadsheetModuleSettings-multi_tab_enabled" type="checkbox" wire:model="spreadsheetModuleSettings.multi_tab_enabled"> Enable Multiple Sheet Tabs</label>
+                    <label class="flex items-center gap-2"><input id="fld-spreadsheetModuleSettings-manager_manage_shared_enabled" type="checkbox" wire:model="spreadsheetModuleSettings.manager_manage_shared_enabled"> Managers Manage Shared Sheets</label>
+                    <label class="flex items-center gap-2"><input id="fld-spreadsheetModuleSettings-admin_view_all_enabled" type="checkbox" wire:model="spreadsheetModuleSettings.admin_view_all_enabled"> Admin View All Sheets</label>
+                    <label class="flex items-center gap-2"><input id="fld-spreadsheetModuleSettings-activity_log_enabled" type="checkbox" wire:model="spreadsheetModuleSettings.activity_log_enabled"> Enable Activity Log</label>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
@@ -460,7 +461,7 @@
                                 <input id="fld-newProcessorType" wire:model.defer="newProcessorType" type="text" placeholder="Type" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg">
                             </div>
                             <div class="flex items-center justify-between mb-3">
-                                <label class="text-xs flex items-center gap-2"><input type="checkbox" wire:model="newProcessorActive"> Active</label>
+                                <label class="text-xs flex items-center gap-2"><input id="fld-newProcessorActive" type="checkbox" wire:model="newProcessorActive"> Active</label>
                                 <button wire:click="addProcessor" class="px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-lg">Add Processor</button>
                             </div>
                         @endif
@@ -497,7 +498,7 @@
                                     @endforeach
                                 </select>
                                 <div class="flex items-center justify-between">
-                                    <label class="text-xs flex items-center gap-2"><input type="checkbox" wire:model="newMerchantActive"> Active</label>
+                                    <label class="text-xs flex items-center gap-2"><input id="fld-newMerchantActive" type="checkbox" wire:model="newMerchantActive"> Active</label>
                                     <button wire:click="addMerchantAccount" class="px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-lg">Add Account</button>
                                 </div>
                             </div>
@@ -532,9 +533,9 @@
                     <div class="bg-crm-card border border-crm-border rounded-lg p-4">
                         <div class="text-sm font-semibold mb-3">General</div>
                         <div class="space-y-3">
-                            <label class="flex items-center gap-2 text-sm"><input type="checkbox" wire:model="dialerSettings.enabled"> Enable Click-to-Call</label>
-                            <label class="flex items-center gap-2 text-sm"><input type="checkbox" wire:model="dialerSettings.show_call_buttons"> Show Call Buttons on Phone Numbers</label>
-                            <label class="flex items-center gap-2 text-sm"><input type="checkbox" wire:model="dialerSettings.show_copy_button"> Show Copy Number Button</label>
+                            <label class="flex items-center gap-2 text-sm"><input id="fld-dialerSettings-enabled" type="checkbox" wire:model="dialerSettings.enabled"> Enable Click-to-Call</label>
+                            <label class="flex items-center gap-2 text-sm"><input id="fld-dialerSettings-show_call_buttons" type="checkbox" wire:model="dialerSettings.show_call_buttons"> Show Call Buttons on Phone Numbers</label>
+                            <label class="flex items-center gap-2 text-sm"><input id="fld-dialerSettings-show_copy_button" type="checkbox" wire:model="dialerSettings.show_copy_button"> Show Copy Number Button</label>
                         </div>
                     </div>
 
@@ -580,8 +581,8 @@
                     <div class="bg-crm-card border border-crm-border rounded-lg p-4">
                         <div class="text-sm font-semibold mb-3">Call Logging</div>
                         <div class="space-y-3">
-                            <label class="flex items-center gap-2 text-sm"><input type="checkbox" wire:model="dialerSettings.logging_enabled"> Log All Dial Attempts</label>
-                            <label class="flex items-center gap-2 text-sm"><input type="checkbox" wire:model="dialerSettings.require_outcome"> Require Call Outcome After Dial</label>
+                            <label class="flex items-center gap-2 text-sm"><input id="fld-dialerSettings-logging_enabled" type="checkbox" wire:model="dialerSettings.logging_enabled"> Log All Dial Attempts</label>
+                            <label class="flex items-center gap-2 text-sm"><input id="fld-dialerSettings-require_outcome" type="checkbox" wire:model="dialerSettings.require_outcome"> Require Call Outcome After Dial</label>
                         </div>
                     </div>
 
@@ -640,6 +641,48 @@
                     </div>
                 </div>
                 <div class="mt-4 text-right"><button wire:click="saveAiSettings" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">Save AI Settings</button></div>
+            @endif
+
+            {{-- ═══ SCRIPT MANAGEMENT ═══ --}}
+            @if($section === 'scripts' && $isMaster)
+                <h3 class="text-sm font-semibold mb-3">Script Management</h3>
+                <p class="text-xs text-crm-t3 mb-4">Manage sales scripts for each stage. Only one default per stage is allowed.</p>
+
+                @foreach(['fronter', 'closer', 'verification'] as $stage)
+                    <div class="mb-6">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-crm-t3 mb-2 border-b border-crm-border pb-1">{{ ucfirst($stage) }} Stage</h4>
+                        <div class="space-y-2">
+                            @foreach(($allScripts ?? collect())->where('stage', $stage) as $script)
+                                <div class="flex items-center justify-between bg-crm-card border border-crm-border rounded-lg px-3 py-2.5">
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-sm font-semibold truncate">{{ $script->name }}</span>
+                                            @if($script->is_default)
+                                                <span class="text-[8px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 uppercase shrink-0">Default</span>
+                                            @endif
+                                            @if(!$script->is_active)
+                                                <span class="text-[8px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 uppercase shrink-0">Inactive</span>
+                                            @endif
+                                        </div>
+                                        <div class="text-[10px] text-crm-t3">{{ $script->slug }} &middot; {{ ucfirst($script->category) }}</div>
+                                    </div>
+                                    <div class="flex items-center gap-2 shrink-0 ml-2">
+                                        @if(!$script->is_default)
+                                            <button wire:click="setDefaultScript({{ $script->id }})" class="px-2 py-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 rounded hover:bg-emerald-100 transition">Set Default</button>
+                                        @endif
+                                        <button wire:click="toggleScriptActive({{ $script->id }})" class="px-2 py-1 text-[10px] font-semibold {{ $script->is_active ? 'text-red-600 bg-red-50 hover:bg-red-100' : 'text-blue-600 bg-blue-50 hover:bg-blue-100' }} rounded transition">
+                                            {{ $script->is_active ? 'Deactivate' : 'Activate' }}
+                                        </button>
+                                    </div>
+                                </div>
+                            @endforeach
+
+                            @if(($allScripts ?? collect())->where('stage', $stage)->isEmpty())
+                                <p class="text-xs text-crm-t3 italic px-2">No scripts for this stage yet.</p>
+                            @endif
+                        </div>
+                    </div>
+                @endforeach
             @endif
 
             {{-- ═══ SALES TRAINING SETTINGS ═══ --}}

@@ -97,6 +97,7 @@
                     ]],
                     ['title' => 'TRAINING', 'items' => [
                         ['route' => 'sales-training','icon' => '🎯', 'label' => 'Sales Training',   'perm' => null],
+                        ['route' => 'script-editor', 'icon' => '📜', 'label' => 'Script Editor',    'perm' => 'edit_users'],
                         ['route' => 'daily-sales',  'icon' => '📅', 'label' => 'Daily Sales System','perm' => null],
                         ['route' => 'training',     'icon' => '📚', 'label' => 'Training & Help',  'perm' => null],
                     ]],
@@ -111,8 +112,9 @@
                         ['route' => 'transfers',    'icon' => '♻️',  'label' => 'Transfers',       'perm' => null],
                     ]],
                     ['title' => 'SYSTEM', 'items' => [
-                        ['route' => 'users',        'icon' => '👥', 'label' => 'Users',           'perm' => 'view_users'],
-                        ['route' => 'settings',     'icon' => '⚙️',  'label' => 'Settings',        'perm' => null],
+                        ['route' => 'users',          'icon' => '👥', 'label' => 'Users',           'perm' => 'view_users'],
+                        ['route' => 'settings',       'icon' => '⚙️',  'label' => 'Settings',        'perm' => null],
+                        ['route' => 'system-monitor', 'icon' => '📡', 'label' => 'System Monitor',  'perm' => 'master_override'],
                     ]],
                 ];
             @endphp

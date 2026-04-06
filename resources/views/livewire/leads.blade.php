@@ -137,7 +137,7 @@
             @endforeach
         </div>
         @if($isAdmin)
-        <select wire:model.live="duplicateFilter" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
+        <select id="fld-duplicateFilter" wire:model.live="duplicateFilter" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
             <option value="all">All (Duplicates)</option>
             <option value="has_duplicates">Has Duplicates</option>
             <option value="exact_duplicates">Exact Duplicates</option>
@@ -307,7 +307,7 @@
     <div class="flex items-center justify-between mb-6">
         <div class="flex items-center gap-2">
             <span class="text-xs text-crm-t3">Per page:</span>
-            <select wire:model.live="perPage" class="px-2 py-1 text-xs bg-white border border-crm-border rounded-lg focus:outline-none">
+            <select id="fld-perPage" wire:model.live="perPage" class="px-2 py-1 text-xs bg-white border border-crm-border rounded-lg focus:outline-none">
                 <option value="25">25</option>
                 <option value="50">50</option>
                 <option value="100">100</option>
@@ -640,13 +640,13 @@
                     <label class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold">Duplicate Handling</label>
                     <div class="flex items-center gap-3 mt-1">
                         <label class="flex items-center gap-1.5 text-xs cursor-pointer">
-                            <input type="radio" wire:model="duplicateStrategy" value="flag" class="text-blue-600"> Flag & Import
+                            <input id="fld-duplicateStrategy-flag" type="radio" wire:model="duplicateStrategy" value="flag" class="text-blue-600"> Flag & Import
                         </label>
                         <label class="flex items-center gap-1.5 text-xs cursor-pointer">
-                            <input type="radio" wire:model="duplicateStrategy" value="skip" class="text-blue-600"> Skip Duplicates
+                            <input id="fld-duplicateStrategy-skip" type="radio" wire:model="duplicateStrategy" value="skip" class="text-blue-600"> Skip Duplicates
                         </label>
                         <label class="flex items-center gap-1.5 text-xs cursor-pointer">
-                            <input type="radio" wire:model="duplicateStrategy" value="import_all" class="text-blue-600"> Import All
+                            <input id="fld-duplicateStrategy-import_all" type="radio" wire:model="duplicateStrategy" value="import_all" class="text-blue-600"> Import All
                         </label>
                     </div>
                 </div>
@@ -661,7 +661,7 @@
                                 {{ $leadFile->getClientOriginalName() }} ({{ number_format($leadFile->getSize() / 1024, 1) }} KB)
                             </div>
                         @endif
-                        <input type="file" wire:model="leadFile" accept=".csv,.txt" class="hidden">
+                        <input id="fld-leadFile" type="file" wire:model="leadFile" accept=".csv,.txt" class="hidden">
                     </label>
                     @error('leadFile')
                         <p class="mt-2 text-xs font-semibold text-red-600">{{ $message }}</p>
