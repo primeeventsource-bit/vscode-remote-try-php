@@ -234,11 +234,7 @@ class GifController extends Controller
 
     private function resolveUser(Request $request): ?User
     {
-        if ($request->user()) {
-            return $request->user();
-        }
-
-        $userId = $request->integer('user_id');
-        return $userId ? User::find($userId) : null;
+        // Always use the authenticated user — never trust user_id from query string
+        return $request->user() ?? auth()->user();
     }
 }

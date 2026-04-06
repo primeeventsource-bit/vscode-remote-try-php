@@ -20,7 +20,7 @@
             if(!reset&&this.cursor) p.set('cursor',this.cursor);
             if(this.tab==='category'&&this.activeCategory) p.set('q',this.categories[this.activeCategory]);
             else if(this.tab==='search'&&this.query.trim().length>=2) p.set('q',this.query.trim());
-            const r=await fetch(this.ep()+'?'+p,{headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'}});
+            const r=await fetch(this.ep()+'?'+p,{credentials:'same-origin',headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'}});
             if(!r.ok||!(r.headers.get('content-type')||'').includes('json')) throw new Error('Failed ('+r.status+')');
             const d=await r.json();
             const items=(d.data||[]).map(g=>({id:g.id||'',title:g.title||'GIF',url:g.url||g.preview_url||'',preview_url:g.preview_url||g.url||'',provider:g.provider||'giphy',width:g.width,height:g.height}));
