@@ -205,6 +205,11 @@
         @livewire('chat-widget')
     @endif
 
+    {{-- Global incoming call notification — polls for pending invites on every page --}}
+    @auth
+        @livewire('incoming-call-alert')
+    @endauth
+
     @livewireScripts
 
     {{-- Presence heartbeat tracker --}}

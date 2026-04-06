@@ -1,19 +1,27 @@
-<div class="p-5" x-data="videoCallApp()" x-init="init()">
+<div class="p-5" x-data="videoCallApp()" x-init="init()" wire:poll.3s>
 
-    {{-- Incoming invite toast --}}
+    {{-- Incoming invite toast (also handled globally by IncomingCallAlert) --}}
     @if($pendingInvite && !$roomId)
-        <div class="fixed top-4 right-4 z-50 bg-white border-2 border-blue-500 rounded-xl shadow-2xl p-4 w-80 animate-pulse">
+        @php
+            $invCaller = $pendingInvite->room?->creator;
+            $invCallerName = $invCaller?->name ?? 'Admin';
+            $invIsVideo = ($pendingInvite->room?->media_mode ?? 'video') !== 'audio';
+        @endphp
+        <div class="fixed top-4 right-4 z-50 bg-white border-2 {{ $invIsVideo ? 'border-blue-500' : 'border-emerald-500' }} rounded-2xl shadow-2xl p-4 w-80 animate-bounce" style="animation-duration: 2s;">
             <div class="flex items-center gap-3 mb-3">
-                <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white text-lg">📹</div>
+                @if($invCaller?->avatar_path)
+                    <img src="{{ asset('storage/' . $invCaller->avatar_path) }}" class="w-10 h-10 rounded-full object-cover">
+                @else
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold" style="background: {{ $invCaller?->color ?? '#3b82f6' }}">{{ $invCaller?->avatar ?? substr($invCallerName, 0, 2) }}</div>
+                @endif
                 <div>
-                    <div class="text-sm font-bold">Incoming Group Call</div>
-                    <div class="text-xs text-crm-t3">From {{ $pendingInvite->room?->creator?->name ?? 'Admin' }}</div>
+                    <div class="text-sm font-bold">Incoming {{ $invIsVideo ? 'Video' : 'Audio' }} Call</div>
+                    <div class="text-xs text-crm-t3">{{ $invCallerName }}</div>
                 </div>
             </div>
-            <div class="text-xs text-crm-t3 mb-3">{{ $pendingInvite->room?->name ?? 'Group Video Call' }}</div>
             <div class="flex gap-2">
                 <a href="{{ route('video-call', ['room' => $pendingInvite->room?->uuid]) }}"
-                   class="flex-1 py-2 text-center text-xs font-bold text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 transition">Join</a>
+                   class="flex-1 py-2 text-center text-xs font-bold text-white {{ $invIsVideo ? 'bg-blue-500 hover:bg-blue-600' : 'bg-emerald-500 hover:bg-emerald-600' }} rounded-lg transition">Answer</a>
                 <button wire:click="declineInvite" class="flex-1 py-2 text-xs font-bold text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition">Decline</button>
             </div>
         </div>
@@ -55,8 +63,22 @@
                 </div>
             </div>
 
-            {{-- Media error banner --}}
-            <div x-show="!!mediaError" x-cloak class="mx-4 mt-2 px-3 py-2 bg-amber-900/80 text-amber-200 text-xs rounded-lg" x-text="mediaError || ''"></div>
+            {{-- Media permission error banner with retry --}}
+            <div x-show="!!mediaError" x-cloak class="mx-4 mt-2 px-4 py-3 bg-amber-900/90 rounded-xl">
+                <div class="flex items-start gap-3">
+                    <span class="text-amber-300 text-lg mt-0.5">⚠️</span>
+                    <div class="flex-1">
+                        <div class="text-amber-100 text-xs font-semibold mb-1">Device Permission Required</div>
+                        <div class="text-amber-200 text-xs leading-relaxed" x-text="mediaError"></div>
+                        <div class="flex items-center gap-2 mt-2">
+                            <button @click="retryMedia()" class="px-3 py-1.5 text-[10px] font-bold text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition">
+                                Retry Camera & Mic
+                            </button>
+                            <span class="text-[9px] text-amber-400">You can still hear and see others without local media</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             {{-- Video grid --}}
             <div class="p-4">
@@ -301,41 +323,56 @@ function videoCallApp() {
             try {
                 this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                 this.attachLocalStream();
-                console.log('Media init: full video+audio OK');
                 return;
             } catch (e) {
-                console.warn('Full media failed:', e.name, e.message);
+                if (e.name === 'NotAllowedError') {
+                    this.cameraOn = false;
+                    this.micOn = false;
+                    this.mediaError = 'Camera and microphone access was blocked. Click the lock/camera icon in your browser address bar, allow access, then click Retry below.';
+                    return;
+                }
             }
 
-            // Step 2: Try audio-only (camera busy or missing)
+            // Step 2: Try audio-only (camera busy, missing, or denied)
             try {
                 this.localStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
                 this.cameraOn = false;
-                this.mediaError = 'Camera unavailable — audio only. You can still see and hear others.';
+                this.mediaError = 'Camera unavailable — audio only. To enable camera: click the lock icon in your browser address bar and allow camera access, then click Retry.';
                 this.attachLocalStream();
-                console.log('Media init: audio-only OK');
                 return;
             } catch (e) {
-                console.warn('Audio-only failed:', e.name, e.message);
+                if (e.name === 'NotAllowedError') {
+                    this.cameraOn = false;
+                    this.micOn = false;
+                    this.mediaError = 'Microphone access was blocked. Click the lock/camera icon in your browser address bar, allow microphone access, then click Retry below.';
+                    return;
+                }
             }
 
             // Step 3: Try video-only (no mic)
             try {
                 this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
                 this.micOn = false;
-                this.mediaError = 'Microphone unavailable — video only.';
+                this.mediaError = 'Microphone unavailable — video only. To enable mic: click the lock icon in your browser address bar and allow microphone access.';
                 this.attachLocalStream();
-                console.log('Media init: video-only OK');
                 return;
-            } catch (e) {
-                console.warn('Video-only failed:', e.name, e.message);
-            }
+            } catch (e) {}
 
-            // Step 4: Nothing works — join without media
+            // Step 4: Nothing works
             this.cameraOn = false;
             this.micOn = false;
-            this.mediaError = 'Camera and microphone unavailable. You can still see and hear others.';
-            console.warn('Media init: all attempts failed, joining without local media');
+            this.mediaError = 'Camera and microphone are unavailable. This may be because access was blocked or no devices were found. Click the lock icon in your browser address bar to check permissions, then click Retry.';
+        },
+
+        async retryMedia() {
+            this.mediaError = '';
+            if (this.localStream) {
+                this.localStream.getTracks().forEach(t => t.stop());
+                this.localStream = null;
+            }
+            this.micOn = true;
+            this.cameraOn = true;
+            await this.initMedia();
         },
 
         attachLocalStream() {
@@ -444,6 +481,6 @@ function videoCallApp() {
 </script>
 @else
 <script>
-function videoCallApp() { return { micOn: true, cameraOn: true, mediaError: '', init() {}, toggleMic() {}, toggleCamera() {}, cleanup() {} } }
+function videoCallApp() { return { micOn: true, cameraOn: true, mediaError: '', init() {}, toggleMic() {}, toggleCamera() {}, cleanup() {}, retryMedia() {} } }
 </script>
 @endif
