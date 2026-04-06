@@ -23,9 +23,11 @@ class TwilioVideoTokenService
      */
     public static function generateToken(string $identity, string $roomName, int $ttl = 14400): ?string
     {
-        $accountSid = config('twilio.account_sid') ?? config('services.twilio.account_sid');
-        $apiKeySid  = config('twilio.api_key_sid') ?? config('services.twilio.api_key_sid');
-        $apiSecret  = config('twilio.api_key_secret') ?? config('services.twilio.api_key_secret');
+        // Read from config first, fall back to env() directly for Azure App Service
+        // where config:cache may run before env vars are injected
+        $accountSid = config('twilio.account_sid') ?: config('services.twilio.account_sid') ?: env('TWILIO_ACCOUNT_SID');
+        $apiKeySid  = config('twilio.api_key_sid') ?: config('services.twilio.api_key_sid') ?: env('TWILIO_API_KEY_SID');
+        $apiSecret  = config('twilio.api_key_secret') ?: config('services.twilio.api_key_secret') ?: env('TWILIO_API_KEY_SECRET');
 
         if (!$accountSid || !$apiKeySid || !$apiSecret) {
             Log::error('Twilio Video token generation failed: missing credentials', [

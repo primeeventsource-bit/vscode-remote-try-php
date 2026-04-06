@@ -30,10 +30,12 @@ fi
 echo "[Startup] Running migrations..."
 php artisan migrate --force 2>&1 || true
 
-# Clear and rebuild caches
-echo "[Startup] Caching config/routes/views..."
-php artisan config:cache 2>/dev/null || true
-php artisan route:cache 2>/dev/null || true
+# Clear caches — do NOT use config:cache on Azure App Service
+# Azure injects env vars at runtime; config:cache would bake in empty values
+echo "[Startup] Clearing caches..."
+php artisan config:clear 2>/dev/null || true
+php artisan route:clear 2>/dev/null || true
+php artisan view:clear 2>/dev/null || true
 php artisan view:cache 2>/dev/null || true
 
 # ── Start Queue Worker in background ─────────────────

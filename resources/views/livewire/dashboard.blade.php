@@ -408,10 +408,10 @@
 
             <div class="bg-crm-card border border-crm-border rounded-lg p-4">
                 <div class="text-sm font-semibold mb-3">Recent Deals</div>
-                @foreach($recentDeals as $d)
+                @foreach($recentDeals->filter() as $d)
                     <div class="flex items-center justify-between py-1.5 border-b border-crm-border last:border-0 text-sm">
                         <div class="min-w-0">
-                            <span class="font-semibold truncate block">{{ $d->owner_name }}</span>
+                            <span class="font-semibold truncate block">{{ $d->owner_name ?? 'N/A' }}</span>
                             <span class="text-crm-t3 text-[10px]">{{ $d->resort_name }}</span>
                         </div>
                         <div class="flex items-center gap-2 flex-shrink-0">
@@ -444,10 +444,10 @@
     @if($isCloser && $deals->isNotEmpty())
     <div class="bg-crm-card border border-crm-border rounded-lg p-4 mb-6">
         <div class="text-sm font-semibold mb-3">My Recent Deals</div>
-        @forelse($deals->sortByDesc('id')->take(8) as $d)
+        @forelse($deals->filter()->sortByDesc('id')->take(8) as $d)
             <div class="flex items-center justify-between py-1.5 border-b border-crm-border last:border-0 text-sm">
                 <div class="min-w-0">
-                    <span class="font-semibold truncate block">{{ $d->owner_name }}</span>
+                    <span class="font-semibold truncate block">{{ $d->owner_name ?? 'N/A' }}</span>
                     <span class="text-crm-t3 text-[10px]">{{ $d->resort_name }} · {{ $d->timestamp?->format('n/j/Y') ?? '--' }}</span>
                 </div>
                 <div class="flex items-center gap-2 flex-shrink-0">

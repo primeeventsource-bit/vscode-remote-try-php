@@ -18,9 +18,9 @@ class TwilioIceService
      */
     public static function getIceServers(int $ttl = 3600): array
     {
-        $accountSid = config('services.twilio.account_sid');
-        $apiKeySid  = config('services.twilio.api_key_sid');
-        $apiSecret  = config('services.twilio.api_key_secret');
+        $accountSid = config('services.twilio.account_sid') ?: env('TWILIO_ACCOUNT_SID');
+        $apiKeySid  = config('services.twilio.api_key_sid') ?: env('TWILIO_API_KEY_SID');
+        $apiSecret  = config('services.twilio.api_key_secret') ?: env('TWILIO_API_KEY_SECRET');
 
         if (! $accountSid || ! $apiKeySid || ! $apiSecret) {
             // Fallback to free STUN only if Twilio not configured

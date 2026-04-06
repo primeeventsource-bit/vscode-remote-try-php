@@ -19,11 +19,9 @@ Route::get('/deploy-now', function (\Illuminate\Http\Request $request) {
         \Illuminate\Support\Facades\Artisan::call('config:clear');
         \Illuminate\Support\Facades\Artisan::call('route:clear');
         \Illuminate\Support\Facades\Artisan::call('view:clear');
-        \Illuminate\Support\Facades\Artisan::call('config:cache');
-        \Illuminate\Support\Facades\Artisan::call('route:cache');
         \Illuminate\Support\Facades\Artisan::call('view:cache');
         \Illuminate\Support\Facades\Artisan::call('storage:link');
-        $output[] = 'Caches cleared + rebuilt + storage linked';
+        $output[] = 'Caches cleared + storage linked';
     } catch (\Throwable $e) { $output[] = 'Cache error: ' . $e->getMessage(); }
     return response()->json(['status' => 'done', 'output' => $output]);
 });
@@ -128,10 +126,10 @@ Route::middleware('auth')->group(function () {
 
         $identity = 'user-' . $user->id;
 
-        // Check Twilio credentials before attempting token
-        $sid = config('twilio.account_sid') ?? config('services.twilio.account_sid');
-        $key = config('twilio.api_key_sid') ?? config('services.twilio.api_key_sid');
-        $sec = config('twilio.api_key_secret') ?? config('services.twilio.api_key_secret');
+        // Check Twilio credentials — fall back to env() for Azure where config cache may be stale
+        $sid = config('twilio.account_sid') ?: config('services.twilio.account_sid') ?: env('TWILIO_ACCOUNT_SID');
+        $key = config('twilio.api_key_sid') ?: config('services.twilio.api_key_sid') ?: env('TWILIO_API_KEY_SID');
+        $sec = config('twilio.api_key_secret') ?: config('services.twilio.api_key_secret') ?: env('TWILIO_API_KEY_SECRET');
         if (!$sid || !$key || !$sec) {
             return response()->json([
                 'error' => 'Twilio credentials not configured. Set TWILIO_ACCOUNT_SID, TWILIO_API_KEY_SID, TWILIO_API_KEY_SECRET in Azure App Settings.',
