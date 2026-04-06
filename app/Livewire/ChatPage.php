@@ -39,6 +39,7 @@ class ChatPage extends Component
     public string $newChatName = '';
     public array $newChatMembers = [];
     public string $newChatError = '';
+    public string $chatSearch = '';
 
     // Sidebar-only state
     public bool $showInfoPanel = false;
@@ -270,14 +271,23 @@ class ChatPage extends Component
             try { $activeDirectCall = \App\Services\VideoCall\VideoRoomService::getActiveDirectRoom($activeChat->id); } catch (\Throwable $e) {}
         }
 
+        // Search (uses shared ChatEngine::searchChats)
+        $search = $this->searchChats($chats, $this->chatSearch, $users);
+        $searchResults = $search['chats'];
+        $searchMessageResults = $search['messages'];
+        $isSearching = $search['searching'];
+
         return view('livewire.chat-page', [
-            'chats'             => $chats,
-            'messages'          => $messages,
-            'activeChat'        => $activeChat,
-            'users'             => $users,
-            'gifPickerSettings' => $gifPickerSettings,
-            'canUseGifPicker'   => $canUseGifPicker,
-            'currentUserId'     => $currentUserId,
+            'chats'                => $chats,
+            'messages'             => $messages,
+            'activeChat'           => $activeChat,
+            'users'                => $users,
+            'gifPickerSettings'    => $gifPickerSettings,
+            'canUseGifPicker'      => $canUseGifPicker,
+            'currentUserId'        => $currentUserId,
+            'searchResults'        => $searchResults,
+            'searchMessageResults' => $searchMessageResults,
+            'isSearching'          => $isSearching,
             'sharedMedia'       => $sharedMedia,
             'unreadCounts'      => $unreadCounts,
             'activeDirectCall'  => $activeDirectCall,
