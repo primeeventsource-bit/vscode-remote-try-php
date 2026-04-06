@@ -2,12 +2,11 @@
 
 namespace App\Services\Twilio;
 
-use Firebase\JWT\JWT;
 use Illuminate\Support\Facades\Log;
 
 /**
  * Generates Twilio Video access tokens for group room participation.
- * Uses API Key SID + API Secret to sign JWT — no Twilio SDK required.
+ * Uses API Key SID + API Secret to sign JWT — no external SDK required.
  *
  * Each token grants a specific user access to a specific room.
  * Tokens are short-lived (default 4 hours).
@@ -28,40 +27,69 @@ class TwilioVideoTokenService
         $apiKeySid  = config('twilio.api_key_sid') ?? config('services.twilio.api_key_sid');
         $apiSecret  = config('twilio.api_key_secret') ?? config('services.twilio.api_key_secret');
 
-        if (! $accountSid || ! $apiKeySid || ! $apiSecret) {
-            Log::error('Twilio Video token generation failed: missing credentials');
+        if (!$accountSid || !$apiKeySid || !$apiSecret) {
+            Log::error('Twilio Video token generation failed: missing credentials', [
+                'account_sid_set' => !empty($accountSid),
+                'api_key_set' => !empty($apiKeySid),
+                'api_secret_set' => !empty($apiSecret),
+            ]);
             return null;
         }
 
         try {
             $now = time();
 
-            // Build the JWT payload with Twilio Video grant
-            $payload = [
-                'jti'   => $apiKeySid . '-' . $now,
-                'iss'   => $apiKeySid,
-                'sub'   => $accountSid,
-                'nbf'   => $now,
-                'exp'   => $now + $ttl,
-                'grants' => [
-                    'identity' => $identity,
-                    'video'    => [
-                        'room' => $roomName,
-                    ],
-                ],
-            ];
-
-            // Build JWT header
+            // JWT Header — Twilio requires cty: twilio-fpa;v=1
             $header = [
                 'typ' => 'JWT',
                 'alg' => 'HS256',
                 'cty' => 'twilio-fpa;v=1',
             ];
 
-            return JWT::encode($payload, $apiSecret, 'HS256', $apiKeySid, $header);
+            // JWT Payload with Twilio Video grant
+            $payload = [
+                'jti'    => $apiKeySid . '-' . $now,
+                'iss'    => $apiKeySid,
+                'sub'    => $accountSid,
+                'nbf'    => $now,
+                'exp'    => $now + $ttl,
+                'grants' => [
+                    'identity' => $identity,
+                    'video'    => ['room' => $roomName],
+                ],
+            ];
+
+            // Try firebase/php-jwt if available
+            if (class_exists(\Firebase\JWT\JWT::class)) {
+                return \Firebase\JWT\JWT::encode($payload, $apiSecret, 'HS256', $apiKeySid, $header);
+            }
+
+            // Manual JWT construction (zero dependencies)
+            return self::buildJwt($header, $payload, $apiSecret, $apiKeySid);
         } catch (\Throwable $e) {
             Log::error('Twilio Video token generation error', ['error' => $e->getMessage()]);
             return null;
         }
+    }
+
+    /**
+     * Build a JWT manually without any external library.
+     */
+    private static function buildJwt(array $header, array $payload, string $secret, string $kid): string
+    {
+        // Add kid to header
+        $header['kid'] = $kid;
+
+        $base64UrlEncode = function (string $data): string {
+            return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+        };
+
+        $headerEncoded = $base64UrlEncode(json_encode($header, JSON_UNESCAPED_SLASHES));
+        $payloadEncoded = $base64UrlEncode(json_encode($payload, JSON_UNESCAPED_SLASHES));
+        $signature = $base64UrlEncode(
+            hash_hmac('sha256', "{$headerEncoded}.{$payloadEncoded}", $secret, true)
+        );
+
+        return "{$headerEncoded}.{$payloadEncoded}.{$signature}";
     }
 }

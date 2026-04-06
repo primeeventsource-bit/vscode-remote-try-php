@@ -124,11 +124,27 @@ Route::middleware('auth')->group(function () {
         if (! $participant) return response()->json(['error' => 'Not a participant'], 403);
 
         $identity = 'user-' . $user->id;
+
+        // Check Twilio credentials before attempting token
+        $sid = config('twilio.account_sid') ?? config('services.twilio.account_sid');
+        $key = config('twilio.api_key_sid') ?? config('services.twilio.api_key_sid');
+        $sec = config('twilio.api_key_secret') ?? config('services.twilio.api_key_secret');
+        if (!$sid || !$key || !$sec) {
+            return response()->json([
+                'error' => 'Twilio credentials not configured. Set TWILIO_ACCOUNT_SID, TWILIO_API_KEY_SID, TWILIO_API_KEY_SECRET in Azure App Settings.',
+                'missing' => array_filter([
+                    !$sid ? 'TWILIO_ACCOUNT_SID' : null,
+                    !$key ? 'TWILIO_API_KEY_SID' : null,
+                    !$sec ? 'TWILIO_API_KEY_SECRET' : null,
+                ]),
+            ], 503);
+        }
+
         $token = \App\Services\Twilio\TwilioVideoTokenService::generateToken($identity, $meeting->provider_room_name);
-        if (! $token) return response()->json(['error' => 'Token generation failed'], 500);
+        if (!$token) return response()->json(['error' => 'Token generation failed — check server logs'], 500);
 
         // Mark as joined
-        \App\Services\Meetings\MeetingService::joinRoom($meeting, $user);
+        try { \App\Services\Meetings\MeetingService::joinRoom($meeting, $user); } catch (\Throwable $e) {}
 
         return response()->json([
             'token'    => $token,
