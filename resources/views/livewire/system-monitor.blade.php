@@ -17,10 +17,95 @@
 
     {{-- Tabs --}}
     <div class="flex gap-1 bg-crm-card border border-crm-border rounded-lg p-0.5 mb-5">
-        @foreach(['health' => 'System Health', 'storage' => 'Storage', 'incidents' => 'Incidents ('.$summary['open'].')', 'queue' => 'Queue & Jobs', 'scheduler' => 'Scheduler'] as $k => $l)
+        @foreach(['healing' => 'Self-Healing', 'health' => 'System Health', 'storage' => 'Storage', 'incidents' => 'Incidents ('.$summary['open'].')', 'queue' => 'Queue & Jobs', 'scheduler' => 'Scheduler'] as $k => $l)
             <button wire:click="$set('tab', '{{ $k }}')" class="px-3 py-1.5 text-xs font-semibold rounded-md transition {{ $tab === $k ? 'bg-white text-blue-600 shadow-sm' : 'text-crm-t3 hover:text-crm-t1' }}">{{ $l }}</button>
         @endforeach
     </div>
+
+    {{-- ═══ SELF-HEALING ═══ --}}
+    @if($tab === 'healing')
+        @php
+            $hs = $healingSummary ?? [];
+            $overallState = $hs['overall'] ?? 'unknown';
+            $overallColor = match($overallState) {
+                'healthy' => 'emerald', 'degraded' => 'amber', 'critical', 'failed' => 'red',
+                'failover' => 'blue', default => 'gray',
+            };
+            $subsystems = [
+                'queue' => ['label' => 'Queue', 'icon' => '⚡'],
+                'scheduler' => ['label' => 'Scheduler', 'icon' => '⏱'],
+                'storage' => ['label' => 'Storage', 'icon' => '💾'],
+            ];
+        @endphp
+
+        {{-- Overall Banner --}}
+        <div class="bg-{{ $overallColor }}-50 border border-{{ $overallColor }}-200 rounded-lg p-4 mb-5 flex items-center justify-between">
+            <div>
+                <div class="text-sm font-bold text-{{ $overallColor }}-800">Platform: {{ strtoupper(str_replace('_', ' ', $overallState)) }}</div>
+                <div class="text-[10px] text-{{ $overallColor }}-600 mt-0.5">Queue + Scheduler + Storage unified health</div>
+            </div>
+            @if(auth()->user()->hasRole('master_admin'))
+                <button wire:click="runFullHeal" class="px-4 py-1.5 text-xs font-semibold text-white bg-{{ $overallColor }}-600 rounded-lg hover:bg-{{ $overallColor }}-700 transition">
+                    Run Full Heal
+                </button>
+            @endif
+        </div>
+
+        {{-- Subsystem Cards --}}
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+            @foreach($subsystems as $key => $meta)
+                @php
+                    $subState = $hs[$key] ?? 'unknown';
+                    $subColor = match($subState) {
+                        'healthy' => 'emerald', 'degraded', 'lagging' => 'amber', 'stuck' => 'amber',
+                        'critical', 'failed', 'down' => 'red', 'failover_active' => 'blue', default => 'gray',
+                    };
+                @endphp
+                <div class="bg-crm-card border border-crm-border rounded-lg p-4 border-l-4 border-l-{{ $subColor }}-500">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-xs font-bold">{{ $meta['icon'] }} {{ $meta['label'] }}</div>
+                            <div class="text-lg font-extrabold text-{{ $subColor }}-600 mt-1">{{ ucfirst(str_replace('_', ' ', $subState)) }}</div>
+                        </div>
+                        <span class="text-[9px] font-bold px-2 py-1 rounded bg-{{ $subColor }}-50 text-{{ $subColor }}-700 uppercase">{{ $subState }}</span>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+
+        {{-- Recent Healing Actions --}}
+        @php $actions = $hs['actions'] ?? collect(); @endphp
+        @if($actions instanceof \Illuminate\Support\Collection ? $actions->isNotEmpty() : !empty($actions))
+            <div class="text-xs font-bold mb-2">Recent Healing Actions (24h)</div>
+            <div class="bg-crm-card border border-crm-border rounded-lg overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-crm-border bg-crm-surface">
+                            <th class="text-left px-4 py-2 text-[10px] uppercase text-crm-t3 font-semibold">Subsystem</th>
+                            <th class="text-left px-3 py-2 text-[10px] uppercase text-crm-t3 font-semibold">Action</th>
+                            <th class="text-center px-3 py-2 text-[10px] uppercase text-crm-t3 font-semibold">Status</th>
+                            <th class="text-left px-3 py-2 text-[10px] uppercase text-crm-t3 font-semibold">Trigger</th>
+                            <th class="text-right px-4 py-2 text-[10px] uppercase text-crm-t3 font-semibold">When</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($actions as $act)
+                            @php $actColor = match($act->status ?? '') { 'success' => 'emerald', 'failed' => 'red', 'running' => 'blue', default => 'gray' }; @endphp
+                            <tr class="border-b border-crm-border">
+                                <td class="px-4 py-2 text-xs font-mono">{{ $act->subsystem }}</td>
+                                <td class="px-3 py-2 text-xs">{{ $act->action }}</td>
+                                <td class="text-center px-3 py-2"><span class="text-[9px] font-bold px-2 py-0.5 rounded bg-{{ $actColor }}-50 text-{{ $actColor }}-600">{{ $act->status }}</span></td>
+                                <td class="px-3 py-2 text-[10px] text-crm-t3">{{ $act->trigger }}</td>
+                                <td class="text-right px-4 py-2 text-[10px] text-crm-t3">{{ $act->created_at?->diffForHumans() }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @else
+            <p class="text-xs text-crm-t3 text-center py-6">No healing actions in the last 24 hours — system stable.</p>
+        @endif
+    @endif
 
     {{-- ═══ HEALTH ═══ --}}
     @if($tab === 'health')

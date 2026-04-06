@@ -53,6 +53,13 @@ class SystemMonitor extends Component
         $this->flashMsg = 'Storage health check completed';
     }
 
+    public function runFullHeal(): void
+    {
+        if (! auth()->user()?->hasRole('master_admin')) return;
+        \App\Services\SelfHealingOrchestrator::run();
+        $this->flashMsg = 'Full self-healing cycle completed';
+    }
+
     public function forceStorageDisk(string $mode): void
     {
         if (! auth()->user()?->hasRole('master_admin')) return;
@@ -129,9 +136,15 @@ class SystemMonitor extends Component
             $storageEvents = \App\Models\StorageEvent::orderByDesc('created_at')->limit(15)->get();
         } catch (\Throwable $e) {}
 
+        // Unified healing summary
+        $healingSummary = ['queue' => 'unknown', 'scheduler' => 'unknown', 'storage' => 'unknown', 'overall' => 'unknown', 'actions' => collect()];
+        try {
+            $healingSummary = \App\Services\SelfHealingOrchestrator::summary();
+        } catch (\Throwable $e) {}
+
         return view('livewire.system-monitor', compact(
             'health', 'summary', 'failedJobs', 'queuePending', 'recentBeats',
-            'storageStatus', 'storageEvents'
+            'storageStatus', 'storageEvents', 'healingSummary'
         ));
     }
 }

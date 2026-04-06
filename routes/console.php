@@ -19,14 +19,16 @@ Schedule::call(function () {
         ->delete();
 })->hourly();
 
-// ─── System health checks (every 5 minutes) ─────────────────
-Schedule::command('monitor:health')
+// ─── Unified self-healing cycle (every 5 minutes) ───────────
+// Replaces separate monitor:health + storage:health-check
+// Runs queue + scheduler + storage health in one coordinated pass
+Schedule::command('system:heal')
     ->everyFiveMinutes()
     ->withoutOverlapping()
     ->runInBackground();
 
-// ─── Storage health checks (every 5 minutes) ────────────────
-Schedule::command('storage:health-check')
+// ─── System health checks (component-level, every 5 minutes) ─
+Schedule::command('monitor:health')
     ->everyFiveMinutes()
     ->withoutOverlapping()
     ->runInBackground();
