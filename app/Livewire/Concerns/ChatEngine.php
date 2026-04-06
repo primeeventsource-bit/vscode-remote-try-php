@@ -3,81 +3,71 @@
 namespace App\Livewire\Concerns;
 
 use App\Models\Chat;
-use App\Models\Message;
 use App\Models\User;
+use App\Services\Chat\CallService;
+use App\Services\Chat\ChatService;
+use App\Services\Chat\MessageService;
+use App\Models\AppSetting;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 /**
  * Shared chat engine trait used by BOTH ChatWidget (bubble) and ChatPage (sidebar).
- * Single source of truth for: threads, messages, send, read, create, unread, GIF, search.
+ * Delegates ALL business logic to ChatService / MessageService / CallService.
  *
  * DO NOT duplicate any of this logic in the consuming components.
  */
 trait ChatEngine
 {
     // ═══════════════════════════════════════════════════════
-    // THREAD QUERIES — single source for both UIs
+    // SERVICE ACCESSORS
+    // ═══════════════════════════════════════════════════════
+
+    protected function chatService(): ChatService
+    {
+        return app(ChatService::class);
+    }
+
+    protected function messageService(): MessageService
+    {
+        return app(MessageService::class);
+    }
+
+    protected function callService(): CallService
+    {
+        return app(CallService::class);
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // THREAD QUERIES
     // ═══════════════════════════════════════════════════════
 
     protected function loadThreadsForUser(User $user): Collection
     {
-        try {
-            return Chat::orderBy('updated_at', 'desc')->get()->filter(function ($c) use ($user) {
-                $members = is_array($c->members) ? $c->members : json_decode($c->members ?? '[]', true);
-                return in_array($user->id, $members) || in_array((string) $user->id, $members);
-            });
-        } catch (\Throwable $e) {
-            return collect();
-        }
+        return $this->chatService()->getChatsForUser($user);
     }
 
     // ═══════════════════════════════════════════════════════
-    // UNREAD COUNTS — single source for both UIs
+    // UNREAD COUNTS
     // ═══════════════════════════════════════════════════════
 
     protected function computeUnreadCounts(Collection $chats, int $userId): Collection
     {
-        if ($chats->isEmpty()) return collect();
-
-        try {
-            return DB::table('messages')
-                ->whereIn('chat_id', $chats->pluck('id'))
-                ->where('sender_id', '!=', $userId)
-                ->whereNull('seen_at')
-                ->selectRaw('chat_id, count(*) as cnt')
-                ->groupBy('chat_id')
-                ->pluck('cnt', 'chat_id');
-        } catch (\Throwable $e) {
-            return collect();
-        }
+        return $this->chatService()->computeUnreadCounts($chats, $userId);
     }
 
     // ═══════════════════════════════════════════════════════
-    // MARK AS SEEN — single source for both UIs
+    // MARK AS READ
     // ═══════════════════════════════════════════════════════
 
     protected function markChatAsSeen(): void
     {
-        if (! $this->selectedChat) return;
-
-        try {
-            $now = now()->toDateTimeString();
-            Message::where('chat_id', $this->selectedChat)
-                ->where('sender_id', '!=', auth()->id())
-                ->whereNull('seen_at')
-                ->update([
-                    'seen_at'      => $now,
-                    'delivered_at' => $now,
-                ]);
-        } catch (\Throwable $e) {
-            // seen_at column may not exist yet
-        }
+        if (!$this->selectedChat) return;
+        $this->chatService()->markAsRead($this->selectedChat, auth()->id());
     }
 
     // ═══════════════════════════════════════════════════════
-    // SELECT CHAT — single source for both UIs
+    // SELECT CHAT
     // ═══════════════════════════════════════════════════════
 
     public function selectChat($id): void
@@ -89,81 +79,47 @@ trait ChatEngine
     }
 
     // ═══════════════════════════════════════════════════════
-    // REFRESH (poll target) — single source for both UIs
+    // REFRESH (poll target)
     // ═══════════════════════════════════════════════════════
 
     public function refreshUnreadCounts(): void
     {
-        // Re-mark active chat on each poll cycle
         $this->markChatAsSeen();
     }
 
     // ═══════════════════════════════════════════════════════
-    // SEND MESSAGE — single source for both UIs
+    // SEND MESSAGE
     // ═══════════════════════════════════════════════════════
 
     public function sendMessage(): void
     {
         $text = trim($this->messageInput);
-        if (! $text || ! $this->selectedChat) return;
+        if (!$text || !$this->selectedChat) return;
 
-        try {
-            $msgData = [
-                'chat_id'      => $this->selectedChat,
-                'message_type' => 'text',
-                'sender_id'    => auth()->id(),
-                'text'         => $text,
-            ];
-
-            // Sender sees own message as delivered immediately
-            try { $msgData['seen_at'] = now(); $msgData['delivered_at'] = now(); } catch (\Throwable $e) {}
-
-            Message::create($msgData);
-            Chat::where('id', $this->selectedChat)->update(['updated_at' => now()]);
+        $msg = $this->messageService()->sendText($this->selectedChat, auth()->id(), $text);
+        if ($msg) {
             $this->messageInput = '';
-        } catch (\Throwable $e) {
-            Log::error('Message send failed', ['error' => $e->getMessage()]);
         }
     }
 
     // ═══════════════════════════════════════════════════════
-    // SEND GIF — single source for both UIs
+    // SEND GIF
     // ═══════════════════════════════════════════════════════
 
     public function sendGif(array $gif): void
     {
-        if (! $this->selectedChat || empty($gif['url'])) return;
-
-        try {
-            $msgData = [
-                'chat_id'         => $this->selectedChat,
-                'message_type'    => 'gif',
-                'sender_id'       => auth()->id(),
-                'gif_url'         => $gif['url'] ?? '',
-                'gif_preview_url' => $gif['preview_url'] ?? $gif['url'] ?? '',
-                'gif_provider'    => $gif['provider'] ?? 'giphy',
-                'gif_external_id' => $gif['id'] ?? null,
-                'gif_title'       => $gif['title'] ?? 'GIF',
-            ];
-
-            // Sender delivery status
-            try { $msgData['seen_at'] = now(); $msgData['delivered_at'] = now(); } catch (\Throwable $e) {}
-
-            Message::create($msgData);
-            Chat::where('id', $this->selectedChat)->update(['updated_at' => now()]);
-        } catch (\Throwable $e) {
-            Log::error('GIF send failed', ['error' => $e->getMessage()]);
-        }
+        if (!$this->selectedChat || empty($gif['url'])) return;
+        $this->messageService()->sendGif($this->selectedChat, auth()->id(), $gif);
     }
 
     // ═══════════════════════════════════════════════════════
-    // CREATE NEW CHAT — single source for both UIs
+    // CREATE NEW CHAT
     // ═══════════════════════════════════════════════════════
 
     public function createNewChat(): void
     {
         $user = auth()->user();
-        if (! $user) return;
+        if (!$user) return;
 
         $this->newChatError = '';
         $selectedMembers = array_values(array_unique(array_map('intval', $this->newChatMembers)));
@@ -175,63 +131,38 @@ trait ChatEngine
             return;
         }
 
-        if ($this->newChatType === 'dm') {
-            $selectedMembers = [reset($selectedMembers)];
-            $otherUser = User::find($selectedMembers[0]);
-            if (! $otherUser) {
-                $this->newChatError = 'The selected user could not be found.';
-                return;
-            }
-            $name = $otherUser->name ?? 'Direct Message';
-
-            // Prevent duplicate DMs
-            $existing = Chat::where('type', 'dm')->get()->first(function ($c) use ($user, $selectedMembers) {
-                $m = is_array($c->members) ? $c->members : json_decode($c->members ?? '[]', true);
-                $ids = array_map('intval', array_values($m));
-                sort($ids);
-                $t = [$user->id, $selectedMembers[0]];
-                sort($t);
-                return $ids === $t;
-            });
-
-            if ($existing) {
-                $this->selectedChat = $existing->id;
-                $this->showNewChatForm = false;
-                $this->newChatMembers = [];
-                $this->markChatAsSeen();
-                return;
-            }
-        } else {
-            $name = trim($this->newChatName) ?: 'Group Chat';
-        }
-
         try {
-            $members = array_values(array_unique(array_merge($selectedMembers, [$user->id])));
-            $chat = Chat::create([
-                'name'       => $name,
-                'type'       => $this->newChatType,
-                'members'    => $members,
-                'created_by' => $user->id,
-            ]);
+            if ($this->newChatType === 'dm') {
+                $otherUser = User::find($selectedMembers[0]);
+                if (!$otherUser) {
+                    $this->newChatError = 'The selected user could not be found.';
+                    return;
+                }
+                $chat = $this->chatService()->findOrCreateDirectChat($user, $otherUser);
+            } else {
+                $name = trim($this->newChatName) ?: 'Group Chat';
+                $chat = $this->chatService()->createGroupChat($user, $selectedMembers, $name);
+            }
+
             $this->selectedChat = $chat->id;
             $this->showNewChatForm = false;
             $this->newChatName = '';
             $this->newChatMembers = [];
             $this->messageInput = '';
             $this->newChatError = '';
+            $this->markChatAsSeen();
         } catch (\Throwable $e) {
-            Log::error('Chat creation failed', ['error' => $e->getMessage()]);
             $this->newChatError = 'Failed to create chat. Please try again.';
         }
     }
 
     // ═══════════════════════════════════════════════════════
-    // TOGGLE NEW CHAT FORM — single source for both UIs
+    // TOGGLE NEW CHAT FORM
     // ═══════════════════════════════════════════════════════
 
     public function toggleNewChatForm(): void
     {
-        $this->showNewChatForm = ! $this->showNewChatForm;
+        $this->showNewChatForm = !$this->showNewChatForm;
         if ($this->showNewChatForm) {
             $this->selectedChat = null;
             $this->newChatType = 'dm';
@@ -242,95 +173,67 @@ trait ChatEngine
     }
 
     // ═══════════════════════════════════════════════════════
-    // VIDEO CALLS — single source for both UIs
+    // VIDEO CALLS
     // ═══════════════════════════════════════════════════════
 
     public function startDirectCall(): void
     {
-        if (! $this->selectedChat) return;
+        if (!$this->selectedChat) return;
         $chat = Chat::find($this->selectedChat);
-        if (! $chat || $chat->type !== 'dm') return;
+        if (!$chat || $chat->type !== 'dm') return;
 
-        try {
-            // Get other user from DM members
-            $members = is_array($chat->members) ? $chat->members : json_decode($chat->members ?? '[]', true);
-            $otherId = collect($members)->first(fn($m) => (int) $m !== auth()->id());
-            if (! $otherId) return;
+        $otherId = collect($chat->getMemberIds())->first(fn($m) => (int) $m !== auth()->id());
+        if (!$otherId) return;
 
-            // Use unified meeting system — creates meeting + notifies other user
-            $meeting = \App\Services\Meetings\MeetingService::startDirectCall(auth()->user(), (int) $otherId, $chat->id);
-            if ($meeting) {
-                $this->redirect('/meeting/' . $meeting->uuid);
-            }
-        } catch (\Throwable $e) { report($e); }
+        $meeting = $this->callService()->startDirectCall(auth()->user(), (int) $otherId, $chat->id);
+        if ($meeting) {
+            $this->redirect('/meeting/' . $meeting->uuid);
+        }
     }
 
     public function startDirectAudioCall(): void
     {
-        // Audio calls use same meeting system (media selection happens on client)
         $this->startDirectCall();
     }
 
     // ═══════════════════════════════════════════════════════
-    // MESSAGES LOAD — single source for both UIs
+    // MESSAGES LOAD
     // ═══════════════════════════════════════════════════════
 
     protected function loadMessages(int $limit = 200): Collection
     {
-        if (! $this->selectedChat) return collect();
-
-        try {
-            return Message::where('chat_id', $this->selectedChat)
-                ->orderBy('id')
-                ->limit($limit)
-                ->get();
-        } catch (\Throwable $e) {
-            return collect();
-        }
+        return $this->messageService()->loadMessages($this->selectedChat ?? 0, $limit);
     }
 
     // ═══════════════════════════════════════════════════════
-    // SEARCH — single source for both UIs
+    // SEARCH
     // ═══════════════════════════════════════════════════════
 
     protected function searchChats(Collection $chats, string $query, Collection $users): array
     {
-        $q = trim($query);
-        if ($q === '') return ['chats' => collect(), 'messages' => collect(), 'searching' => false];
-
-        $chatResults = $chats->filter(function ($c) use ($q, $users) {
-            $name = $c->name ?? '';
-            if (stripos($name, $q) !== false) return true;
-            $members = is_array($c->members) ? $c->members : json_decode($c->members ?? '[]', true);
-            foreach ($members as $mid) {
-                $mu = $users->get((int) $mid);
-                if ($mu && stripos($mu->name ?? '', $q) !== false) return true;
-            }
-            return false;
-        });
-
-        $msgResults = collect();
-        try {
-            $msgResults = Message::whereIn('chat_id', $chats->pluck('id'))
-                ->where('text', 'like', "%{$q}%")
-                ->orderByDesc('id')
-                ->limit(20)
-                ->get();
-        } catch (\Throwable $e) {}
-
-        return ['chats' => $chatResults, 'messages' => $msgResults, 'searching' => true];
+        return $this->chatService()->search($chats, $query, $users);
     }
 
     // ═══════════════════════════════════════════════════════
-    // GIF SETTINGS — single source for both UIs
+    // LAST MESSAGES (batch for thread list)
     // ═══════════════════════════════════════════════════════
 
+    protected function getLastMessages(Collection $chats): Collection
+    {
+        return $this->chatService()->getLastMessages($chats);
+    }
+
     // ═══════════════════════════════════════════════════════
-    // PENDING CALL INVITES — single source for both UIs
+    // PENDING CALL INVITES
     // ═══════════════════════════════════════════════════════
 
     protected function loadPendingCallInvite(): ?object
     {
+        // Check unified meetings system first
+        $invite = $this->callService()->getPendingInvite(auth()->id());
+        if ($invite) return $invite;
+
+        // Fallback: legacy video room system
         try {
             return \App\Models\VideoRoomParticipant::where('user_id', auth()->id())
                 ->where('invite_status', 'pending')
@@ -344,29 +247,20 @@ trait ChatEngine
     }
 
     // ═══════════════════════════════════════════════════════
-    // GIF SETTINGS — single source for both UIs
+    // GIF SETTINGS
     // ═══════════════════════════════════════════════════════
 
     protected function loadGifSettings(): array
     {
-        $get = function (string $key, mixed $default) {
-            try {
-                $raw = DB::table('crm_settings')->where('key', $key)->value('value');
-                return $raw === null ? $default : json_decode($raw, true);
-            } catch (\Throwable $e) {
-                return $default;
-            }
-        };
-
         return [
-            'module_enabled'   => (bool) $get('gifs.module_enabled', true),
-            'trending_enabled' => (bool) $get('gifs.trending_enabled', true),
-            'movies_enabled'   => (bool) $get('gifs.movies_enabled', true),
-            'search_enabled'   => (bool) $get('gifs.search_enabled', true),
-            'recent_enabled'   => (bool) $get('gifs.recent_enabled', true),
-            'favorites_enabled' => (bool) $get('gifs.favorites_enabled', true),
-            'provider'         => (string) $get('gifs.provider', 'giphy'),
-            'results_limit'    => (int) $get('gifs.results_limit', 24),
+            'module_enabled'    => (bool) AppSetting::getValue('gifs', 'module_enabled', true),
+            'trending_enabled'  => (bool) AppSetting::getValue('gifs', 'trending_enabled', true),
+            'movies_enabled'    => (bool) AppSetting::getValue('gifs', 'movies_enabled', true),
+            'search_enabled'    => (bool) AppSetting::getValue('gifs', 'search_enabled', true),
+            'recent_enabled'    => (bool) AppSetting::getValue('gifs', 'recent_enabled', true),
+            'favorites_enabled' => (bool) AppSetting::getValue('gifs', 'favorites_enabled', true),
+            'provider'          => (string) AppSetting::getValue('gifs', 'provider', 'giphy'),
+            'results_limit'     => (int) AppSetting::getValue('gifs', 'results_limit', 24),
         ];
     }
 }

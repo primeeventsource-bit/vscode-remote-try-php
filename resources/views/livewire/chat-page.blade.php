@@ -4,7 +4,7 @@
     .badge-blink-red { animation: pulse-badge 1.5s ease-in-out infinite; background: #ef4444; }
     .msg-unread { background: rgba(59,130,246,0.06); border-left: 3px solid #3b82f6; }
 </style>
-<div class="flex h-[calc(100vh-3rem)]" wire:poll.15s="refreshUnreadCounts">
+<div class="flex h-[calc(100vh-3rem)]" wire:poll.visible.15s="refreshUnreadCounts">
     {{-- Left Panel: Advanced Chat Workspace --}}
     <div class="w-80 border-r border-crm-border bg-crm-surface flex flex-col flex-shrink-0">
         {{-- Header --}}
@@ -43,7 +43,7 @@
         </div>
 
         {{-- Thread List --}}
-        <div class="flex-1 overflow-y-auto">
+        <div class="flex-1 overflow-y-auto" wire:loading.class="opacity-50 pointer-events-none" wire:target="selectChat">
             @if($isSearching ?? false)
                 {{-- Search Results --}}
                 @if(($searchResults ?? collect())->isEmpty() && ($searchMessageResults ?? collect())->isEmpty())

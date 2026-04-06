@@ -258,19 +258,8 @@ class ChatPage extends Component
         $activeChat = $this->selectedChat ? Chat::find($this->selectedChat) : null;
         $users = User::all()->keyBy('id');
 
-        // Pre-load last message for each chat (single query, not N+1 inside Blade)
-        $lastMessages = collect();
-        if ($chats->isNotEmpty()) {
-            try {
-                $chatIds = $chats->pluck('id');
-                $lastMessages = \App\Models\Message::whereIn('chat_id', $chatIds)
-                    ->whereIn('id', function ($q) use ($chatIds) {
-                        $q->selectRaw('MAX(id)')->from('messages')->whereIn('chat_id', $chatIds)->groupBy('chat_id');
-                    })
-                    ->get()
-                    ->keyBy('chat_id');
-            } catch (\Throwable $e) {}
-        }
+        // Pre-load last message for each chat (single query via service)
+        $lastMessages = $this->getLastMessages($chats);
         $gifPickerSettings = $this->loadGifSettings();
         $canUseGifPicker = $gifPickerSettings['module_enabled'];
         $currentUserId = (int) auth()->id();

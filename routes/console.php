@@ -2,6 +2,16 @@
 
 use Illuminate\Support\Facades\Schedule;
 
+// ─── Scheduler Heartbeat (every minute — production monitoring) ─
+Schedule::command('scheduler:heartbeat')
+    ->everyMinute()
+    ->withoutOverlapping();
+
+// ─── Stale call cleanup (every minute) ──────────────────────
+Schedule::command('calls:cleanup --seconds=90')
+    ->everyMinute()
+    ->withoutOverlapping();
+
 // ─── Presence ────────────────────────────────────────────────
 Schedule::command('presence:recompute')
     ->everyFiveMinutes()

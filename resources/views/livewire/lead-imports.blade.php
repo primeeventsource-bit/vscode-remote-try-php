@@ -1,4 +1,4 @@
-<div class="p-5" wire:poll.5s>
+<div class="p-5" wire:poll.visible.15s>
     <div class="flex items-center justify-between mb-5">
         <div>
             <h2 class="text-xl font-bold">Lead Import History</h2>

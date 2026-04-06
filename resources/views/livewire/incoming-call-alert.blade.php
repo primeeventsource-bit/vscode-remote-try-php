@@ -1,4 +1,4 @@
-<div wire:poll.3s>
+<div wire:poll.10s>
     {{-- New unified meeting invites --}}
     @if($meetingInvite ?? null)
         @php

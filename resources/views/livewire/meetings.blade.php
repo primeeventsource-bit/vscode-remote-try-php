@@ -1,4 +1,4 @@
-<div class="p-5" wire:poll.10s>
+<div class="p-5" wire:poll.visible.30s>
     <div class="flex items-center justify-between mb-5">
         <div>
             <h2 class="text-xl font-bold">Meetings</h2>

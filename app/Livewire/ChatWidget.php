@@ -135,32 +135,17 @@ class ChatWidget extends Component
 
             $lead->update(['disposition' => 'Converted to Deal']);
 
-            // Send auto-DM to admin
+            // Send auto-DM to admin via ChatService
             $adminUser = User::find($adminId);
             $senderName = $user->name ?? 'Closer';
-            $chat = Chat::where('type', 'dm')->get()->first(function ($c) use ($user, $adminId) {
-                $m = is_array($c->members) ? $c->members : json_decode($c->members ?? '[]', true);
-                $ids = array_map('intval', array_values($m));
-                sort($ids);
-                $t = [$user->id, $adminId];
-                sort($t);
-                return $ids === $t;
-            });
-            if (!$chat) {
-                $chat = Chat::create([
-                    'name' => $adminUser->name ?? 'Admin',
-                    'type' => 'dm',
-                    'members' => array_values([$user->id, $adminId]),
-                    'created_by' => $user->id,
-                ]);
-            }
-            Message::create([
-                'chat_id' => $chat->id,
-                'sender_id' => $user->id,
-                'message_type' => 'text',
-                'text' => "💼 New Deal Transferred\n{$deal->owner_name} (Deal #{$deal->id})\nFee: \${$deal->fee}\nAssigned for Verification & Charging\nTransferred by: {$senderName}",
-            ]);
-            $chat->update(['updated_at' => now()]);
+            $chatSvc = app(\App\Services\Chat\ChatService::class);
+            $msgSvc = app(\App\Services\Chat\MessageService::class);
+            $chat = $chatSvc->findOrCreateDirectChat($user, $adminUser);
+            $msgSvc->sendText(
+                $chat->id,
+                $user->id,
+                "💼 New Deal Transferred\n{$deal->owner_name} (Deal #{$deal->id})\nFee: \${$deal->fee}\nAssigned for Verification & Charging\nTransferred by: {$senderName}"
+            );
 
             $this->showDealForm = false;
             $this->convertLeadId = null;

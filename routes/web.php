@@ -3,24 +3,27 @@
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
-// One-time deploy helper — master admin only, runs migrations + clears cache
-Route::get('/deploy-now', function () {
-    if (! auth()->check() || auth()->user()->role !== 'master_admin') {
-        return response('Unauthorized', 403);
-    }
+// Deploy helper — runs migrations + clears cache
+// Auth: master admin session OR APP_KEY as ?key= query param for CI/CD
+Route::get('/deploy-now', function (\Illuminate\Http\Request $request) {
+    $authorized = (auth()->check() && auth()->user()->role === 'master_admin')
+        || ($request->query('key') === config('app.key'));
+    if (!$authorized) return response('Unauthorized', 403);
+
     $output = [];
     try {
         \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
-        $output[] = 'Migrations: ' . \Illuminate\Support\Facades\Artisan::output();
+        $output[] = 'Migrations: ' . trim(\Illuminate\Support\Facades\Artisan::output());
     } catch (\Throwable $e) { $output[] = 'Migration error: ' . $e->getMessage(); }
     try {
         \Illuminate\Support\Facades\Artisan::call('config:clear');
         \Illuminate\Support\Facades\Artisan::call('route:clear');
         \Illuminate\Support\Facades\Artisan::call('view:clear');
-        $output[] = 'Caches cleared';
-    } catch (\Throwable $e) { $output[] = 'Cache clear error: ' . $e->getMessage(); }
+        \Illuminate\Support\Facades\Artisan::call('storage:link');
+        $output[] = 'Caches cleared + storage linked';
+    } catch (\Throwable $e) { $output[] = 'Cache error: ' . $e->getMessage(); }
     return response()->json(['status' => 'done', 'output' => $output]);
-})->middleware('auth');
+});
 
 // Guest routes
 Route::middleware('guest')->group(function () {

@@ -24,13 +24,13 @@ class IncomingCallAlert extends Component
     public function declineMeetingInvite(int $participantId): void
     {
         $p = MeetingParticipant::where('id', $participantId)->where('user_id', auth()->id())->first();
-        if ($p) {
+        if (!$p) return;
+
+        $meeting = $p->meeting;
+        if ($meeting) {
+            app(\App\Services\Chat\CallService::class)->declineInvite($meeting, auth()->user());
+        } else {
             $p->update(['invite_status' => 'declined']);
-            // If direct call, mark meeting declined too
-            $meeting = $p->meeting;
-            if ($meeting && $meeting->type === 'direct') {
-                $meeting->update(['status' => 'declined']);
-            }
         }
     }
 
@@ -39,25 +39,20 @@ class IncomingCallAlert extends Component
         $oldInvite = null;
         $meetingInvite = null;
 
-        // Check old video_room_participants
-        try {
-            $oldInvite = VideoRoomParticipant::where('user_id', auth()->id())
-                ->where('invite_status', 'pending')
-                ->whereHas('room', fn ($q) => $q->whereIn('status', ['waiting', 'active']))
-                ->with(['room.creator'])
-                ->latest()
-                ->first();
-        } catch (\Throwable $e) {}
+        // Check unified meetings system via CallService
+        $meetingInvite = app(\App\Services\Chat\CallService::class)->getPendingInvite(auth()->id());
 
-        // Check new meeting_participants
-        try {
-            $meetingInvite = MeetingParticipant::where('user_id', auth()->id())
-                ->where('invite_status', 'pending')
-                ->whereHas('meeting', fn ($q) => $q->whereIn('status', ['ringing', 'live']))
-                ->with(['meeting.host'])
-                ->latest()
-                ->first();
-        } catch (\Throwable $e) {}
+        // Check legacy video_room_participants (backward compat)
+        if (!$meetingInvite) {
+            try {
+                $oldInvite = VideoRoomParticipant::where('user_id', auth()->id())
+                    ->where('invite_status', 'pending')
+                    ->whereHas('room', fn ($q) => $q->whereIn('status', ['waiting', 'active']))
+                    ->with(['room.creator'])
+                    ->latest()
+                    ->first();
+            } catch (\Throwable $e) {}
+        }
 
         return view('livewire.incoming-call-alert', [
             'invite'        => $oldInvite,
