@@ -42,6 +42,7 @@ class ChatPage extends Component
     public string $chatSearch = '';
 
     // Sidebar-only state
+    public string $chatTab = 'all'; // all, direct, group, unread
     public bool $showInfoPanel = false;
     public $avatarUpload = null;
     public $groupIconUpload = null;

@@ -5,16 +5,41 @@
     .msg-unread { background: rgba(59,130,246,0.06); border-left: 3px solid #3b82f6; }
 </style>
 <div class="flex h-[calc(100vh-3rem)]" wire:poll.15s="refreshUnreadCounts">
-    {{-- Left Panel: Chat List (mirrors bubble chat) --}}
-    <div class="w-72 border-r border-crm-border bg-crm-surface flex flex-col flex-shrink-0">
-        {{-- Header + Search --}}
-        <div class="px-3 py-2.5 border-b border-crm-border space-y-2">
-            <div class="flex items-center justify-between">
+    {{-- Left Panel: Advanced Chat Workspace --}}
+    <div class="w-80 border-r border-crm-border bg-crm-surface flex flex-col flex-shrink-0">
+        {{-- Header --}}
+        <div class="px-3 py-2 border-b border-crm-border">
+            <div class="flex items-center justify-between mb-2">
                 <h3 class="text-sm font-bold">Chat</h3>
-                <button wire:click="toggleNewChatForm" class="text-[10px] font-semibold text-blue-600 hover:text-blue-700">+ New</button>
+                <div class="flex items-center gap-1">
+                    <button wire:click="$set('newChatType', 'dm'); toggleNewChatForm()" class="text-[9px] font-semibold text-blue-600 hover:text-blue-700 px-1.5 py-0.5 rounded hover:bg-blue-50">+ DM</button>
+                    <button wire:click="$set('newChatType', 'group'); toggleNewChatForm()" class="text-[9px] font-semibold text-emerald-600 hover:text-emerald-700 px-1.5 py-0.5 rounded hover:bg-emerald-50">+ Group</button>
+                </div>
             </div>
-            <input id="cp-chat-search" name="chatSearch" wire:model.live.debounce.300ms="chatSearch" type="text" placeholder="Search chats..."
+            <input id="cp-chat-search" name="chatSearch" wire:model.live.debounce.300ms="chatSearch" type="text" placeholder="Search conversations..."
                 class="w-full px-3 py-1.5 text-xs bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+        </div>
+
+        {{-- Tabs: All / Direct / Groups / Unread --}}
+        @php
+            $allChats = $chats ?? collect();
+            $dmChats = $allChats->where('type', 'dm');
+            $groupChats = $allChats->filter(fn($c) => $c->type === 'group');
+            $totalUnread = ($unreadCounts ?? collect())->sum();
+            $unreadChats = $allChats->filter(fn($c) => ($unreadCounts[$c->id] ?? 0) > 0);
+        @endphp
+        <div class="flex border-b border-crm-border bg-crm-surface px-1 py-0.5 gap-0.5">
+            @foreach([
+                'all' => 'All (' . $allChats->count() . ')',
+                'direct' => 'DMs (' . $dmChats->count() . ')',
+                'group' => 'Groups (' . $groupChats->count() . ')',
+                'unread' => 'Unread (' . $unreadChats->count() . ')',
+            ] as $tabKey => $tabLabel)
+                <button wire:click="$set('chatTab', '{{ $tabKey }}')"
+                    class="flex-1 px-2 py-1 text-[9px] font-semibold rounded transition {{ $chatTab === $tabKey ? 'bg-white text-blue-600 shadow-sm' : 'text-crm-t3 hover:text-crm-t1' }}">
+                    {{ $tabLabel }}
+                </button>
+            @endforeach
         </div>
 
         {{-- Thread List --}}
@@ -22,7 +47,10 @@
             @if($isSearching ?? false)
                 {{-- Search Results --}}
                 @if(($searchResults ?? collect())->isEmpty() && ($searchMessageResults ?? collect())->isEmpty())
-                    <div class="px-4 py-8 text-center text-xs text-crm-t3">No results found</div>
+                    <div class="px-4 py-12 text-center">
+                        <div class="text-2xl mb-2">🔍</div>
+                        <div class="text-xs text-crm-t3">No results for "{{ $chatSearch }}"</div>
+                    </div>
                 @else
                     @if(($searchResults ?? collect())->isNotEmpty())
                         <div class="px-3 pt-2 pb-1"><span class="text-[9px] text-crm-t3 uppercase font-semibold">Chats ({{ $searchResults->count() }})</span></div>
@@ -36,7 +64,7 @@
                         @endphp
                         <button wire:key="sr-{{ $chat->id }}" wire:click="selectChat({{ $chat->id }})"
                             class="flex w-full items-center gap-3 border-b border-crm-border px-3 py-2.5 text-left transition hover:bg-blue-50">
-                            <div class="flex h-7 w-7 items-center justify-center rounded-full text-[8px] font-bold text-white flex-shrink-0" style="background:{{ $other?->color ?? '#6b7280' }}">{{ $other?->avatar ?? substr($displayName, 0, 2) }}</div>
+                            <div class="flex h-8 w-8 items-center justify-center rounded-full text-[9px] font-bold text-white flex-shrink-0" style="background:{{ $other?->color ?? '#6b7280' }}">{{ $other?->avatar ?? substr($displayName, 0, 2) }}</div>
                             <div class="min-w-0 flex-1">
                                 <div class="truncate text-xs font-semibold">{{ $displayName }}</div>
                                 <div class="text-[10px] text-crm-t3">{{ $chat->updated_at?->diffForHumans() }}</div>
@@ -49,106 +77,90 @@
                     @foreach($searchMessageResults ?? collect() as $mr)
                         <button wire:key="mr-{{ $mr->id }}" wire:click="selectChat({{ $mr->chat_id }})"
                             class="flex w-full items-center gap-3 border-b border-crm-border px-3 py-2.5 text-left transition hover:bg-amber-50">
-                            <div class="flex h-7 w-7 items-center justify-center rounded-full bg-amber-100 text-amber-600 text-[8px] font-bold flex-shrink-0">💬</div>
+                            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-amber-600 text-[9px] font-bold flex-shrink-0">💬</div>
                             <div class="min-w-0 flex-1">
-                                <div class="truncate text-[10px] text-crm-t2">{{ Str::limit($mr->text, 50) }}</div>
+                                <div class="truncate text-[10px] text-crm-t2">{{ Str::limit($mr->text, 60) }}</div>
                                 <div class="text-[9px] text-amber-500">{{ $mr->created_at?->diffForHumans() }}</div>
                             </div>
                         </button>
                     @endforeach
                 @endif
             @else
-                {{-- DM List --}}
-                @php $dmChats = ($chats ?? collect())->where('type', 'dm'); $groupChats = ($chats ?? collect())->filter(fn($c) => $c->type === 'group'); $channelChats = ($chats ?? collect())->where('type', 'channel'); @endphp
+                {{-- Filtered Thread List --}}
+                @php
+                    $filteredChats = match($chatTab) {
+                        'direct' => $dmChats,
+                        'group' => $groupChats,
+                        'unread' => $unreadChats,
+                        default => $allChats,
+                    };
+                @endphp
 
-                @if($dmChats->isNotEmpty())
-                    <div class="px-3 pt-3 pb-1 flex items-center justify-between">
-                        <span class="text-[9px] text-crm-t3 uppercase font-semibold tracking-wider">Direct Messages</span>
-                        <span class="text-[9px] text-crm-t3">{{ $dmChats->count() }}</span>
-                    </div>
-                    @foreach($dmChats as $chat)
-                        @php
-                            $members = is_array($chat->members) ? $chat->members : json_decode($chat->members ?? '[]', true);
-                            $otherId = collect($members)->first(fn($m) => (int)$m !== auth()->id());
-                            $other = $otherId ? $users->get($otherId) : null;
-                            $chatUnread = $unreadCounts[$chat->id] ?? 0;
-                        @endphp
-                        <button wire:key="chat-{{ $chat->id }}" wire:click="selectChat({{ $chat->id }})"
-                            class="flex w-full items-center gap-3 border-b border-crm-border px-3 py-2.5 text-left transition {{ ($selectedChat === $chat->id) ? 'bg-blue-50' : ($chatUnread > 0 ? 'bg-blue-50/50' : 'hover:bg-crm-hover') }}">
-                            <div class="relative flex-shrink-0">
-                                <div class="flex h-7 w-7 items-center justify-center rounded-full text-[8px] font-bold text-white" style="background:{{ $other?->color ?? '#6b7280' }}">{{ $other?->avatar ?? substr($other?->name ?? '?', 0, 2) }}</div>
-                                @if($chatUnread > 0)<span class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full badge-blink-blue"></span>@endif
-                            </div>
-                            <div class="min-w-0 flex-1">
-                                <div class="truncate text-xs {{ $chatUnread > 0 ? 'font-bold' : 'font-semibold' }}">{{ $other?->name ?? $chat->name ?? 'DM' }}</div>
-                                <div class="text-[10px] text-crm-t3">{{ $chat->updated_at?->diffForHumans() ?? '' }}</div>
-                            </div>
-                            @if($chatUnread > 0)
-                                <span class="min-w-[16px] h-[16px] flex items-center justify-center text-[8px] font-bold text-white badge-blink-blue rounded-full px-1">{{ $chatUnread }}</span>
-                            @endif
-                        </button>
-                    @endforeach
-                @endif
-
-                {{-- Group List --}}
-                @if($groupChats->isNotEmpty())
-                    <div class="px-3 pt-3 pb-1 flex items-center justify-between">
-                        <span class="text-[9px] text-crm-t3 uppercase font-semibold tracking-wider">Groups</span>
-                        <span class="text-[9px] text-crm-t3">{{ $groupChats->count() }}</span>
-                    </div>
-                    @foreach($groupChats as $chat)
-                        @php $chatUnread = $unreadCounts[$chat->id] ?? 0; @endphp
-                        <button wire:key="chat-{{ $chat->id }}" wire:click="selectChat({{ $chat->id }})"
-                            class="flex w-full items-center gap-3 border-b border-crm-border px-3 py-2.5 text-left transition {{ ($selectedChat === $chat->id) ? 'bg-blue-50' : ($chatUnread > 0 ? 'bg-red-50/50' : 'hover:bg-crm-hover') }}">
-                            <div class="relative flex-shrink-0">
-                                @if($chat->icon_path)
-                                    <img src="{{ asset('storage/' . $chat->icon_path) }}" class="w-7 h-7 rounded-lg object-cover">
-                                @elseif($chat->icon_emoji)
-                                    <span class="w-7 h-7 rounded-lg bg-crm-card border border-crm-border flex items-center justify-center text-sm">{{ $chat->icon_emoji }}</span>
+                @forelse($filteredChats as $chat)
+                    @php
+                        $members = is_array($chat->members) ? $chat->members : json_decode($chat->members ?? '[]', true);
+                        $otherId = collect($members)->first(fn($m) => (int)$m !== auth()->id());
+                        $other = $otherId ? ($users[$otherId] ?? null) : null;
+                        $chatUnread = $unreadCounts[$chat->id] ?? 0;
+                        $isSelected = $selectedChat === $chat->id;
+                        $isDm = $chat->type === 'dm';
+                        $displayName = $isDm ? ($other?->name ?? $chat->name ?? 'DM') : ($chat->name ?? 'Group');
+                        $memberCount = count($members);
+                        // Last message preview
+                        $lastMsg = null;
+                        try { $lastMsg = \App\Models\Message::where('chat_id', $chat->id)->orderByDesc('id')->first(); } catch (\Throwable $e) {}
+                    @endphp
+                    <button wire:key="chat-{{ $chat->id }}" wire:click="selectChat({{ $chat->id }})"
+                        class="flex w-full items-center gap-3 border-b border-crm-border px-3 py-2.5 text-left transition {{ $isSelected ? 'bg-blue-50 border-l-2 border-l-blue-500' : ($chatUnread > 0 ? ($isDm ? 'bg-blue-50/40' : 'bg-red-50/40') : 'hover:bg-crm-hover') }}">
+                        {{-- Avatar --}}
+                        <div class="relative flex-shrink-0">
+                            @if($isDm && $other)
+                                @if($other->avatar_path)
+                                    <img src="{{ asset('storage/' . $other->avatar_path) }}" class="w-9 h-9 rounded-full object-cover">
                                 @else
-                                    <span class="w-7 h-7 rounded-lg bg-crm-card border border-crm-border flex items-center justify-center text-[8px] font-bold text-crm-t3">G</span>
+                                    <div class="flex h-9 w-9 items-center justify-center rounded-full text-[10px] font-bold text-white" style="background:{{ $other->color ?? '#6b7280' }}">{{ $other->avatar ?? substr($other->name ?? '?', 0, 2) }}</div>
                                 @endif
-                                @if($chatUnread > 0)<span class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full badge-blink-red"></span>@endif
-                            </div>
-                            <div class="min-w-0 flex-1">
-                                <div class="truncate text-xs {{ $chatUnread > 0 ? 'font-bold' : 'font-semibold' }}">{{ $chat->name }}</div>
-                                <div class="text-[10px] text-crm-t3">{{ $chat->updated_at?->diffForHumans() ?? '' }}</div>
-                            </div>
-                            @if($chatUnread > 0)
-                                <span class="min-w-[16px] h-[16px] flex items-center justify-center text-[8px] font-bold text-white badge-blink-red rounded-full px-1">{{ $chatUnread }}</span>
+                            @elseif($chat->icon_path)
+                                <img src="{{ asset('storage/' . $chat->icon_path) }}" class="w-9 h-9 rounded-lg object-cover">
+                            @elseif($chat->icon_emoji ?? false)
+                                <span class="w-9 h-9 rounded-lg bg-crm-card border border-crm-border flex items-center justify-center text-lg">{{ $chat->icon_emoji }}</span>
+                            @else
+                                <span class="w-9 h-9 rounded-{{ $isDm ? 'full' : 'lg' }} bg-crm-card border border-crm-border flex items-center justify-center text-[9px] font-bold text-crm-t3">{{ $isDm ? substr($displayName, 0, 2) : 'G' }}</span>
                             @endif
-                        </button>
-                    @endforeach
-                @endif
-
-                {{-- Channel List --}}
-                @if($channelChats->isNotEmpty())
-                    <div class="px-3 pt-3 pb-1 flex items-center justify-between">
-                        <span class="text-[9px] text-crm-t3 uppercase font-semibold tracking-wider">Channels</span>
-                        <span class="text-[9px] text-crm-t3">{{ $channelChats->count() }}</span>
+                            @if($chatUnread > 0)
+                                <span class="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full {{ $isDm ? 'badge-blink-blue' : 'badge-blink-red' }}"></span>
+                            @endif
+                        </div>
+                        {{-- Content --}}
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center justify-between gap-1">
+                                <span class="truncate text-xs {{ $chatUnread > 0 ? 'font-bold text-crm-t1' : 'font-semibold text-crm-t2' }}">{{ $displayName }}</span>
+                                <span class="text-[9px] text-crm-t3 flex-shrink-0">{{ $chat->updated_at?->diffForHumans(short: true) ?? '' }}</span>
+                            </div>
+                            <div class="flex items-center justify-between gap-1 mt-0.5">
+                                <span class="truncate text-[10px] {{ $chatUnread > 0 ? 'text-crm-t2 font-medium' : 'text-crm-t3' }}">
+                                    @if($lastMsg)
+                                        @if($lastMsg->message_type === 'gif') 🎬 GIF
+                                        @else {{ Str::limit($lastMsg->text ?? '', 40) }}
+                                        @endif
+                                    @elseif(!$isDm) {{ $memberCount }} members
+                                    @else Start a conversation
+                                    @endif
+                                </span>
+                                @if($chatUnread > 0)
+                                    <span class="min-w-[18px] h-[18px] flex items-center justify-center text-[8px] font-bold text-white {{ $isDm ? 'badge-blink-blue' : 'badge-blink-red' }} rounded-full px-1 flex-shrink-0">{{ $chatUnread }}</span>
+                                @endif
+                            </div>
+                        </div>
+                    </button>
+                @empty
+                    <div class="px-4 py-12 text-center">
+                        <div class="text-2xl mb-2">{{ match($chatTab) { 'direct' => '👤', 'group' => '👥', 'unread' => '✓', default => '💬' } }}</div>
+                        <div class="text-xs text-crm-t3 font-medium">{{ match($chatTab) { 'direct' => 'No direct messages', 'group' => 'No group chats', 'unread' => 'All caught up!', default => 'No conversations yet' } }}</div>
+                        <div class="text-[10px] text-crm-t3 mt-1">{{ $chatTab === 'unread' ? 'No unread messages' : 'Start a new conversation above' }}</div>
                     </div>
-                    @foreach($channelChats as $chat)
-                        @php $chatUnread = $unreadCounts[$chat->id] ?? 0; @endphp
-                        <button wire:key="chat-{{ $chat->id }}" wire:click="selectChat({{ $chat->id }})"
-                            class="flex w-full items-center gap-3 border-b border-crm-border px-3 py-2.5 text-left transition {{ ($selectedChat === $chat->id) ? 'bg-blue-50' : 'hover:bg-crm-hover' }}">
-                            <span class="text-xs text-crm-t3">#</span>
-                            <span class="text-xs font-semibold truncate flex-1">{{ $chat->name }}</span>
-                            @if($chatUnread > 0)
-                                <span class="min-w-[16px] h-[16px] flex items-center justify-center text-[8px] font-bold text-white bg-blue-600 rounded-full px-1">{{ $chatUnread }}</span>
-                            @endif
-                        </button>
-                    @endforeach
-                @endif
-
-                @if($dmChats->isEmpty() && $groupChats->isEmpty() && $channelChats->isEmpty())
-                    <div class="px-4 py-8 text-center text-xs text-crm-t3">No conversations yet</div>
-                @endif
+                @endforelse
             @endif
-        </div>
-
-        {{-- New Chat Button --}}
-        <div class="p-3 border-t border-crm-border">
-            <button wire:click="toggleNewChatForm" class="w-full px-3 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">+ New Chat</button>
         </div>
     </div>
 
