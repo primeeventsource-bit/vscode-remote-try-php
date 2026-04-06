@@ -125,7 +125,7 @@ class Documents extends Component
         if (!$doc || !$doc->userCan(auth()->user(), 'delete')) return;
 
         if ($doc->stored_path) {
-            Storage::disk('public')->delete($doc->stored_path);
+            try { app(\App\Services\Storage\ActiveStorageResolver::class)->delete($doc->stored_path); } catch (\Throwable $e) { \Log::warning('Doc delete failed', ['error' => $e->getMessage()]); }
         }
         CrmFileActivityLog::log('documents', $id, 'deleted', ['title' => $doc->title]);
         $doc->delete();
@@ -143,7 +143,7 @@ class Documents extends Component
 
         try {
             $file = $this->fileUpload;
-            $path = $file->store('crm-documents', 'public');
+            $path = app(\App\Services\Storage\ActiveStorageResolver::class)->storeUpload($file, 'crm-documents');
 
             $doc = CrmDocument::create([
                 'title' => pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME),

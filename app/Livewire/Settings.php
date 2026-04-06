@@ -426,20 +426,21 @@ class Settings extends Component
             'avatar_emoji' => $this->profileEmoji ?: null,
         ];
 
-        // Handle photo upload
+        // Handle photo upload — uses central storage resolver
         if ($this->profilePhotoUpload) {
             $this->validate(['profilePhotoUpload' => 'image|max:5120|mimes:jpg,jpeg,png,webp,gif,bmp,tiff,tif']);
-            if ($user->avatar_path) Storage::disk('public')->delete($user->avatar_path);
-            $path = $this->profilePhotoUpload->store('avatars', 'public');
+            $resolver = app(\App\Services\Storage\ActiveStorageResolver::class);
+            if ($user->avatar_path) { try { $resolver->delete($user->avatar_path); } catch (\Throwable $e) {} }
+            $path = $resolver->storeUpload($this->profilePhotoUpload, 'avatars');
             $updateData['avatar_path'] = $path;
-            $updateData['avatar_emoji'] = null; // photo overrides emoji
+            $updateData['avatar_emoji'] = null;
             $this->profilePhotoUpload = null;
             $this->profileEmoji = '';
         }
 
         // If emoji is set, clear photo
         if ($this->profileEmoji) {
-            if ($user->avatar_path) Storage::disk('public')->delete($user->avatar_path);
+            if ($user->avatar_path) { try { app(\App\Services\Storage\ActiveStorageResolver::class)->delete($user->avatar_path); } catch (\Throwable $e) {} }
             $updateData['avatar_path'] = null;
         }
 
@@ -468,7 +469,7 @@ class Settings extends Component
     {
         $user = auth()->user();
         if ($user->avatar_path) {
-            Storage::disk('public')->delete($user->avatar_path);
+            try { app(\App\Services\Storage\ActiveStorageResolver::class)->delete($user->avatar_path); } catch (\Throwable $e) {}
             $user->update(['avatar_path' => null]);
         }
         session()->flash('success', 'Photo removed.');

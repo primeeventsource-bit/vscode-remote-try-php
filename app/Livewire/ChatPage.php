@@ -6,6 +6,7 @@ use App\Livewire\Concerns\ChatEngine;
 use App\Models\Chat;
 use App\Models\Message;
 use App\Models\User;
+use App\Services\Storage\ActiveStorageResolver;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -82,9 +83,10 @@ class ChatPage extends Component
     {
         $this->validate(['avatarUpload' => 'image|max:2048|mimes:jpg,jpeg,png,webp']);
         try {
+            $resolver = app(ActiveStorageResolver::class);
             $user = auth()->user();
-            if ($user->avatar_path) Storage::disk('public')->delete($user->avatar_path);
-            $path = $this->avatarUpload->store('avatars', 'public');
+            if ($user->avatar_path) $resolver->delete($user->avatar_path);
+            $path = $resolver->storeUpload($this->avatarUpload, 'avatars');
             $user->update(['avatar_path' => $path]);
             $this->avatarUpload = null;
         } catch (\Throwable $e) {
@@ -96,7 +98,7 @@ class ChatPage extends Component
     {
         $user = auth()->user();
         if ($user->avatar_path) {
-            Storage::disk('public')->delete($user->avatar_path);
+            try { app(ActiveStorageResolver::class)->delete($user->avatar_path); } catch (\Throwable $e) { Log::warning('Avatar delete failed', ['error' => $e->getMessage()]); }
             $user->update(['avatar_path' => null]);
         }
     }
@@ -107,10 +109,11 @@ class ChatPage extends Component
         if (!auth()->user()?->hasRole('master_admin')) return;
         $this->validate(['groupIconUpload' => 'image|max:2048|mimes:jpg,jpeg,png,webp']);
         try {
+            $resolver = app(ActiveStorageResolver::class);
             $chat = Chat::find($this->selectedChat);
             if (!$chat || $chat->type === 'dm') return;
-            if ($chat->icon_path) Storage::disk('public')->delete($chat->icon_path);
-            $path = $this->groupIconUpload->store('chat-icons', 'public');
+            if ($chat->icon_path) $resolver->delete($chat->icon_path);
+            $path = $resolver->storeUpload($this->groupIconUpload, 'chat-icons');
             $chat->update(['icon_path' => $path]);
             $this->groupIconUpload = null;
         } catch (\Throwable $e) {
@@ -124,7 +127,7 @@ class ChatPage extends Component
         if (!auth()->user()?->hasRole('master_admin')) return;
         $chat = Chat::find($this->selectedChat);
         if ($chat?->icon_path) {
-            Storage::disk('public')->delete($chat->icon_path);
+            try { app(ActiveStorageResolver::class)->delete($chat->icon_path); } catch (\Throwable $e) { Log::warning('Group icon delete failed', ['error' => $e->getMessage()]); }
             $chat->update(['icon_path' => null]);
         }
     }
@@ -133,7 +136,7 @@ class ChatPage extends Component
     {
         $user = auth()->user();
         if (!$user) return;
-        if ($user->avatar_path) Storage::disk('public')->delete($user->avatar_path);
+        if ($user->avatar_path) { try { app(ActiveStorageResolver::class)->delete($user->avatar_path); } catch (\Throwable $e) {} }
         $user->update(['avatar_emoji' => $emoji, 'avatar_path' => null]);
     }
 
@@ -143,7 +146,7 @@ class ChatPage extends Component
         if (!auth()->user()?->hasRole('master_admin')) return;
         $chat = Chat::find($this->selectedChat);
         if (!$chat || $chat->type === 'dm') return;
-        if ($chat->icon_path) Storage::disk('public')->delete($chat->icon_path);
+        if ($chat->icon_path) { try { app(ActiveStorageResolver::class)->delete($chat->icon_path); } catch (\Throwable $e) {} }
         $chat->update(['icon_emoji' => $emoji, 'icon_path' => null]);
     }
 

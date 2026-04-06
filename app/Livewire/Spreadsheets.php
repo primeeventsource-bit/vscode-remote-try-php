@@ -129,7 +129,7 @@ class Spreadsheets extends Component
     {
         $sheet = CrmSheet::find($id);
         if (!$sheet || !$sheet->userCan(auth()->user(), 'delete')) return;
-        if ($sheet->stored_path) Storage::disk('public')->delete($sheet->stored_path);
+        if ($sheet->stored_path) { try { app(\App\Services\Storage\ActiveStorageResolver::class)->delete($sheet->stored_path); } catch (\Throwable $e) { \Log::warning('Sheet delete failed', ['error' => $e->getMessage()]); } }
         CrmFileActivityLog::log('sheets', $id, 'deleted', ['title' => $sheet->title]);
         $sheet->delete();
         if ($this->editingId === $id) $this->editingId = null;

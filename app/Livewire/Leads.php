@@ -368,12 +368,18 @@ class Leads extends Component
 
             foreach ($chunks as $i => $chunk) {
                 $isLast = ($i === count($chunks) - 1);
-                ProcessLeadImportChunk::dispatch(
-                    $batch->id,
-                    $chunk,
-                    $rowOffset,
-                    $isLast
-                );
+                try {
+                    ProcessLeadImportChunk::dispatch(
+                        $batch->id,
+                        $chunk,
+                        $rowOffset,
+                        $isLast
+                    );
+                } catch (\Throwable $e) {
+                    \Log::error('Failed to dispatch import chunk', ['batch' => $batch->id, 'chunk' => $i, 'error' => $e->getMessage()]);
+                    $this->importStatus = "Import partially queued — some chunks failed to dispatch. Check system monitor.";
+                    return;
+                }
                 $rowOffset += count($chunk);
             }
 

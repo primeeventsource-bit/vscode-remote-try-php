@@ -505,7 +505,8 @@ class Clients extends Component
 
         $file = $this->evidenceUpload;
         $storedName = time() . '_' . $file->getClientOriginalName();
-        $path = $file->storeAs('chargeback-evidence/' . $case->id, $storedName, 'local');
+        $resolver = app(\App\Services\Storage\ActiveStorageResolver::class);
+        $path = $resolver->storeUpload($file, 'chargeback-evidence/' . $case->id);
 
         // Replace existing doc of same type
         ChargebackEvidence::where('chargeback_case_id', $case->id)
