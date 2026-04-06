@@ -51,6 +51,13 @@ class RefreshUserPermissions extends Command
             'disposition_leads', 'create_deals', 'create_chats',
             'view_login_info', 'view_payroll',
         ],
+        'closer_panama' => [
+            'view_dashboard', 'view_leads', 'view_pipeline',
+            'view_deals', 'view_verification', 'view_chat',
+            'view_documents', 'view_spreadsheets',
+            'disposition_leads', 'create_deals', 'create_chats',
+            'view_login_info',
+        ],
     ];
 
     public function handle(): int

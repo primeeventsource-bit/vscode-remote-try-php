@@ -53,7 +53,7 @@
                             <td class="px-4 py-2.5">
                                 @if($isAdmin)
                                     <select id="role-{{ $user->id }}" wire:change="changeRole({{ $user->id }}, $event.target.value)" class="text-[10px] font-semibold px-1.5 py-0.5 rounded border-0 {{ $roleColor }} focus:outline-none cursor-pointer">
-                                        @foreach(['fronter', 'closer', 'admin', 'master_admin'] as $role)
+                                        @foreach(['fronter', 'fronter_panama', 'closer', 'closer_panama', 'admin', 'master_admin'] as $role)
                                             <option value="{{ $role }}" {{ $user->role === $role ? 'selected' : '' }}>{{ ucfirst(str_replace('_', ' ', $role)) }}</option>
                                         @endforeach
                                     </select>
@@ -115,7 +115,9 @@
                             <label for="fld-newUser-role" class="text-[10px] text-crm-t3 uppercase tracking-wider">Role</label>
                                 <select id="fld-newUser-role" wire:model="newUser.role" class="w-full px-3 py-2 text-sm bg-crm-surface border border-crm-border rounded-lg focus:outline-none">
                                 <option value="fronter">Fronter</option>
+                                <option value="fronter_panama">Fronter Panama</option>
                                 <option value="closer">Closer</option>
+                                <option value="closer_panama">Closer Panama</option>
                                 <option value="admin">Admin</option>
                                 <option value="master_admin">Master Admin</option>
                             </select>
