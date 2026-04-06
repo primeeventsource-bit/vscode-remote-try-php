@@ -29,6 +29,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/documents', \App\Livewire\Documents::class)->name('documents');
     Route::get('/spreadsheets', \App\Livewire\Spreadsheets::class)->name('spreadsheets');
     Route::get('/video-call/{room?}', \App\Livewire\VideoCall::class)->name('video-call');
+    Route::get('/meetings', \App\Livewire\Meetings::class)->name('meetings');
     Route::get('/training', \App\Livewire\Onboarding::class)->name('training');
     Route::get('/sales-training', \App\Livewire\SalesTraining::class)->name('sales-training');
     Route::get('/daily-sales', \App\Livewire\DailySalesSystem::class)->name('daily-sales');
@@ -45,6 +46,26 @@ Route::middleware('auth')->group(function () {
             'iceServers' => \App\Services\TwilioIceService::getIceServers(),
         ]);
     })->name('ice-servers');
+
+    // Twilio Video access token for group rooms
+    Route::post('/video-token', function () {
+        $user = auth()->user();
+        if (! $user) return response()->json(['error' => 'Unauthorized'], 401);
+
+        $roomName = request()->input('room_name');
+        if (! $roomName) return response()->json(['error' => 'Room name required'], 400);
+
+        $identity = 'user-' . $user->id;
+        $token = \App\Services\Twilio\TwilioVideoTokenService::generateToken($identity, $roomName);
+
+        if (! $token) return response()->json(['error' => 'Failed to generate video token'], 500);
+
+        return response()->json([
+            'token'    => $token,
+            'identity' => $identity,
+            'room'     => $roomName,
+        ]);
+    })->name('video-token');
 
     // Presence heartbeat
     Route::post('/presence/heartbeat', function () {

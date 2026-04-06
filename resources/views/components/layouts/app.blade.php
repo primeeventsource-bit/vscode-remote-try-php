@@ -103,6 +103,7 @@
                     ]],
                     ['title' => 'COMMUNICATION', 'items' => [
                         ['route' => 'chat',         'icon' => '💬', 'label' => 'Chat',            'perm' => null, 'enabled' => $chatEnabled],
+                        ['route' => 'meetings',     'icon' => '🎥', 'label' => 'Meetings',        'perm' => null],
                         ['route' => 'video-call',   'icon' => '📹', 'label' => 'Video Calls',      'perm' => null],
                     ]],
                     ['title' => 'WORKSPACE', 'items' => [
