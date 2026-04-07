@@ -75,7 +75,7 @@ class ChatPage extends Component
         $this->messageInput = '';
         $this->showNewChatForm = false;
         $this->showInfoPanel = false;
-        $this->markChatAsSeen();
+        try { $this->markChatAsSeen(); } catch (\Throwable $e) {}
     }
 
     // ── Sidebar-only: Info Panel ─────────────────────────
@@ -246,8 +246,19 @@ class ChatPage extends Component
     public function render()
     {
         $user = auth()->user();
+        if (!$user) {
+            return view('livewire.chat-page', [
+                'chats' => collect(), 'messages' => collect(), 'activeChat' => null,
+                'users' => collect(), 'gifPickerSettings' => [], 'canUseGifPicker' => false,
+                'currentUserId' => 0, 'searchResults' => collect(), 'searchMessageResults' => collect(),
+                'isSearching' => false, 'sharedMedia' => collect(), 'lastMessages' => collect(),
+                'unreadCounts' => collect(), 'activeDirectCall' => null,
+            ]);
+        }
 
-        $chats = $this->loadThreadsForUser($user);
+        try {
+            $chats = $this->loadThreadsForUser($user);
+        } catch (\Throwable $e) { $chats = collect(); }
 
         if ($this->selectedChat) {
             $this->markChatAsSeen();
@@ -255,8 +266,13 @@ class ChatPage extends Component
 
         $unreadCounts = $this->computeUnreadCounts($chats, $user->id);
         $messages = $this->loadMessages(200);
-        $activeChat = $this->selectedChat ? Chat::find($this->selectedChat) : null;
-        $users = User::all()->keyBy('id');
+        try {
+            $activeChat = $this->selectedChat ? Chat::find($this->selectedChat) : null;
+            $users = User::all()->keyBy('id');
+        } catch (\Throwable $e) {
+            $activeChat = null;
+            $users = collect();
+        }
 
         // Pre-load last message for each chat (single query via service)
         $lastMessages = $this->getLastMessages($chats);

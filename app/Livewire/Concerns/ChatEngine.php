@@ -44,7 +44,11 @@ trait ChatEngine
 
     protected function loadThreadsForUser(User $user): Collection
     {
-        return $this->chatService()->getChatsForUser($user);
+        try {
+            return $this->chatService()->getChatsForUser($user);
+        } catch (\Throwable $e) {
+            return collect();
+        }
     }
 
     // ═══════════════════════════════════════════════════════
@@ -53,7 +57,11 @@ trait ChatEngine
 
     protected function computeUnreadCounts(Collection $chats, int $userId): Collection
     {
-        return $this->chatService()->computeUnreadCounts($chats, $userId);
+        try {
+            return $this->chatService()->computeUnreadCounts($chats, $userId);
+        } catch (\Throwable $e) {
+            return collect();
+        }
     }
 
     // ═══════════════════════════════════════════════════════
@@ -63,7 +71,11 @@ trait ChatEngine
     protected function markChatAsSeen(): void
     {
         if (!$this->selectedChat) return;
-        $this->chatService()->markAsRead($this->selectedChat, auth()->id());
+        try {
+            $this->chatService()->markAsRead($this->selectedChat, auth()->id());
+        } catch (\Throwable $e) {
+            // Mark-as-read failure must not break thread selection
+        }
     }
 
     // ═══════════════════════════════════════════════════════

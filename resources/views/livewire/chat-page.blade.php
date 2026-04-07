@@ -43,7 +43,7 @@
         </div>
 
         {{-- Thread List --}}
-        <div class="flex-1 overflow-y-auto" wire:loading.class="opacity-50 pointer-events-none" wire:target="selectChat">
+        <div class="flex-1 overflow-y-auto" wire:loading.class="opacity-50" wire:target="selectChat">
             @if($isSearching ?? false)
                 {{-- Search Results --}}
                 @if(($searchResults ?? collect())->isEmpty() && ($searchMessageResults ?? collect())->isEmpty())
