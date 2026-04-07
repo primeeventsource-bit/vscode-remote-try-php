@@ -3,6 +3,42 @@
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
+// TEMP: diagnostic endpoint to check why meetings token returns 503
+Route::get('/diag-token/{uuid}', function (string $uuid) {
+    try {
+        $meeting = \App\Models\Meeting::where('uuid', $uuid)->first();
+        $sid = env('TWILIO_ACCOUNT_SID') ?: config('twilio.account_sid');
+        $key = env('TWILIO_API_KEY_SID') ?: config('twilio.api_key_sid');
+        $sec = env('TWILIO_API_KEY_SECRET') ?: config('twilio.api_key_secret');
+
+        $result = [
+            'meeting_found' => $meeting !== null,
+            'meeting_status' => $meeting?->status,
+            'meeting_room' => $meeting?->provider_room_name,
+            'twilio_sid' => $sid ? substr($sid, 0, 8) . '...' : null,
+            'twilio_key' => $key ? substr($key, 0, 8) . '...' : null,
+            'twilio_sec' => $sec ? 'SET' : null,
+            'env_file' => file_exists(base_path('.env')),
+            'php_version' => PHP_VERSION,
+        ];
+
+        if ($meeting && $sid && $key && $sec) {
+            $token = \App\Services\Twilio\TwilioVideoTokenService::generateToken('test-user', $meeting->provider_room_name);
+            $result['token_generated'] = $token !== null;
+            $result['token_length'] = $token ? strlen($token) : 0;
+        }
+
+        return response()->json($result);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'error' => $e->getMessage(),
+            'file' => basename($e->getFile()),
+            'line' => $e->getLine(),
+            'class' => get_class($e),
+        ], 500);
+    }
+});
+
 // Deploy helper — runs migrations + clears cache
 // Auth: master admin session OR APP_KEY as ?key= query param for CI/CD
 Route::get('/deploy-now', function (\Illuminate\Http\Request $request) {
