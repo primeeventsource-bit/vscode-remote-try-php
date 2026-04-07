@@ -19,7 +19,7 @@
         <div class="text-xs text-crm-t3 uppercase tracking-wider font-semibold mb-3">My Daily Progress</div>
         <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
             @foreach([
-                ['label' => 'Calls', 'actual' => $myProgress['calls']['actual'], 'target' => $myProgress['calls']['target'], 'color' => 'blue'],
+                ['label' => 'Prime Connect', 'actual' => $myProgress['calls']['actual'], 'target' => $myProgress['calls']['target'], 'color' => 'blue'],
                 ['label' => 'Contacts', 'actual' => $myProgress['contacts']['actual'], 'target' => $myProgress['contacts']['target'], 'color' => 'purple'],
                 ['label' => 'Transfers', 'actual' => $myProgress['transfers']['actual'], 'target' => $myProgress['transfers']['target'], 'color' => 'amber'],
                 ['label' => 'Deals Closed', 'actual' => $myProgress['deals']['actual'], 'target' => $myProgress['deals']['target'], 'color' => 'emerald'],
@@ -62,7 +62,7 @@
             <div class="text-xs text-crm-t3 uppercase tracking-wider font-semibold mb-3">Team Summary — Today</div>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div class="bg-crm-card border border-crm-border rounded-lg p-4 border-t-[3px] border-t-blue-500">
-                    <div class="text-[10px] text-crm-t3 uppercase tracking-wider">Team Calls</div>
+                    <div class="text-[10px] text-crm-t3 uppercase tracking-wider">Team Prime Connect</div>
                     <div class="text-2xl font-extrabold text-blue-500 mt-1">{{ $teamSummary['total_calls'] }}</div>
                 </div>
                 <div class="bg-crm-card border border-crm-border rounded-lg p-4 border-t-[3px] border-t-emerald-500">

@@ -749,8 +749,8 @@
                 <h3 class="text-sm font-semibold mb-3">Video Call Settings</h3>
                 <p class="text-xs text-crm-t3 mb-4">Control internal group video call behavior and permissions.</p>
                 <div class="space-y-3">
-                    <label class="flex items-center gap-2 text-sm"><input id="fld-vc-enable" type="checkbox" wire:model="videoCallSettings.enable_group_video_calls"> Enable Group Video Calls</label>
-                    <label class="flex items-center gap-2 text-sm"><input id="fld-vc-adminonly" type="checkbox" wire:model="videoCallSettings.only_admin_can_create_group_calls"> Only Admin Can Create Group Calls</label>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-vc-enable" type="checkbox" wire:model="videoCallSettings.enable_group_video_calls"> Enable Group Prime Connect</label>
+                    <label class="flex items-center gap-2 text-sm"><input id="fld-vc-adminonly" type="checkbox" wire:model="videoCallSettings.only_admin_can_create_group_calls"> Only Admin Can Create Group Sessions</label>
                     <label class="flex items-center gap-2 text-sm"><input id="fld-vc-ma" type="checkbox" wire:model="videoCallSettings.allow_master_admin_create_group_calls"> Allow Master Admin Create</label>
                     <label class="flex items-center gap-2 text-sm"><input id="fld-vc-admin" type="checkbox" wire:model="videoCallSettings.allow_admin_create_group_calls"> Allow Admin Create</label>
                     <label class="flex items-center gap-2 text-sm"><input id="fld-vc-agents" type="checkbox" wire:model="videoCallSettings.allow_agents_create_group_calls"> Allow Agents Create (default: off)</label>
