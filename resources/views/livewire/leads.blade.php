@@ -153,12 +153,9 @@
         <button @click="selectAllVisibleLocal()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white border border-crm-border hover:bg-crm-hover transition">Select All Visible</button>
         <button @click="clearSelectionLocal()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white border border-crm-border hover:bg-crm-hover transition">Clear Selection</button>
         <span class="text-xs text-crm-t3">{{ count($selectedLeads) }} selected</span>
-        <select id="fld-bulkFronter" wire:model="bulkFronter" data-training="bulk-assign-dropdown" class="px-3 py-1.5 text-xs bg-white border border-crm-border rounded-lg focus:outline-none">
-            <option value="">Assign selected to user...</option>
-            @foreach($users as $u)
-                <option value="{{ $u->id }}">{{ $u->name }} ({{ ucfirst(str_replace('_', ' ', $u->role)) }})</option>
-            @endforeach
-        </select>
+        <div class="w-56" data-training="bulk-assign-dropdown">
+            <x-user-picker :users="$users" wire-model="bulkFronter" placeholder="Assign selected to user..." />
+        </div>
         <button wire:click="assignSelectedToFronter" data-training="bulk-assign-btn" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">Assign Selected</button>
         <button wire:click="unassignSelectedLeads" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-500 text-white hover:bg-amber-600 transition">Take Selected Off Rep</button>
         @if($isAdmin && count($selectedLeads) > 0)
@@ -520,12 +517,9 @@
 
                 {{-- Transfer to Closer --}}
                 <div class="flex items-center gap-2 mt-3">
-                    <select id="fld-transferCloser" wire:model="transferCloser" data-training="transfer-closer" class="px-3 py-1.5 text-xs bg-white border border-crm-border rounded-lg focus:outline-none">
-                        <option value="">Select User to Transfer...</option>
-                        @foreach($users as $u)
-                            <option value="{{ $u->id }}">{{ $u->name }} ({{ ucfirst(str_replace('_', ' ', $u->role)) }})</option>
-                        @endforeach
-                    </select>
+                    <div class="flex-1" data-training="transfer-closer">
+                        <x-user-picker :users="$users" wire-model="transferCloser" placeholder="Select user to transfer..." />
+                    </div>
                     <button wire:click="transferToCloser({{ $active->id }})" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-purple-50 text-purple-600 border border-purple-200 hover:bg-purple-100 transition">Transfer Lead</button>
                 </div>
 
@@ -543,12 +537,9 @@
                     <div class="mt-4 pt-3 border-t border-crm-border">
                         <div class="text-[10px] text-emerald-600 uppercase tracking-wider font-semibold mb-2">Deal Created — Transfer for Verification</div>
                         <div class="flex items-center gap-2">
-                            <select id="fld-transferAdmin" wire:model="transferAdmin" data-training="transfer-admin" class="flex-1 px-3 py-1.5 text-xs bg-white border border-crm-border rounded-lg focus:outline-none">
-                                <option value="">Select User...</option>
-                                @foreach($users as $u)
-                                    <option value="{{ $u->id }}">{{ $u->name }} ({{ ucfirst(str_replace('_', ' ', $u->role)) }})</option>
-                                @endforeach
-                            </select>
+                            <div class="flex-1" data-training="transfer-admin">
+                                <x-user-picker :users="$users" wire-model="transferAdmin" placeholder="Select user..." />
+                            </div>
                             <button wire:click="transferDealToAdmin" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">Transfer</button>
                         </div>
                     </div>

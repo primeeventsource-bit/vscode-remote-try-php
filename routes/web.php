@@ -25,7 +25,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/stats', \App\Livewire\Statistics::class)->name('stats');
     Route::get('/users', \App\Livewire\Users::class)->name('users');
     Route::get('/settings', \App\Livewire\Settings::class)->name('settings');
-    Route::get('/chat', \App\Livewire\ChatPage::class)->name('chat');
+    // Sidebar chat temporarily disabled — bubble chat remains active
+    Route::get('/chat', fn () => redirect('/dashboard'))->name('chat');
     Route::get('/documents', \App\Livewire\Documents::class)->name('documents');
     Route::get('/spreadsheets', \App\Livewire\Spreadsheets::class)->name('spreadsheets');
     Route::get('/calls', \App\Livewire\Calls::class)->name('calls');

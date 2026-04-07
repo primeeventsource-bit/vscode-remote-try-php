@@ -103,7 +103,7 @@
                         ['route' => 'training',     'icon' => '📚', 'label' => 'Training & Help',  'perm' => null, 'training' => 'nav-training'],
                     ]],
                     ['title' => 'COMMUNICATION', 'items' => [
-                        ['route' => 'chat',         'icon' => '💬', 'label' => 'Chat',            'perm' => null, 'enabled' => $chatEnabled, 'training' => 'nav-chat'],
+                        // Sidebar chat disabled — use bubble chat (bottom-right)
                         ['route' => 'calls',        'icon' => '📞', 'label' => 'Calls',           'perm' => null, 'training' => 'nav-calls'],
                     ]],
                     ['title' => 'WORKSPACE', 'items' => [
