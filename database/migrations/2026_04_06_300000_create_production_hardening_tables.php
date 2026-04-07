@@ -149,7 +149,7 @@ return new class extends Migration
                 $table->string('uuid')->unique();
                 $table->text('connection');
                 $table->text('queue');
-                $table->text('payload'); // longText causes issues on some SQL Server configs
+                $table->longText('payload');
                 $table->text('exception');
                 $table->timestamp('failed_at')->useCurrent();
             });
@@ -162,7 +162,7 @@ return new class extends Migration
             Schema::create('jobs', function (Blueprint $table) {
                 $table->id();
                 $table->string('queue')->index();
-                $table->text('payload'); // longText causes issues on SQL Server
+                $table->longText('payload');
                 $table->unsignedTinyInteger('attempts');
                 $table->unsignedInteger('reserved_at')->nullable();
                 $table->unsignedInteger('available_at');
