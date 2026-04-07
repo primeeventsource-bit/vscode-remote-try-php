@@ -13,7 +13,7 @@ return new class extends Migration
                 $table->id();
                 $table->string('name');
                 $table->string('module_type', 30); // documents, sheets
-                $table->foreignId('created_by')->nullable()->constrained('users');
+                $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
                 $table->timestamps();
             });
         }
@@ -24,8 +24,8 @@ return new class extends Migration
                 $table->string('title');
                 $table->longText('content')->nullable();
                 $table->string('type', 20)->default('rich_text'); // rich_text, uploaded
-                $table->foreignId('owner_id')->constrained('users');
-                $table->foreignId('folder_id')->nullable()->constrained('crm_folders');
+                $table->foreignId('owner_id')->constrained('users')->cascadeOnDelete();
+                $table->foreignId('folder_id')->nullable()->constrained('crm_folders')->nullOnDelete();
                 $table->string('status', 20)->default('active'); // active, archived, deleted
                 $table->boolean('is_uploaded')->default(false);
                 $table->string('original_filename')->nullable();
@@ -42,8 +42,8 @@ return new class extends Migration
                 $table->id();
                 $table->string('title');
                 $table->json('data')->nullable(); // rows/cols JSON
-                $table->foreignId('owner_id')->constrained('users');
-                $table->foreignId('folder_id')->nullable()->constrained('crm_folders');
+                $table->foreignId('owner_id')->constrained('users')->cascadeOnDelete();
+                $table->foreignId('folder_id')->nullable()->constrained('crm_folders')->nullOnDelete();
                 $table->string('status', 20)->default('active');
                 $table->boolean('is_uploaded')->default(false);
                 $table->string('original_filename')->nullable();
@@ -58,10 +58,10 @@ return new class extends Migration
         if (!Schema::hasTable('crm_document_permissions')) {
             Schema::create('crm_document_permissions', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('document_id')->constrained('crm_documents');
-                $table->foreignId('user_id')->constrained('users');
+                $table->foreignId('document_id')->constrained('crm_documents')->cascadeOnDelete();
+                $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
                 $table->string('permission_type', 10)->default('view'); // view, edit
-                $table->foreignId('granted_by')->nullable()->constrained('users');
+                $table->foreignId('granted_by')->nullable()->constrained('users')->nullOnDelete();
                 $table->timestamp('created_at')->nullable();
                 $table->unique(['document_id', 'user_id']);
             });
@@ -70,10 +70,10 @@ return new class extends Migration
         if (!Schema::hasTable('crm_sheet_permissions')) {
             Schema::create('crm_sheet_permissions', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('sheet_id')->constrained('crm_sheets');
-                $table->foreignId('user_id')->constrained('users');
+                $table->foreignId('sheet_id')->constrained('crm_sheets')->cascadeOnDelete();
+                $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
                 $table->string('permission_type', 10)->default('view');
-                $table->foreignId('granted_by')->nullable()->constrained('users');
+                $table->foreignId('granted_by')->nullable()->constrained('users')->nullOnDelete();
                 $table->timestamp('created_at')->nullable();
                 $table->unique(['sheet_id', 'user_id']);
             });
@@ -84,7 +84,7 @@ return new class extends Migration
                 $table->id();
                 $table->string('module_type', 30); // documents, sheets
                 $table->unsignedBigInteger('record_id');
-                $table->foreignId('user_id')->nullable()->constrained('users');
+                $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
                 $table->string('action', 50);
                 $table->json('metadata')->nullable();
                 $table->timestamp('created_at')->nullable();

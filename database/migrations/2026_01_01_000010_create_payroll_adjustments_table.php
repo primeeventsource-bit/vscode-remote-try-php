@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('created_by', 50);
             $table->dateTime('created_at')->nullable();
 
-            $table->foreign('entry_id')->references('id')->on('payroll_entries');
+            $table->foreign('entry_id')->references('id')->on('payroll_entries')->onDelete('cascade');
         });
     }
 

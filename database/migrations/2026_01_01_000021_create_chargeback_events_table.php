@@ -13,12 +13,12 @@ return new class extends Migration {
 
         Schema::create('chargeback_events', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('chargeback_id')->constrained('chargebacks');
+            $table->foreignId('chargeback_id')->constrained('chargebacks')->cascadeOnDelete();
             $table->string('event_type');
             $table->string('old_status')->nullable();
             $table->string('new_status')->nullable();
             $table->dateTime('event_date')->nullable();
-            $table->foreignId('performed_by')->nullable()->constrained('users');
+            $table->foreignId('performed_by')->nullable()->constrained('users')->nullOnDelete();
             $table->text('notes')->nullable();
             $table->json('metadata')->nullable();
             $table->timestamps();

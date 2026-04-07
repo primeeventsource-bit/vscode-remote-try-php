@@ -12,7 +12,7 @@ return new class extends Migration
 
         Schema::create('script_versions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('script_id')->constrained('sales_scripts');
+            $table->foreignId('script_id')->constrained('sales_scripts')->cascadeOnDelete();
             $table->integer('version_number')->default(1);
             $table->string('title_snapshot', 255);
             $table->longText('body_snapshot');
@@ -20,7 +20,7 @@ return new class extends Migration
             $table->unsignedInteger('character_count')->default(0);
             $table->string('source_type', 50)->nullable(); // manual, pdf, import
             $table->string('source_filename', 255)->nullable();
-            $table->foreignId('edited_by')->nullable()->constrained('users');
+            $table->foreignId('edited_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('created_at')->useCurrent();
         });
 

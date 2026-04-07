@@ -11,7 +11,7 @@ return new class extends Migration
         if (!Schema::hasTable('api_tokens')) {
             Schema::create('api_tokens', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('user_id')->constrained('users');
+                $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
                 $table->string('token', 255)->unique();
                 $table->dateTime('expires_at');
                 $table->timestamp('created_at')->nullable();

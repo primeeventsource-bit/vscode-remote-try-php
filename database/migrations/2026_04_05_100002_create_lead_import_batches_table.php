@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('lead_import_batches', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users');
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->string('filename')->nullable();
             $table->string('original_filename')->nullable();
             $table->string('file_path')->nullable();

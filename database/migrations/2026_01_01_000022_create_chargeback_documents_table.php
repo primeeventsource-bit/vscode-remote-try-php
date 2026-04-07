@@ -13,11 +13,11 @@ return new class extends Migration {
 
         Schema::create('chargeback_documents', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('chargeback_id')->constrained('chargebacks');
+            $table->foreignId('chargeback_id')->constrained('chargebacks')->cascadeOnDelete();
             $table->string('file_path');
             $table->string('file_name');
             $table->string('file_type')->nullable();
-            $table->foreignId('uploaded_by')->nullable()->constrained('users');
+            $table->foreignId('uploaded_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
 
             $table->index('chargeback_id');

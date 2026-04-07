@@ -10,7 +10,7 @@ return new class extends Migration
     {
         if (!Schema::hasColumn('video_rooms', 'chat_id')) {
             Schema::table('video_rooms', function (Blueprint $table) {
-                $table->foreignId('chat_id')->nullable()->after('type')->constrained('chats');
+                $table->foreignId('chat_id')->nullable()->after('type')->constrained('chats')->nullOnDelete();
             });
         }
     }

@@ -36,8 +36,8 @@ return new class extends Migration
 
                 // Foreign keys — safe with try/catch for existing schema variations
                 try {
-                    $table->foreign('chat_id')->references('id')->on('chats');
-                    $table->foreign('user_id')->references('id')->on('users');
+                    $table->foreign('chat_id')->references('id')->on('chats')->cascadeOnDelete();
+                    $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
                 } catch (\Throwable $e) {
                     // FK may fail on some Azure SQL configurations — indexes still work
                 }
@@ -71,7 +71,7 @@ return new class extends Migration
                 $table->index('chat_id');
 
                 try {
-                    $table->foreign('chat_id')->references('id')->on('chats');
+                    $table->foreign('chat_id')->references('id')->on('chats')->nullOnDelete();
                     $table->foreign('initiated_by')->references('id')->on('users');
                 } catch (\Throwable $e) {}
             });
@@ -95,8 +95,8 @@ return new class extends Migration
                 $table->index(['user_id', 'invite_status']);
 
                 try {
-                    $table->foreign('call_session_id')->references('id')->on('call_sessions');
-                    $table->foreign('user_id')->references('id')->on('users');
+                    $table->foreign('call_session_id')->references('id')->on('call_sessions')->cascadeOnDelete();
+                    $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
                 } catch (\Throwable $e) {}
             });
         }
@@ -135,7 +135,7 @@ return new class extends Migration
                 $table->index('message_id');
 
                 try {
-                    $table->foreign('message_id')->references('id')->on('messages');
+                    $table->foreign('message_id')->references('id')->on('messages')->cascadeOnDelete();
                 } catch (\Throwable $e) {}
             });
         }

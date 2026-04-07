@@ -27,7 +27,7 @@ return new class extends Migration
                 $table->boolean('is_voice_capable')->default(true);
                 $table->string('validation_status', 20)->default('pending'); // pending, valid, invalid
                 $table->timestamp('last_validated_at')->nullable();
-                $table->foreignId('created_by')->nullable()->constrained('users');
+                $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
                 $table->timestamps();
 
                 $table->index(['phoneable_type', 'phoneable_id']);
@@ -43,14 +43,14 @@ return new class extends Migration
                 $table->string('threadable_type', 100)->index();
                 $table->unsignedBigInteger('threadable_id');
                 $table->string('channel', 20)->default('sms'); // sms, mms, voice, whatsapp
-                $table->foreignId('assigned_user_id')->nullable()->constrained('users');
+                $table->foreignId('assigned_user_id')->nullable()->constrained('users')->nullOnDelete();
                 $table->string('phone_number', 20)->nullable(); // the external number
                 $table->timestamp('last_message_at')->nullable();
                 $table->timestamp('last_inbound_at')->nullable();
                 $table->timestamp('last_outbound_at')->nullable();
                 $table->unsignedInteger('unread_count')->default(0);
                 $table->string('status', 20)->default('open'); // open, closed, archived
-                $table->foreignId('created_by')->nullable()->constrained('users');
+                $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
                 $table->timestamps();
 
                 $table->index(['threadable_type', 'threadable_id']);
@@ -63,11 +63,11 @@ return new class extends Migration
         if (! Schema::hasTable('communications')) {
             Schema::create('communications', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('thread_id')->nullable()->constrained('communication_threads');
+                $table->foreignId('thread_id')->nullable()->constrained('communication_threads')->cascadeOnDelete();
                 $table->string('communicable_type', 100)->nullable();
                 $table->unsignedBigInteger('communicable_id')->nullable();
-                $table->foreignId('contact_phone_number_id')->nullable()->constrained('contact_phone_numbers');
-                $table->foreignId('user_id')->nullable()->constrained('users');
+                $table->foreignId('contact_phone_number_id')->nullable()->constrained('contact_phone_numbers')->nullOnDelete();
+                $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
                 $table->string('provider', 30)->default('twilio');
                 $table->string('provider_message_sid', 50)->nullable()->unique();
                 $table->string('provider_call_sid', 50)->nullable();
@@ -87,7 +87,7 @@ return new class extends Migration
                 $table->timestamp('failed_at')->nullable();
                 $table->timestamp('received_at')->nullable();
                 $table->json('metadata')->nullable();
-                $table->foreignId('created_by')->nullable()->constrained('users');
+                $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
                 $table->timestamps();
 
                 $table->index(['communicable_type', 'communicable_id']);
@@ -102,7 +102,7 @@ return new class extends Migration
         if (! Schema::hasTable('communication_events')) {
             Schema::create('communication_events', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('communication_id')->nullable()->constrained('communications');
+                $table->foreignId('communication_id')->nullable()->constrained('communications')->cascadeOnDelete();
                 $table->string('provider', 30)->default('twilio');
                 $table->string('event_type', 50);
                 $table->string('provider_sid', 50)->nullable();
@@ -148,7 +148,7 @@ return new class extends Migration
                 $table->string('consent_status', 20)->default('unknown'); // opted_in, opted_out, pending, unknown
                 $table->string('source', 30)->default('manual_admin'); // web_form, manual_admin, inbound_keyword, import, api
                 $table->text('source_details')->nullable();
-                $table->foreignId('captured_by_user_id')->nullable()->constrained('users');
+                $table->foreignId('captured_by_user_id')->nullable()->constrained('users')->nullOnDelete();
                 $table->timestamp('captured_at')->nullable();
                 $table->timestamp('revoked_at')->nullable();
                 $table->text('notes')->nullable();
@@ -167,8 +167,8 @@ return new class extends Migration
                 $table->longText('body');
                 $table->string('channel', 20)->default('sms');
                 $table->boolean('is_active')->default(true);
-                $table->foreignId('created_by')->nullable()->constrained('users');
-                $table->foreignId('updated_by')->nullable()->constrained('users');
+                $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+                $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
                 $table->timestamps();
             });
         }

@@ -11,8 +11,8 @@ return new class extends Migration
         if (!Schema::hasTable('admin_payroll')) {
             Schema::create('admin_payroll', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('admin_user_id')->constrained('users');
-                $table->foreignId('entered_by_user_id')->constrained('users');
+                $table->foreignId('admin_user_id')->constrained('users')->cascadeOnDelete();
+                $table->foreignId('entered_by_user_id')->constrained('users')->cascadeOnDelete();
                 $table->date('pay_period_start')->nullable();
                 $table->date('pay_period_end')->nullable();
                 $table->decimal('hours_worked', 6, 2)->default(0);

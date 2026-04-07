@@ -52,7 +52,7 @@ return new class extends Migration
                 $table->json('input')->nullable();       // what was passed in
                 $table->json('result')->nullable();      // what happened
                 $table->integer('retry_count')->default(0);
-                $table->foreignId('triggered_by')->nullable()->constrained('users');
+                $table->foreignId('triggered_by')->nullable()->constrained('users')->nullOnDelete();
                 $table->timestamp('started_at')->nullable();
                 $table->timestamp('completed_at')->nullable();
                 $table->timestamps();

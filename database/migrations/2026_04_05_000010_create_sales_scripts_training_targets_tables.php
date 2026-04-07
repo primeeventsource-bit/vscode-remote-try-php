@@ -19,7 +19,7 @@ return new class extends Migration
             $table->longText('content');
             $table->boolean('is_active')->default(true);
             $table->integer('order_index')->default(0);
-            $table->foreignId('created_by')->nullable()->constrained('users');
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
         });
 
@@ -35,13 +35,13 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->boolean('is_required')->default(true);
             $table->integer('estimated_minutes')->nullable();
-            $table->foreignId('created_by')->nullable()->constrained('users');
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
         });
 
         Schema::create('training_quizzes', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('module_id')->constrained('training_modules');
+            $table->foreignId('module_id')->constrained('training_modules')->cascadeOnDelete();
             $table->string('title');
             $table->integer('passing_score')->default(80);
             $table->boolean('is_active')->default(true);
@@ -50,7 +50,7 @@ return new class extends Migration
 
         Schema::create('training_quiz_questions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('quiz_id')->constrained('training_quizzes');
+            $table->foreignId('quiz_id')->constrained('training_quizzes')->cascadeOnDelete();
             $table->text('question');
             $table->json('options');
             $table->string('correct_answer');
@@ -61,8 +61,8 @@ return new class extends Migration
 
         Schema::create('training_progress', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users');
-            $table->foreignId('module_id')->constrained('training_modules');
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('module_id')->constrained('training_modules')->cascadeOnDelete();
             $table->string('status', 20)->default('not_started');
             $table->decimal('score', 5, 2)->nullable();
             $table->timestamp('started_at')->nullable();
@@ -74,8 +74,8 @@ return new class extends Migration
 
         Schema::create('training_quiz_attempts', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('quiz_id')->constrained('training_quizzes');
-            $table->foreignId('user_id')->constrained('users');
+            $table->foreignId('quiz_id')->constrained('training_quizzes')->cascadeOnDelete();
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->decimal('score', 5, 2);
             $table->boolean('passed');
             $table->json('answers')->nullable();
@@ -86,7 +86,7 @@ return new class extends Migration
         Schema::create('sales_targets', function (Blueprint $table) {
             $table->id();
             $table->string('role', 30)->nullable()->index();
-            $table->foreignId('user_id')->nullable()->constrained('users');
+            $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->integer('calls_target')->nullable();
             $table->integer('contacts_target')->nullable();
             $table->integer('transfers_target')->nullable();
@@ -94,13 +94,13 @@ return new class extends Migration
             $table->decimal('revenue_target', 12, 2)->nullable();
             $table->date('effective_date')->nullable();
             $table->boolean('is_active')->default(true);
-            $table->foreignId('created_by')->nullable()->constrained('users');
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
         });
 
         Schema::create('daily_sales_metrics', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users');
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->date('metric_date')->index();
             $table->integer('calls_count')->default(0);
             $table->integer('contacts_count')->default(0);

@@ -18,8 +18,8 @@ return new class extends Migration
             $table->string('st', 10)->nullable();
             $table->string('zip', 20)->nullable();
             $table->string('resort_location')->nullable();
-            $table->foreignId('assigned_to')->nullable()->constrained('users')->onDelete('no action');
-            $table->foreignId('original_fronter')->nullable()->constrained('users')->onDelete('no action');
+            $table->foreignId('assigned_to')->nullable()->constrained('users')->onDelete('set null');
+            $table->foreignId('original_fronter')->nullable()->constrained('users')->onDelete('set null');
             $table->string('disposition', 100)->nullable();
             $table->string('transferred_to', 100)->nullable();
             $table->string('source', 20)->default('manual');

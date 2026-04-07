@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->uuid('uuid')->unique();
             $table->string('name')->nullable();
-            $table->foreignId('created_by')->constrained('users');
+            $table->foreignId('created_by')->constrained('users')->cascadeOnDelete();
             $table->string('type', 20)->default('group');
             $table->string('status', 20)->default('waiting'); // waiting, active, ended
             $table->timestamp('started_at')->nullable();
@@ -25,9 +25,9 @@ return new class extends Migration
 
         Schema::create('video_room_participants', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('room_id')->constrained('video_rooms');
-            $table->foreignId('user_id')->constrained('users');
-            $table->foreignId('invited_by')->nullable()->constrained('users');
+            $table->foreignId('room_id')->constrained('video_rooms')->cascadeOnDelete();
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('invited_by')->nullable()->constrained('users')->nullOnDelete();
             $table->string('role', 20)->default('participant'); // host, participant
             $table->string('invite_status', 20)->default('pending'); // pending, accepted, declined, missed
             $table->timestamp('joined_at')->nullable();
@@ -42,8 +42,8 @@ return new class extends Migration
 
         Schema::create('video_call_logs', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('room_id')->constrained('video_rooms');
-            $table->foreignId('user_id')->nullable()->constrained('users');
+            $table->foreignId('room_id')->constrained('video_rooms')->cascadeOnDelete();
+            $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->string('event_type', 30);
             $table->json('meta')->nullable();
             $table->timestamps();
@@ -54,9 +54,9 @@ return new class extends Migration
         // Signaling table for WebRTC offer/answer/ice without WebSocket
         Schema::create('video_signals', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('room_id')->constrained('video_rooms');
-            $table->foreignId('from_user_id')->constrained('users');
-            $table->foreignId('to_user_id')->constrained('users');
+            $table->foreignId('room_id')->constrained('video_rooms')->cascadeOnDelete();
+            $table->foreignId('from_user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('to_user_id')->constrained('users')->cascadeOnDelete();
             $table->string('type', 20); // offer, answer, ice
             $table->longText('payload');
             $table->boolean('consumed')->default(false);

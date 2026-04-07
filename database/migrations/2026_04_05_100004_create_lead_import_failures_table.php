@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('lead_import_failures', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('lead_import_batch_id')->constrained('lead_import_batches');
+            $table->foreignId('lead_import_batch_id')->constrained('lead_import_batches')->onDelete('cascade');
             $table->unsignedInteger('row_number');
             $table->json('raw_row')->nullable();
             $table->string('reason');

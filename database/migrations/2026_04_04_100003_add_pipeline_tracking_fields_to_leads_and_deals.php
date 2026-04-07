@@ -15,16 +15,16 @@ return new class extends Migration
         // ── LEADS: pipeline tracking fields ─────────────────────────
         Schema::table('leads', function (Blueprint $table) {
             $table->string('current_stage', 50)->nullable()->after('disposition')->index();
-            $table->foreignId('transferred_by_user_id')->nullable()->after('current_stage')->constrained('users');
-            $table->foreignId('transferred_to_user_id')->nullable()->after('transferred_by_user_id')->constrained('users');
+            $table->foreignId('transferred_by_user_id')->nullable()->after('current_stage')->constrained('users')->nullOnDelete();
+            $table->foreignId('transferred_to_user_id')->nullable()->after('transferred_by_user_id')->constrained('users')->nullOnDelete();
             $table->timestamp('transferred_at')->nullable()->after('transferred_to_user_id');
             $table->timestamp('closer_received_at')->nullable()->after('transferred_at');
-            $table->foreignId('closed_by_user_id')->nullable()->after('closer_received_at')->constrained('users');
+            $table->foreignId('closed_by_user_id')->nullable()->after('closer_received_at')->constrained('users')->nullOnDelete();
             $table->timestamp('closed_at')->nullable()->after('closed_by_user_id');
-            $table->foreignId('converted_to_deal_id')->nullable()->after('closed_at')->constrained('deals');
-            $table->foreignId('sent_to_verification_by_user_id')->nullable()->after('converted_to_deal_id')->constrained('users');
+            $table->foreignId('converted_to_deal_id')->nullable()->after('closed_at')->constrained('deals')->nullOnDelete();
+            $table->foreignId('sent_to_verification_by_user_id')->nullable()->after('converted_to_deal_id')->constrained('users')->nullOnDelete();
             $table->timestamp('sent_to_verification_at')->nullable()->after('sent_to_verification_by_user_id');
-            $table->foreignId('verification_received_by_user_id')->nullable()->after('sent_to_verification_at')->constrained('users');
+            $table->foreignId('verification_received_by_user_id')->nullable()->after('sent_to_verification_at')->constrained('users')->nullOnDelete();
             $table->timestamp('verification_received_at')->nullable()->after('verification_received_by_user_id');
             $table->string('final_outcome', 50)->nullable()->after('verification_received_at')->index();
             $table->timestamp('final_outcome_at')->nullable()->after('final_outcome');
@@ -39,17 +39,17 @@ return new class extends Migration
             // closer_user_id and verification_admin_user_id mirror existing
             // fronter/closer/assigned_admin but with explicit naming
             if (!Schema::hasColumn('deals', 'closer_user_id')) {
-                $table->foreignId('closer_user_id')->nullable()->after('closer')->constrained('users');
+                $table->foreignId('closer_user_id')->nullable()->after('closer')->constrained('users')->nullOnDelete();
             }
             if (!Schema::hasColumn('deals', 'verification_admin_user_id')) {
-                $table->foreignId('verification_admin_user_id')->nullable()->after('assigned_admin')->constrained('users');
+                $table->foreignId('verification_admin_user_id')->nullable()->after('assigned_admin')->constrained('users')->nullOnDelete();
             }
             $table->string('charge_status', 30)->nullable()->after('charged_back')->index();
             $table->string('verification_status', 30)->nullable()->after('charge_status')->index();
-            $table->foreignId('sent_to_verification_by_user_id')->nullable()->after('verification_status')->constrained('users');
+            $table->foreignId('sent_to_verification_by_user_id')->nullable()->after('verification_status')->constrained('users')->nullOnDelete();
             $table->timestamp('sent_to_verification_at')->nullable()->after('sent_to_verification_by_user_id');
             $table->timestamp('verification_received_at')->nullable()->after('sent_to_verification_at');
-            $table->foreignId('charged_by_user_id')->nullable()->after('verification_received_at')->constrained('users');
+            $table->foreignId('charged_by_user_id')->nullable()->after('verification_received_at')->constrained('users')->nullOnDelete();
             $table->timestamp('charged_at')->nullable()->after('charged_by_user_id');
             $table->boolean('is_green')->default(false)->after('charged_at')->index();
 
@@ -73,11 +73,11 @@ return new class extends Migration
             UPDATE leads SET
                 current_stage = 'transferred_to_closer',
                 transferred_by_user_id = COALESCE(original_fronter, assigned_to),
-                transferred_to_user_id = CAST(transferred_to AS BIGINT),
+                transferred_to_user_id = CAST(transferred_to AS UNSIGNED),
                 transferred_at = updated_at
             WHERE disposition = 'Transferred to Closer'
                 AND transferred_to IS NOT NULL
-                AND ISNUMERIC(transferred_to) = 1
+                AND transferred_to REGEXP '^[0-9]+$'
                 AND current_stage IS NULL
         ");
 

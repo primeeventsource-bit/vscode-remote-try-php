@@ -33,8 +33,8 @@ return new class extends Migration
                 $table->json('context')->nullable();
                 $table->string('status', 20)->default('open')->index(); // open, acknowledged, resolved, auto_resolved
                 $table->string('fingerprint', 64)->nullable()->index(); // dedup key
-                $table->foreignId('assigned_to')->nullable()->constrained('users');
-                $table->foreignId('resolved_by')->nullable()->constrained('users');
+                $table->foreignId('assigned_to')->nullable()->constrained('users')->nullOnDelete();
+                $table->foreignId('resolved_by')->nullable()->constrained('users')->nullOnDelete();
                 $table->timestamp('opened_at')->useCurrent();
                 $table->timestamp('acknowledged_at')->nullable();
                 $table->timestamp('resolved_at')->nullable();
@@ -47,11 +47,11 @@ return new class extends Migration
         if (! Schema::hasTable('system_recovery_actions')) {
             Schema::create('system_recovery_actions', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('incident_id')->nullable()->constrained('system_incidents');
+                $table->foreignId('incident_id')->nullable()->constrained('system_incidents')->cascadeOnDelete();
                 $table->string('action', 100);             // retry_failed_jobs, rebuild_unread, fix_storage_link, etc.
                 $table->string('status', 20)->default('pending'); // pending, running, success, failed, skipped
                 $table->boolean('requires_approval')->default(false);
-                $table->foreignId('approved_by')->nullable()->constrained('users');
+                $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
                 $table->json('result')->nullable();
                 $table->integer('retry_count')->default(0);
                 $table->integer('max_retries')->default(3);

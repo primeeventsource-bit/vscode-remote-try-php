@@ -13,7 +13,7 @@ return new class extends Migration
         if (!Schema::hasTable('ai_trainer_events')) {
             Schema::create('ai_trainer_events', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('user_id')->constrained('users');
+                $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
                 $table->string('role', 30)->nullable();
                 $table->string('module', 50);           // leads, deals, clients, settings, etc.
                 $table->string('entity_type', 50)->nullable(); // lead, deal, user
@@ -34,7 +34,7 @@ return new class extends Migration
         if (!Schema::hasTable('ai_trainer_recommendations')) {
             Schema::create('ai_trainer_recommendations', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('user_id')->constrained('users');
+                $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
                 $table->string('module', 50);
                 $table->string('entity_type', 50)->nullable();
                 $table->unsignedBigInteger('entity_id')->nullable();
@@ -56,7 +56,7 @@ return new class extends Migration
         if (!Schema::hasTable('ai_trainer_mistakes')) {
             Schema::create('ai_trainer_mistakes', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('user_id')->constrained('users');
+                $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
                 $table->string('module', 50);
                 $table->string('entity_type', 50)->nullable();
                 $table->unsignedBigInteger('entity_id')->nullable();
@@ -78,7 +78,7 @@ return new class extends Migration
         if (!Schema::hasTable('ai_trainer_progress')) {
             Schema::create('ai_trainer_progress', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('user_id')->constrained('users');
+                $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
                 $table->string('role', 30);
                 $table->json('strengths_json')->nullable();
                 $table->json('weaknesses_json')->nullable();

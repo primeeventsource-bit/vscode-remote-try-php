@@ -43,7 +43,7 @@ return new class extends Migration
             $table->dateTime('created_at')->nullable();
             $table->dateTime('updated_at')->nullable();
 
-            $table->foreign('run_id')->references('id')->on('payroll_runs');
+            $table->foreign('run_id')->references('id')->on('payroll_runs')->onDelete('cascade');
             $table->unique(['run_id', 'user_id'], 'uq_entries_user_run');
         });
     }

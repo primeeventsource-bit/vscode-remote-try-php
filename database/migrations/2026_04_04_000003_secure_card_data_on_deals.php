@@ -24,7 +24,7 @@ return new class extends Migration
             $table->string('card_brand', 30)->nullable()->after('card_last4');
             $table->string('card_last4_2', 4)->nullable()->after('card_number2');
             $table->string('card_brand2', 30)->nullable()->after('card_last4_2');
-            $table->foreignId('updated_by')->nullable()->after('last_edited_by')->constrained('users');
+            $table->foreignId('updated_by')->nullable()->after('last_edited_by')->constrained('users')->nullOnDelete();
         });
 
         // Step 2: Extract last4 from existing card numbers, store brand, encrypt full numbers, destroy CVV

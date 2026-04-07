@@ -10,9 +10,9 @@ return new class extends Migration
     {
         Schema::create('client_audit_logs', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users');
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->string('user_role', 50);
-            $table->foreignId('deal_id')->constrained('deals');
+            $table->foreignId('deal_id')->constrained('deals')->onDelete('cascade');
             $table->string('action', 50); // viewed, edited, viewed_banking, edited_banking, viewed_payment, edited_payment, viewed_deal_sheet, edited_deal_sheet
             $table->string('section', 50)->nullable(); // client_info, deal_sheet, banking, payment_profile, audit_logs
             $table->json('changed_fields')->nullable(); // array of field names that changed

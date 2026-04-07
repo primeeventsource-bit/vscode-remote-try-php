@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('user_favorite_gifs', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users');
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->string('gif_external_id', 120);
             $table->string('gif_provider', 30);
             $table->text('gif_url');

@@ -19,7 +19,7 @@ return new class extends Migration
                 $table->dateTime('callback_date')->nullable()->after('disposition_status');
             }
             if (!Schema::hasColumn('deals', 'last_edited_by')) {
-                $table->foreignId('last_edited_by')->nullable()->constrained('users')->after('assigned_admin');
+                $table->foreignId('last_edited_by')->nullable()->constrained('users')->nullOnDelete()->after('assigned_admin');
             }
             if (!Schema::hasColumn('deals', 'last_edited_at')) {
                 $table->timestamp('last_edited_at')->nullable()->after('last_edited_by');

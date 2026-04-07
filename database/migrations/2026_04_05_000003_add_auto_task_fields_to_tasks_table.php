@@ -13,7 +13,7 @@ return new class extends Migration
             $table->string('related_type', 50)->nullable()->after('auto_created');
             $table->unsignedBigInteger('related_id')->nullable()->after('related_type');
             $table->text('description')->nullable()->after('title');
-            $table->foreignId('completed_by_user_id')->nullable()->after('completed_at')->constrained('users');
+            $table->foreignId('completed_by_user_id')->nullable()->after('completed_at')->constrained('users')->nullOnDelete();
             $table->json('metadata')->nullable()->after('completed_by_user_id');
 
             $table->index(['related_type', 'related_id']);

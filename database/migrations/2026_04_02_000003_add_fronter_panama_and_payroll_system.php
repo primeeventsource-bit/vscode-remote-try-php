@@ -49,7 +49,7 @@ return new class extends Migration
                 $table->string('week_label', 50);
                 $table->date('week_start');
                 $table->date('week_end');
-                $table->foreignId('user_id')->constrained('users');
+                $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
                 $table->string('user_role', 30);
                 $table->decimal('total_deals_amount', 12, 2)->default(0);
                 $table->decimal('total_commission', 10, 2)->default(0);
@@ -59,7 +59,7 @@ return new class extends Migration
                 $table->integer('deal_count')->default(0);
                 $table->json('deal_details')->nullable();
                 $table->string('status', 20)->default('draft');
-                $table->foreignId('generated_by')->nullable()->constrained('users');
+                $table->foreignId('generated_by')->nullable()->constrained('users')->nullOnDelete();
                 $table->timestamp('finalized_at')->nullable();
                 $table->timestamps();
                 $table->index(['user_id', 'week_start']);
