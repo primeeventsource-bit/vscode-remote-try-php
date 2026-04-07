@@ -73,13 +73,17 @@
 @if($meeting && !$meeting->isEnded())
 <script src="https://sdk.twilio.com/js/video/releases/2.28.1/twilio-video.min.js"></script>
 <script>
+// Store Twilio objects OUTSIDE Alpine to avoid Proxy conflicts.
+// Alpine wraps reactive data in Proxies, but Twilio Room/Track objects
+// have read-only native Map properties that break under Proxy.
+let _twilioRoom = null;
+let _twilioLocalTracks = [];
+
 function meetingApp() {
     return {
         micOn: true,
         cameraOn: true,
         connected: false,
-        room: null,
-        localTracks: [],
         mediaError: '',
         participantCount: 1,
         meetingUuid: @json($uuid),
@@ -96,15 +100,22 @@ function meetingApp() {
                     method: 'POST', credentials: 'same-origin',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
                 });
-                if (!res.ok) { this.mediaError = 'Failed to get meeting token (' + res.status + ')'; return; }
+                if (!res.ok) {
+                    let errMsg = 'Failed to get meeting token (' + res.status + ')';
+                    try { const body = await res.json(); errMsg += ': ' + (body.error || ''); } catch(e) {}
+                    this.mediaError = errMsg;
+                    return;
+                }
                 const data = await res.json();
 
                 // 2. Get local media
                 let localTracks = [];
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                    localTracks = stream.getTracks().map(t => new Twilio.Video.LocalVideoTrack(t).kind === 'audio'
-                        ? new Twilio.Video.LocalAudioTrack(t) : new Twilio.Video.LocalVideoTrack(t));
+                    for (const t of stream.getTracks()) {
+                        if (t.kind === 'audio') localTracks.push(new Twilio.Video.LocalAudioTrack(t));
+                        else localTracks.push(new Twilio.Video.LocalVideoTrack(t));
+                    }
                 } catch(e) {
                     try {
                         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -122,37 +133,37 @@ function meetingApp() {
                 for (const t of localTracks) {
                     if (t.kind === 'video' && localVideo) { t.attach(localVideo); }
                 }
-                this.localTracks = localTracks;
+                _twilioLocalTracks = localTracks;
 
-                // 3. Connect to Twilio Video Room
-                this.room = await Twilio.Video.connect(data.token, {
+                // 3. Connect to Twilio Video Room (stored OUTSIDE Alpine)
+                _twilioRoom = await Twilio.Video.connect(data.token, {
                     name: data.room,
                     tracks: localTracks,
                     dominantSpeaker: true,
                 });
 
                 this.connected = true;
-                this.participantCount = this.room.participants.size + 1;
-                console.log('Connected to room:', data.room, 'Participants:', this.room.participants.size);
+                this.participantCount = _twilioRoom.participants.size + 1;
+                console.log('Connected to room:', data.room, 'Participants:', _twilioRoom.participants.size);
 
                 // 4. Handle existing participants
-                this.room.participants.forEach(p => this.handleParticipant(p));
+                _twilioRoom.participants.forEach(p => this.handleParticipant(p));
 
                 // 5. Handle new participants
-                this.room.on('participantConnected', p => {
+                _twilioRoom.on('participantConnected', p => {
                     console.log('Participant connected:', p.identity);
                     this.handleParticipant(p);
-                    this.participantCount = this.room.participants.size + 1;
+                    this.participantCount = _twilioRoom.participants.size + 1;
                 });
 
-                this.room.on('participantDisconnected', p => {
+                _twilioRoom.on('participantDisconnected', p => {
                     console.log('Participant disconnected:', p.identity);
                     const el = document.getElementById('remote-' + p.identity);
                     if (el) el.remove();
-                    this.participantCount = this.room.participants.size + 1;
+                    this.participantCount = _twilioRoom.participants.size + 1;
                 });
 
-                this.room.on('disconnected', () => {
+                _twilioRoom.on('disconnected', () => {
                     this.connected = false;
                     this.cleanup();
                 });
@@ -167,37 +178,23 @@ function meetingApp() {
             const grid = document.getElementById('meeting-video-grid');
             if (!grid) return;
 
-            // Create container for this participant
             let container = document.getElementById('remote-' + participant.identity);
             if (!container) {
                 container = document.createElement('div');
                 container.id = 'remote-' + participant.identity;
                 container.className = 'relative bg-gray-800 rounded-lg overflow-hidden';
-
-                // Name label
                 const label = document.createElement('div');
-                label.className = 'absolute bottom-2 left-2 px-2 py-0.5 bg-black/60 rounded text-white text-[10px] font-semibold';
+                label.className = 'absolute bottom-2 left-2 px-2 py-0.5 bg-black/60 rounded text-white text-[10px] font-semibold z-10';
                 label.textContent = participant.identity.replace('user-', 'User ');
                 container.appendChild(label);
-
                 grid.appendChild(container);
             }
 
-            // Handle existing tracks
             participant.tracks.forEach(pub => {
-                if (pub.isSubscribed && pub.track) {
-                    this.attachTrack(pub.track, container);
-                }
+                if (pub.isSubscribed && pub.track) this.attachTrack(pub.track, container);
             });
-
-            // Handle new track subscriptions
-            participant.on('trackSubscribed', track => {
-                this.attachTrack(track, container);
-            });
-
-            participant.on('trackUnsubscribed', track => {
-                track.detach().forEach(el => el.remove());
-            });
+            participant.on('trackSubscribed', track => this.attachTrack(track, container));
+            participant.on('trackUnsubscribed', track => { track.detach().forEach(el => el.remove()); });
         },
 
         attachTrack(track, container) {
@@ -205,34 +202,25 @@ function meetingApp() {
                 const existing = container.querySelector('video');
                 if (existing) existing.remove();
                 const el = track.attach();
-                el.className = 'w-full h-full object-cover';
-                el.style.position = 'absolute';
-                el.style.top = '0';
-                el.style.left = '0';
-                container.style.position = 'relative';
+                el.className = 'w-full h-full object-cover absolute top-0 left-0';
                 container.insertBefore(el, container.firstChild);
             } else if (track.kind === 'audio') {
-                const el = track.attach();
-                document.body.appendChild(el); // Audio elements go in body
+                document.body.appendChild(track.attach());
             }
         },
 
         toggleMic() {
             this.micOn = !this.micOn;
-            this.localTracks.forEach(t => { if (t.kind === 'audio') t.enable(this.micOn); });
+            _twilioLocalTracks.forEach(t => { if (t.kind === 'audio') t.enable(this.micOn); });
         },
 
         toggleCamera() {
             this.cameraOn = !this.cameraOn;
-            this.localTracks.forEach(t => { if (t.kind === 'video') t.enable(this.cameraOn); });
+            _twilioLocalTracks.forEach(t => { if (t.kind === 'video') t.enable(this.cameraOn); });
         },
 
         async retryMedia() {
             this.mediaError = '';
-            if (this.room) {
-                this.room.disconnect();
-                this.room = null;
-            }
             this.cleanup();
             this.micOn = true;
             this.cameraOn = true;
@@ -241,28 +229,22 @@ function meetingApp() {
 
         async leaveMeeting() {
             const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
-            await fetch('/meetings/' + this.meetingUuid + '/leave', {
-                method: 'POST', credentials: 'same-origin',
-                headers: { 'X-CSRF-TOKEN': csrf },
-            }).catch(() => {});
+            fetch('/meetings/' + this.meetingUuid + '/leave', { method: 'POST', credentials: 'same-origin', headers: { 'X-CSRF-TOKEN': csrf } }).catch(() => {});
             this.cleanup();
-            window.location.href = '/meetings';
+            window.location.href = '/calls';
         },
 
         async endMeeting() {
             const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
-            await fetch('/meetings/' + this.meetingUuid + '/end', {
-                method: 'POST', credentials: 'same-origin',
-                headers: { 'X-CSRF-TOKEN': csrf },
-            }).catch(() => {});
+            fetch('/meetings/' + this.meetingUuid + '/end', { method: 'POST', credentials: 'same-origin', headers: { 'X-CSRF-TOKEN': csrf } }).catch(() => {});
             this.cleanup();
-            window.location.href = '/meetings';
+            window.location.href = '/calls';
         },
 
         cleanup() {
-            if (this.room) { this.room.disconnect(); this.room = null; }
-            this.localTracks.forEach(t => { t.stop(); t.detach().forEach(el => el.remove()); });
-            this.localTracks = [];
+            if (_twilioRoom) { _twilioRoom.disconnect(); _twilioRoom = null; }
+            _twilioLocalTracks.forEach(t => { t.stop(); t.detach().forEach(el => el.remove()); });
+            _twilioLocalTracks = [];
             document.querySelectorAll('audio[autoplay]').forEach(el => el.remove());
         }
     }
