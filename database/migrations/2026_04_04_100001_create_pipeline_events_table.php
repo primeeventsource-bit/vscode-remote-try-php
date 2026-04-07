@@ -10,14 +10,14 @@ return new class extends Migration
     {
         Schema::create('pipeline_events', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('lead_id')->nullable()->constrained('leads')->nullOnDelete();
-            $table->foreignId('deal_id')->nullable()->constrained('deals')->nullOnDelete();
+            $table->foreignId('lead_id')->nullable()->constrained('leads');
+            $table->foreignId('deal_id')->nullable()->constrained('deals');
             $table->string('event_type', 50)->index();
             $table->string('from_stage', 50)->nullable();
             $table->string('to_stage', 50)->nullable();
-            $table->foreignId('performed_by_user_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->foreignId('source_user_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->foreignId('target_user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('performed_by_user_id')->nullable()->constrained('users');
+            $table->foreignId('source_user_id')->nullable()->constrained('users');
+            $table->foreignId('target_user_id')->nullable()->constrained('users');
             $table->string('source_role', 50)->nullable();
             $table->string('target_role', 50)->nullable();
             $table->boolean('success_flag')->default(true);
@@ -36,7 +36,7 @@ return new class extends Migration
         // Add lead_id to deals for proper FK link
         if (!Schema::hasColumn('deals', 'lead_id')) {
             Schema::table('deals', function (Blueprint $table) {
-                $table->foreignId('lead_id')->nullable()->after('id')->constrained('leads')->nullOnDelete();
+                $table->foreignId('lead_id')->nullable()->after('id')->constrained('leads');
                 $table->index(['lead_id']);
             });
         }

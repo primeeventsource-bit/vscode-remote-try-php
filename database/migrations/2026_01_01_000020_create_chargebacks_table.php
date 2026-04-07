@@ -15,10 +15,10 @@ return new class extends Migration {
             $table->id();
             $table->unsignedBigInteger('transaction_id')->nullable();
             $table->unsignedBigInteger('customer_id')->nullable();
-            $table->foreignId('deal_id')->nullable()->constrained('deals')->nullOnDelete();
-            $table->foreignId('merchant_account_id')->nullable()->constrained('merchant_accounts')->nullOnDelete();
-            $table->foreignId('processor_id')->nullable()->constrained('processors')->nullOnDelete();
-            $table->foreignId('sales_rep_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('deal_id')->nullable()->constrained('deals');
+            $table->foreignId('merchant_account_id')->nullable()->constrained('merchant_accounts');
+            $table->foreignId('processor_id')->nullable()->constrained('processors');
+            $table->foreignId('sales_rep_id')->nullable()->constrained('users');
             $table->unsignedBigInteger('product_id')->nullable();
 
             $table->string('dispute_reference_number')->nullable();

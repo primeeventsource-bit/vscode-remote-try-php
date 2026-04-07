@@ -10,8 +10,8 @@ return new class extends Migration
     {
         Schema::create('chargeback_cases', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('client_id')->constrained('deals')->cascadeOnDelete(); // clients ARE deals
-            $table->foreignId('deal_id')->nullable()->constrained('deals')->nullOnDelete();
+            $table->foreignId('client_id')->constrained('deals'); // clients ARE deals — no action
+            $table->foreignId('deal_id')->nullable()->constrained('deals');
             $table->string('case_number', 100)->index();
             $table->string('card_type', 50)->nullable();
             $table->string('card_brand', 50)->nullable();
@@ -28,8 +28,8 @@ return new class extends Migration
             $table->string('customer_ip_address', 45)->nullable();
             $table->string('status', 30)->default('open')->index();
             $table->text('internal_comments')->nullable();
-            $table->foreignId('created_by_user_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('updated_by_user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('created_by_user_id')->constrained('users');
+            $table->foreignId('updated_by_user_id')->nullable()->constrained('users');
             $table->timestamps();
 
             $table->index('client_id');
@@ -38,7 +38,7 @@ return new class extends Migration
 
         Schema::create('chargeback_evidence', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('chargeback_case_id')->constrained('chargeback_cases')->cascadeOnDelete();
+            $table->foreignId('chargeback_case_id')->constrained('chargeback_cases');
             $table->string('document_type', 50)->index();
             $table->string('original_filename');
             $table->string('stored_filename');
@@ -46,8 +46,8 @@ return new class extends Migration
             $table->string('mime_type', 100)->nullable();
             $table->unsignedInteger('file_size')->nullable();
             $table->string('status', 20)->default('uploaded'); // missing, uploaded, verified
-            $table->foreignId('uploaded_by_user_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('verified_by_user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('uploaded_by_user_id')->constrained('users');
+            $table->foreignId('verified_by_user_id')->nullable()->constrained('users');
             $table->timestamp('verified_at')->nullable();
             $table->timestamps();
 

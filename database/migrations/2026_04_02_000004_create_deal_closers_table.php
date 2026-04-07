@@ -11,8 +11,8 @@ return new class extends Migration
         if (!Schema::hasTable('deal_closers')) {
             Schema::create('deal_closers', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('deal_id')->constrained('deals')->cascadeOnDelete();
-                $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+                $table->foreignId('deal_id')->constrained('deals');
+                $table->foreignId('user_id')->constrained('users');
                 $table->decimal('comm_pct', 5, 2)->default(10);
                 $table->decimal('comm_amount', 10, 2)->default(0);
                 $table->decimal('snr_deduction', 10, 2)->default(0);

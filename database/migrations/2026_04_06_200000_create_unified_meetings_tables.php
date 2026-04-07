@@ -23,7 +23,7 @@ return new class extends Migration
                 $table->string('provider_room_name', 255)->unique();
                 $table->string('provider_room_sid', 100)->nullable();
                 $table->string('title', 255)->nullable();
-                $table->foreignId('host_user_id')->constrained('users')->cascadeOnDelete();
+                $table->foreignId('host_user_id')->constrained('users');
                 $table->string('status', 30)->default('pending');    // pending, ringing, live, ended, declined, missed, failed
                 $table->timestamp('started_at')->nullable();
                 $table->timestamp('ended_at')->nullable();
@@ -41,8 +41,8 @@ return new class extends Migration
         if (! Schema::hasTable('meeting_participants')) {
             Schema::create('meeting_participants', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('meeting_id')->constrained('meetings')->cascadeOnDelete();
-                $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+                $table->foreignId('meeting_id')->constrained('meetings');
+                $table->foreignId('user_id')->constrained('users');
                 $table->string('role', 20)->default('participant');        // host, participant
                 $table->string('invite_status', 20)->default('pending');   // pending, accepted, declined, missed
                 $table->string('attendance_status', 20)->default('not_joined'); // not_joined, joined, left
@@ -62,8 +62,8 @@ return new class extends Migration
         if (! Schema::hasTable('meeting_events')) {
             Schema::create('meeting_events', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('meeting_id')->constrained('meetings')->cascadeOnDelete();
-                $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
+                $table->foreignId('meeting_id')->constrained('meetings');
+                $table->foreignId('user_id')->nullable()->constrained('users');
                 $table->string('event_type', 50);
                 $table->json('payload')->nullable();
                 $table->timestamp('created_at')->useCurrent();

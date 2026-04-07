@@ -13,7 +13,7 @@ return new class extends Migration
             $table->string('name')->nullable();
             $table->string('type', 20)->default('dm');
             $table->json('members')->nullable();
-            $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null');
+            $table->foreignId('created_by')->nullable()->constrained('users');
             $table->boolean('pinned')->default(false);
             $table->timestamps();
         });

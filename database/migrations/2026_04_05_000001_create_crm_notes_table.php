@@ -13,10 +13,10 @@ return new class extends Migration
             $table->string('noteable_type', 50); // App\Models\Deal or deals/clients
             $table->unsignedBigInteger('noteable_id');
             $table->longText('body');
-            $table->foreignId('created_by_user_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('updated_by_user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('created_by_user_id')->constrained('users');
+            $table->foreignId('updated_by_user_id')->nullable()->constrained('users');
             $table->timestamp('sent_to_chat_at')->nullable();
-            $table->foreignId('sent_to_chat_by_user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('sent_to_chat_by_user_id')->nullable()->constrained('users');
             $table->boolean('internal_only')->default(true);
             $table->timestamps();
 

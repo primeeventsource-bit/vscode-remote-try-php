@@ -12,7 +12,7 @@ return new class extends Migration
         if (! Schema::hasTable('audit_logs')) {
             Schema::create('audit_logs', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
+                $table->foreignId('user_id')->nullable()->constrained('users');
                 $table->string('action', 100)->index();       // e.g. script.updated, user.role_changed, payroll.finalized
                 $table->string('target_type', 100)->nullable(); // e.g. App\Models\SalesScript
                 $table->unsignedBigInteger('target_id')->nullable();
@@ -31,7 +31,7 @@ return new class extends Migration
         if (! Schema::hasTable('activity_logs')) {
             Schema::create('activity_logs', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
+                $table->foreignId('user_id')->nullable()->constrained('users');
                 $table->string('subject_type', 100)->index(); // Lead, Deal, Client, etc.
                 $table->unsignedBigInteger('subject_id');
                 $table->string('event', 100)->index();        // created, updated, status_changed, assigned, transferred

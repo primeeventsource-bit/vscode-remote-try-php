@@ -63,7 +63,7 @@ return new class extends Migration
         if (!Schema::hasTable('onboarding_step_images')) {
             Schema::create('onboarding_step_images', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('step_id')->constrained('onboarding_steps')->cascadeOnDelete();
+                $table->foreignId('step_id')->constrained('onboarding_steps');
                 $table->string('image_path');
                 $table->string('caption')->nullable();
                 $table->integer('sort_order')->default(0);
@@ -77,8 +77,8 @@ return new class extends Migration
         if (!Schema::hasTable('training_completion_summary')) {
             Schema::create('training_completion_summary', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-                $table->foreignId('flow_id')->constrained('onboarding_flows')->cascadeOnDelete();
+                $table->foreignId('user_id')->constrained('users');
+                $table->foreignId('flow_id')->constrained('onboarding_flows');
                 $table->unsignedBigInteger('current_step_id')->nullable();
                 $table->integer('progress_percent')->default(0);
                 $table->timestamp('started_at')->nullable();

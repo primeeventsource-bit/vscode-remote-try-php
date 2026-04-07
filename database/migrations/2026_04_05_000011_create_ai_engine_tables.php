@@ -20,22 +20,22 @@ return new class extends Migration
             $table->string('stage', 20)->nullable();
             $table->boolean('is_active')->default(true);
             $table->integer('version')->default(1);
-            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('created_by')->nullable()->constrained('users');
             $table->timestamps();
         });
 
         Schema::create('ai_interactions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('lead_id')->nullable()->constrained('leads')->nullOnDelete();
-            $table->foreignId('deal_id')->nullable()->constrained('deals')->nullOnDelete();
+            $table->foreignId('user_id')->constrained('users');
+            $table->foreignId('lead_id')->nullable()->constrained('leads');
+            $table->foreignId('deal_id')->nullable()->constrained('deals');
             $table->string('type', 30)->index();
             $table->longText('input_text')->nullable();
             $table->json('context_json')->nullable();
             $table->longText('output_text')->nullable();
             $table->json('output_json')->nullable();
             $table->string('model_used', 50)->nullable();
-            $table->foreignId('prompt_template_id')->nullable()->constrained('ai_prompt_templates')->nullOnDelete();
+            $table->foreignId('prompt_template_id')->nullable()->constrained('ai_prompt_templates');
             $table->decimal('confidence_score', 5, 2)->nullable();
             $table->integer('response_time_ms')->nullable();
             $table->string('status', 20)->default('success');
@@ -47,8 +47,8 @@ return new class extends Migration
 
         Schema::create('ai_feedback', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('interaction_id')->constrained('ai_interactions')->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('interaction_id')->constrained('ai_interactions');
+            $table->foreignId('user_id')->constrained('users');
             $table->string('feedback_type', 20); // helpful, not_helpful, used, worked, failed
             $table->text('notes')->nullable();
             $table->timestamps();

@@ -13,7 +13,7 @@ return new class extends Migration {
 
         Schema::create('merchant_accounts', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('processor_id')->nullable()->constrained('processors')->nullOnDelete();
+            $table->foreignId('processor_id')->nullable()->constrained('processors');
             $table->string('name');
             $table->string('mid_masked', 32)->nullable();
             $table->boolean('active')->default(true);

@@ -39,8 +39,8 @@ return new class extends Migration
         if (! Schema::hasTable('video_room_events')) {
             Schema::create('video_room_events', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('video_room_id')->constrained('video_rooms')->cascadeOnDelete();
-                $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
+                $table->foreignId('video_room_id')->constrained('video_rooms');
+                $table->foreignId('user_id')->nullable()->constrained('users');
                 $table->string('event_type', 50);
                 $table->json('event_payload')->nullable();
                 $table->timestamp('created_at')->useCurrent();
@@ -53,9 +53,9 @@ return new class extends Migration
         if (! Schema::hasTable('video_room_invites')) {
             Schema::create('video_room_invites', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('video_room_id')->constrained('video_rooms')->cascadeOnDelete();
-                $table->foreignId('invited_user_id')->constrained('users')->cascadeOnDelete();
-                $table->foreignId('invited_by_user_id')->nullable()->constrained('users')->nullOnDelete();
+                $table->foreignId('video_room_id')->constrained('video_rooms');
+                $table->foreignId('invited_user_id')->constrained('users');
+                $table->foreignId('invited_by_user_id')->nullable()->constrained('users');
                 $table->string('invite_type', 30)->default('direct'); // direct, department, broadcast
                 $table->string('invite_status', 20)->default('pending'); // pending, accepted, declined, expired
                 $table->timestamp('delivered_at')->nullable();

@@ -11,7 +11,7 @@ return new class extends Migration
         if (!Schema::hasTable('call_logs')) {
             Schema::create('call_logs', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+                $table->foreignId('user_id')->constrained('users');
                 $table->string('callable_type')->nullable();
                 $table->unsignedBigInteger('callable_id')->nullable();
                 $table->string('record_type', 50)->nullable();

@@ -21,7 +21,7 @@ return new class extends Migration
 
         Schema::create('onboarding_steps', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('flow_id')->constrained('onboarding_flows')->cascadeOnDelete();
+            $table->foreignId('flow_id')->constrained('onboarding_flows');
             $table->string('key', 80);
             $table->string('title');
             $table->text('description')->nullable();
@@ -39,9 +39,9 @@ return new class extends Migration
 
         Schema::create('user_onboarding_progress', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('flow_id')->constrained('onboarding_flows')->cascadeOnDelete();
-            $table->foreignId('step_id')->constrained('onboarding_steps')->cascadeOnDelete();
+            $table->foreignId('user_id')->constrained('users');
+            $table->foreignId('flow_id')->constrained('onboarding_flows');
+            $table->foreignId('step_id')->constrained('onboarding_steps');
             $table->string('status', 20)->default('not_started'); // not_started, completed, skipped
             $table->timestamp('completed_at')->nullable();
             $table->timestamp('skipped_at')->nullable();
