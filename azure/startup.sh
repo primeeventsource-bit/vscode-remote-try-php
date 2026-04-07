@@ -9,6 +9,35 @@ cd /home/site/wwwroot
 
 echo "[Startup] $(date) — Initializing Laravel CRM..."
 
+# ── Generate .env from Azure App Settings ────────────
+# GitHub Actions deploy wipes wwwroot — .env must be recreated every boot.
+# Azure injects App Settings as process env vars, so we dump them to .env.
+echo "[Startup] Writing .env from Azure App Settings..."
+cat > /home/site/wwwroot/.env << 'DOTENVEOF'
+APP_NAME="Prime CRM"
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://crmprime.online
+DOTENVEOF
+
+# Append all TWILIO_, DB_, OPENAI_, and other app vars from Azure env
+for var in APP_KEY DB_CONNECTION DB_HOST DB_PORT DB_DATABASE DB_USERNAME DB_PASSWORD \
+           SESSION_DRIVER SESSION_LIFETIME SESSION_ENCRYPT SESSION_SECURE_COOKIE \
+           CACHE_STORE QUEUE_CONNECTION FILESYSTEM_DISK LOG_CHANNEL LOG_LEVEL \
+           TWILIO_ACCOUNT_SID TWILIO_AUTH_TOKEN TWILIO_API_KEY_SID TWILIO_API_KEY_SECRET \
+           TWILIO_SMS_ENABLED TWILIO_WEBHOOK_VALIDATE_SIGNATURE TWILIO_DEFAULT_COUNTRY \
+           TWILIO_LOG_RAW_WEBHOOKS TWILIO_MESSAGING_SERVICE_SID TWILIO_FROM_NUMBER \
+           OPENAI_API_KEY OPENAI_MODEL \
+           GIF_PROVIDER GIPHY_API_KEY TENOR_API_KEY TENOR_CLIENT_KEY \
+           BROADCAST_CONNECTION REDIS_HOST REDIS_PASSWORD REDIS_PORT; do
+    val="${!var}"
+    if [ -n "$val" ]; then
+        echo "${var}=${val}" >> /home/site/wwwroot/.env
+    fi
+done
+
+echo "[Startup] .env written with $(wc -l < /home/site/wwwroot/.env) lines"
+
 # Fix permissions
 chmod -R 775 storage bootstrap/cache 2>/dev/null
 chown -R www-data:www-data storage bootstrap/cache 2>/dev/null
