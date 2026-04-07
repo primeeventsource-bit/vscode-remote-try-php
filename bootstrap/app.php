@@ -21,7 +21,7 @@ if (file_exists($envProductionPath)) {
     }
 }
 
-return Application::configure(basePath: $basePath)
+$app = Application::configure(basePath: $basePath)
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',
@@ -97,3 +97,17 @@ return Application::configure(basePath: $basePath)
                 : redirect()->route('login')->with('error', 'Run migrations and reload.');
         });
     })->create();
+
+// AFTER create but before the app boots, tell it to use env.production
+// if the current .env has wrong values (Oryx's read-only bad .env)
+if (file_exists($app->basePath('env.production'))) {
+    $app->loadEnvironmentFrom('env.production');
+    // Force re-read of env file with correct name
+    \Dotenv\Dotenv::create(
+        \Illuminate\Support\Env::getRepository(),
+        $app->basePath(),
+        'env.production'
+    )->load();
+}
+
+return $app;
