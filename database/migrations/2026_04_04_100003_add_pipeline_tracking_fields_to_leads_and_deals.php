@@ -73,11 +73,11 @@ return new class extends Migration
             UPDATE leads SET
                 current_stage = 'transferred_to_closer',
                 transferred_by_user_id = COALESCE(original_fronter, assigned_to),
-                transferred_to_user_id = CAST(transferred_to AS UNSIGNED),
+                transferred_to_user_id = CAST(transferred_to AS BIGINT),
                 transferred_at = updated_at
             WHERE disposition = 'Transferred to Closer'
                 AND transferred_to IS NOT NULL
-                AND transferred_to REGEXP '^[0-9]+$'
+                AND ISNUMERIC(transferred_to) = 1
                 AND current_stage IS NULL
         ");
 
