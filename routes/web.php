@@ -3,6 +3,36 @@
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
+// TEMP: diagnose 500 errors
+Route::get('/diag-500', function () {
+    try {
+        // Test the exact thing livewire/update does — render a component
+        $user = auth()->user();
+        return response()->json([
+            'user' => $user ? $user->id : null,
+            'storage_logs' => is_dir(storage_path('logs')),
+            'storage_views' => is_dir(storage_path('framework/views')),
+            'storage_sessions' => is_dir(storage_path('framework/sessions')),
+            'storage_cache' => is_dir(storage_path('framework/cache')),
+            'storage_path' => storage_path(),
+            'base_path' => base_path(),
+            'writable_storage' => is_writable(storage_path()),
+            'writable_views' => is_writable(storage_path('framework/views')),
+            'php_version' => PHP_VERSION,
+            'session_driver' => config('session.driver'),
+            'db_connection' => config('database.default'),
+            'db_host' => config('database.connections.' . config('database.default') . '.host') ? 'SET' : null,
+            'db_password' => config('database.connections.' . config('database.default') . '.password') ? 'SET' : null,
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'error' => $e->getMessage(),
+            'file' => basename($e->getFile()) . ':' . $e->getLine(),
+            'class' => get_class($e),
+        ], 500);
+    }
+});
+
 // TEMP: diagnostic endpoint
 Route::get('/diag-token/{uuid}', function (string $uuid) {
     try {
