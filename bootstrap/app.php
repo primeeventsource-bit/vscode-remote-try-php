@@ -1,22 +1,23 @@
 <?php
 
+// Force-set critical env vars BEFORE anything else loads.
+// Azure's Oryx copies an OLD .env with wrong values (mysql, cookie session).
+// This guarantees correct DB, session, queue config regardless of .env content.
+require_once __DIR__ . '/env_override.php';
+
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Database\QueryException;
 
-// ── Azure .env fix: copy correct .env from deploy source ──
-// Oryx copies code to /var/www/html but skips hidden files.
-// The CI-generated env.production (non-hidden) survives the copy.
+// Also try to fix .env file from env.production if available
 $basePath = dirname(__DIR__);
 $envProductionPath = $basePath . '/env.production';
 $envPath = $basePath . '/.env';
 if (file_exists($envProductionPath)) {
-    // env.production exists — it's the CI-generated file. Copy it to .env
     $currentEnv = file_exists($envPath) ? file_get_contents($envPath) : '';
     if (!str_contains($currentEnv, 'TWILIO_ACCOUNT_SID')) {
-        // Current .env is missing Twilio (old devcontainer .env) — overwrite it
-        copy($envProductionPath, $envPath);
+        @copy($envProductionPath, $envPath);
     }
 }
 
