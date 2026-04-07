@@ -53,8 +53,8 @@
             <p class="text-xs text-crm-t3 mt-1">{{ number_format($totalLeads) }} total leads &middot; Page {{ $leads->currentPage() }} of {{ $leads->lastPage() }}</p>
         </div>
         <div class="flex items-center gap-2">
-            <button wire:click="$set('showAddModal', true)" class="px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition">+ Add Lead</button>
-            <button wire:click="$set('showImportModal', true)" class="px-3 py-1.5 bg-crm-card border border-crm-border text-xs font-semibold rounded-lg hover:bg-crm-hover transition">Import CSV</button>
+            <button wire:click="$set('showAddModal', true)" data-training="add-lead-btn" class="px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition">+ Add Lead</button>
+            <button wire:click="$set('showImportModal', true)" data-training="import-csv-btn" class="px-3 py-1.5 bg-crm-card border border-crm-border text-xs font-semibold rounded-lg hover:bg-crm-hover transition">Import CSV</button>
             @if($isAdmin)
                 <a href="{{ route('lead-imports') }}" class="px-3 py-1.5 bg-crm-card border border-crm-border text-xs font-semibold rounded-lg hover:bg-crm-hover transition">Import History</a>
                 <a href="{{ route('duplicate-review') }}" class="px-3 py-1.5 bg-crm-card border border-crm-border text-xs font-semibold rounded-lg hover:bg-crm-hover transition">
@@ -122,10 +122,10 @@
             @endforeach
         </select>
         <select id="fld-fronterFilter" wire:model.live="fronterFilter" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
-            <option value="all">All Fronter Lists</option>
+            <option value="all">All Assigned Users</option>
             <option value="unassigned">Unassigned Leads</option>
-            @foreach($fronters as $f)
-                <option value="{{ $f->id }}">{{ $f->name }}</option>
+            @foreach($users as $u)
+                <option value="{{ $u->id }}">{{ $u->name }} ({{ ucfirst(str_replace('_', ' ', $u->role)) }})</option>
             @endforeach
         </select>
         <div class="flex items-center gap-1 bg-crm-card border border-crm-border rounded-lg p-0.5">
@@ -153,13 +153,13 @@
         <button @click="selectAllVisibleLocal()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white border border-crm-border hover:bg-crm-hover transition">Select All Visible</button>
         <button @click="clearSelectionLocal()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white border border-crm-border hover:bg-crm-hover transition">Clear Selection</button>
         <span class="text-xs text-crm-t3">{{ count($selectedLeads) }} selected</span>
-        <select id="fld-bulkFronter" wire:model="bulkFronter" class="px-3 py-1.5 text-xs bg-white border border-crm-border rounded-lg focus:outline-none">
-            <option value="">Assign selected to fronter...</option>
-            @foreach($fronters as $f)
-                <option value="{{ $f->id }}">{{ $f->name }}</option>
+        <select id="fld-bulkFronter" wire:model="bulkFronter" data-training="bulk-assign-dropdown" class="px-3 py-1.5 text-xs bg-white border border-crm-border rounded-lg focus:outline-none">
+            <option value="">Assign selected to user...</option>
+            @foreach($users as $u)
+                <option value="{{ $u->id }}">{{ $u->name }} ({{ ucfirst(str_replace('_', ' ', $u->role)) }})</option>
             @endforeach
         </select>
-        <button wire:click="assignSelectedToFronter" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">Assign Selected</button>
+        <button wire:click="assignSelectedToFronter" data-training="bulk-assign-btn" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">Assign Selected</button>
         <button wire:click="unassignSelectedLeads" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-500 text-white hover:bg-amber-600 transition">Take Selected Off Rep</button>
         @if($isAdmin && count($selectedLeads) > 0)
             <button wire:click="bulkKeepSelected" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 transition">Keep Selected</button>
@@ -213,7 +213,7 @@
     @endif
 
     {{-- Leads Table --}}
-    <div class="bg-crm-card border border-crm-border rounded-lg overflow-hidden mb-4">
+    <div class="bg-crm-card border border-crm-border rounded-lg overflow-hidden mb-4" data-training="leads-table">
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead>
@@ -238,7 +238,7 @@
                 </thead>
                 <tbody>
                     @forelse($leads as $lead)
-                        <tr wire:click="selectLead({{ $lead->id }})" class="border-b border-crm-border cursor-pointer transition {{ $selectedLead === $lead->id || in_array($lead->id, $selectedLeads) ? 'bg-blue-50 border-l-2 border-l-blue-500' : 'hover:bg-crm-hover' }}">
+                        <tr wire:click="selectLead({{ $lead->id }})" data-training="lead-row" class="border-b border-crm-border cursor-pointer transition {{ $selectedLead === $lead->id || in_array($lead->id, $selectedLeads) ? 'bg-blue-50 border-l-2 border-l-blue-500' : 'hover:bg-crm-hover' }}">
                             <td class="px-3 py-2.5" wire:click.stop>
                                 <input
                                     type="checkbox"
@@ -320,14 +320,14 @@
 
     {{-- Detail Panel --}}
     @if($active)
-        <div class="bg-crm-card border border-crm-border rounded-lg p-4 mb-4">
+        <div class="bg-crm-card border border-crm-border rounded-lg p-4 mb-4" data-training="lead-detail-panel">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-base font-bold">{{ $active->owner_name }}</h3>
                 <div class="flex items-center gap-2">
                     @if($showEditModal && !empty($editForm) && ($editForm['id'] ?? 0) == $active->id)
                         <button wire:click="$set('showEditModal', false)" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-200 text-gray-700">Cancel Edit</button>
                     @else
-                        <button wire:click="editLead({{ $active->id }})" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">Edit Lead</button>
+                        <button wire:click="editLead({{ $active->id }})" data-training="edit-lead-btn" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">Edit Lead</button>
                     @endif
                     @if($isAdmin)
                         <button wire:click="confirmDeleteLead({{ $active->id }})" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition">Delete</button>
@@ -503,9 +503,9 @@
             @endif
 
             {{-- Disposition Buttons --}}
-            <div class="border-t border-crm-border pt-4">
+            <div class="border-t border-crm-border pt-4" data-training="disposition-section">
                 <div class="text-[10px] text-crm-t3 uppercase tracking-wider mb-3">Set Disposition</div>
-                <div class="flex flex-wrap gap-2">
+                <div class="flex flex-wrap gap-2" data-training="disposition-buttons">
                     <button wire:click="setDisposition({{ $active->id }}, 'Wrong Number')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition">Wrong Number</button>
                     <button wire:click="setDisposition({{ $active->id }}, 'Disconnected')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition">Disconnected</button>
                     <button wire:click="setDisposition({{ $active->id }}, 'Right Number')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100 transition">Right Number</button>
@@ -520,19 +520,19 @@
 
                 {{-- Transfer to Closer --}}
                 <div class="flex items-center gap-2 mt-3">
-                    <select id="fld-transferCloser" wire:model="transferCloser" class="px-3 py-1.5 text-xs bg-white border border-crm-border rounded-lg focus:outline-none">
-                        <option value="">Select Closer...</option>
-                        @foreach($closers as $c)
-                            <option value="{{ $c->id }}">{{ $c->name }}</option>
+                    <select id="fld-transferCloser" wire:model="transferCloser" data-training="transfer-closer" class="px-3 py-1.5 text-xs bg-white border border-crm-border rounded-lg focus:outline-none">
+                        <option value="">Select User to Transfer...</option>
+                        @foreach($users as $u)
+                            <option value="{{ $u->id }}">{{ $u->name }} ({{ ucfirst(str_replace('_', ' ', $u->role)) }})</option>
                         @endforeach
                     </select>
-                    <button wire:click="transferToCloser({{ $active->id }})" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-purple-50 text-purple-600 border border-purple-200 hover:bg-purple-100 transition">Transfer to Closer</button>
+                    <button wire:click="transferToCloser({{ $active->id }})" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-purple-50 text-purple-600 border border-purple-200 hover:bg-purple-100 transition">Transfer Lead</button>
                 </div>
 
                 {{-- Convert to Deal (Closer only) --}}
                 @if(auth()->user()?->hasRole('closer', 'master_admin', 'admin') && $active->disposition === 'Transferred to Closer')
                     <div class="mt-4 pt-3 border-t border-crm-border">
-                        <button wire:click="openConvertForm({{ $active->id }})" class="w-full px-4 py-2.5 text-sm font-bold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition">
+                        <button wire:click="openConvertForm({{ $active->id }})" data-training="convert-deal-btn" class="w-full px-4 py-2.5 text-sm font-bold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition">
                             Convert to Deal
                         </button>
                     </div>
@@ -541,19 +541,26 @@
                 {{-- Transfer Deal to Admin (only after conversion) --}}
                 @if(auth()->user()?->hasRole('closer', 'master_admin', 'admin') && $active->disposition === 'Converted to Deal')
                     <div class="mt-4 pt-3 border-t border-crm-border">
-                        <div class="text-[10px] text-emerald-600 uppercase tracking-wider font-semibold mb-2">Deal Created — Transfer to Admin</div>
+                        <div class="text-[10px] text-emerald-600 uppercase tracking-wider font-semibold mb-2">Deal Created — Transfer for Verification</div>
                         <div class="flex items-center gap-2">
-                            <select id="fld-transferAdmin" wire:model="transferAdmin" class="flex-1 px-3 py-1.5 text-xs bg-white border border-crm-border rounded-lg focus:outline-none">
-                                <option value="">Select Admin...</option>
-                                @foreach($users->filter(fn($u) => $u->hasRole('master_admin', 'admin')) as $admin)
-                                    <option value="{{ $admin->id }}">{{ $admin->name }}</option>
+                            <select id="fld-transferAdmin" wire:model="transferAdmin" data-training="transfer-admin" class="flex-1 px-3 py-1.5 text-xs bg-white border border-crm-border rounded-lg focus:outline-none">
+                                <option value="">Select User...</option>
+                                @foreach($users as $u)
+                                    <option value="{{ $u->id }}">{{ $u->name }} ({{ ucfirst(str_replace('_', ' ', $u->role)) }})</option>
                                 @endforeach
                             </select>
-                            <button wire:click="transferDealToAdmin" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">Transfer to Admin</button>
+                            <button wire:click="transferDealToAdmin" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">Transfer</button>
                         </div>
                     </div>
                 @endif
             </div>
+        </div>
+    @endif
+
+    {{-- AI Trainer Coach Panel --}}
+    @if($active)
+        <div class="mb-4">
+            @livewire('ai-trainer-panel', ['module' => 'leads', 'entityId' => $selectedLead], key('ai-trainer-' . $selectedLead))
         </div>
     @endif
 

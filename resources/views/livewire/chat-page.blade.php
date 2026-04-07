@@ -12,8 +12,8 @@
             <div class="flex items-center justify-between mb-2">
                 <h3 class="text-sm font-bold">Chat</h3>
                 <div class="flex items-center gap-1">
-                    <button wire:click="$set('newChatType', 'dm'); toggleNewChatForm()" class="text-[9px] font-semibold text-blue-600 hover:text-blue-700 px-1.5 py-0.5 rounded hover:bg-blue-50">+ DM</button>
-                    <button wire:click="$set('newChatType', 'group'); toggleNewChatForm()" class="text-[9px] font-semibold text-emerald-600 hover:text-emerald-700 px-1.5 py-0.5 rounded hover:bg-emerald-50">+ Group</button>
+                    <button wire:click="startNewDm" class="text-[9px] font-semibold text-blue-600 hover:text-blue-700 px-1.5 py-0.5 rounded hover:bg-blue-50">+ DM</button>
+                    <button wire:click="startNewGroup" class="text-[9px] font-semibold text-emerald-600 hover:text-emerald-700 px-1.5 py-0.5 rounded hover:bg-emerald-50">+ Group</button>
                 </div>
             </div>
             <input id="cp-chat-search" name="chatSearch" wire:model.live.debounce.300ms="chatSearch" type="text" placeholder="Search conversations..."
@@ -577,3 +577,29 @@
         @endif
     </div>
 </div>
+
+<script>
+// Auto-scroll message thread to bottom on load and when new messages arrive
+(function() {
+    function scrollToBottom() {
+        const el = document.getElementById('message-thread');
+        if (el) el.scrollTop = el.scrollHeight;
+    }
+
+    // Scroll on initial load
+    scrollToBottom();
+
+    // Scroll after Livewire updates (thread switch, new message)
+    document.addEventListener('livewire:morphed', scrollToBottom);
+
+    // Scroll on custom event from selectChat
+    document.addEventListener('scroll-to-bottom', () => {
+        setTimeout(scrollToBottom, 100);
+    });
+
+    // Also listen for Livewire dispatched events
+    if (typeof Livewire !== 'undefined') {
+        Livewire.on('scroll-to-bottom', () => setTimeout(scrollToBottom, 100));
+    }
+})();
+</script>

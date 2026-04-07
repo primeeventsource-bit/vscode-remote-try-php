@@ -49,7 +49,7 @@ class Meeting extends Model
 
     public function markEnded(): void
     {
-        $duration = $this->started_at ? now()->diffInSeconds($this->started_at) : 0;
+        $duration = $this->started_at ? max(0, (int) abs(now()->diffInSeconds($this->started_at))) : 0;
         $this->update(['status' => 'ended', 'ended_at' => now(), 'duration_seconds' => $duration]);
         $this->activeParticipants()->update(['attendance_status' => 'left', 'left_at' => now()]);
     }

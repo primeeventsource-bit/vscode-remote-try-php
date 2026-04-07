@@ -75,7 +75,88 @@ class ChatPage extends Component
         $this->messageInput = '';
         $this->showNewChatForm = false;
         $this->showInfoPanel = false;
+        $this->showManageMembers = false;
         try { $this->markChatAsSeen(); } catch (\Throwable $e) {}
+        $this->dispatch('scroll-to-bottom');
+    }
+
+    // New Chat shortcuts — avoid chained $set() + method in wire:click
+    public function startNewDm(): void
+    {
+        $this->newChatType = 'dm';
+        $this->selectedChat = null;
+        $this->showNewChatForm = true;
+        $this->showInfoPanel = false;
+        $this->newChatName = '';
+        $this->newChatMembers = [];
+        $this->newChatError = '';
+    }
+
+    public function startNewGroup(): void
+    {
+        $this->newChatType = 'group';
+        $this->selectedChat = null;
+        $this->showNewChatForm = true;
+        $this->showInfoPanel = false;
+        $this->newChatName = '';
+        $this->newChatMembers = [];
+        $this->newChatError = '';
+    }
+
+    // Override sendMessage to auto-scroll after send
+    public function sendMessage(): void
+    {
+        $text = trim($this->messageInput);
+        if (!$text || !$this->selectedChat) return;
+
+        $msg = $this->messageService()->sendText($this->selectedChat, auth()->id(), $text);
+        if ($msg) {
+            $this->messageInput = '';
+            $this->dispatch('scroll-to-bottom');
+        }
+    }
+
+    // Override createNewChat to auto-open the created chat
+    public function createNewChat(): void
+    {
+        $user = auth()->user();
+        if (!$user) return;
+
+        $this->newChatError = '';
+        $selectedMembers = array_values(array_unique(array_map('intval', $this->newChatMembers)));
+
+        if (empty($selectedMembers)) {
+            $this->newChatError = $this->newChatType === 'dm'
+                ? 'Select one person to start a direct message.'
+                : 'Select at least one member to create a group chat.';
+            return;
+        }
+
+        try {
+            if ($this->newChatType === 'dm') {
+                $otherUser = User::find($selectedMembers[0]);
+                if (!$otherUser) {
+                    $this->newChatError = 'The selected user could not be found.';
+                    return;
+                }
+                $chat = $this->chatService()->findOrCreateDirectChat($user, $otherUser);
+            } else {
+                $name = trim($this->newChatName) ?: 'Group Chat';
+                $chat = $this->chatService()->createGroupChat($user, $selectedMembers, $name);
+            }
+
+            $this->selectedChat = $chat->id;
+            $this->showNewChatForm = false;
+            $this->showInfoPanel = false;
+            $this->newChatName = '';
+            $this->newChatMembers = [];
+            $this->messageInput = '';
+            $this->newChatError = '';
+            $this->markChatAsSeen();
+            $this->dispatch('scroll-to-bottom');
+        } catch (\Throwable $e) {
+            $this->newChatError = 'Failed to create chat. Please try again.';
+        }
     }
 
     // ── Sidebar-only: Info Panel ─────────────────────────

@@ -60,7 +60,11 @@ class Deals extends Component
         $this->newDeal = $this->dealForm;
     }
 
-    public function selectDeal($id) { $this->selectedDeal = $this->selectedDeal === $id ? null : $id; }
+    public function selectDeal($id)
+    {
+        $this->selectedDeal = $this->selectedDeal === $id ? null : $id;
+        $this->dispatch('ai-trainer-entity', module: 'deals', entityId: $this->selectedDeal);
+    }
 
     public function saveDeal()
     {

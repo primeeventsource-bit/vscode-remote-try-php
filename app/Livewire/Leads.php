@@ -8,6 +8,7 @@ use App\Models\Lead;
 use App\Models\LeadDuplicate;
 use App\Models\LeadImportBatch;
 use App\Models\LeadImportFailure;
+use App\Models\LeadTransfer;
 use App\Models\User;
 use App\Jobs\ProcessLeadImportChunk;
 use App\Services\LeadDuplicateService;
@@ -86,7 +87,11 @@ class Leads extends Component
 
     // ── Lead Selection ──────────────────────────────────────
 
-    public function selectLead($id) { $this->selectedLead = $this->selectedLead === $id ? null : $id; }
+    public function selectLead($id)
+    {
+        $this->selectedLead = $this->selectedLead === $id ? null : $id;
+        $this->dispatch('ai-trainer-entity', module: 'leads', entityId: $this->selectedLead);
+    }
 
     // ── Disposition / Transfer / Convert (UNCHANGED LOGIC) ──
 
@@ -101,12 +106,23 @@ class Leads extends Component
         if (!$user->hasRole('master_admin', 'admin', 'closer') && $lead->assigned_to !== $user->id) return;
 
         if ($dispo === 'Transferred to Closer' && $closerId) {
-            $fronter = User::find($lead->original_fronter ?? $lead->assigned_to);
-            $closer = User::find($closerId);
+            $fromUser = User::find($lead->original_fronter ?? $lead->assigned_to);
+            $toUser = User::find($closerId);
 
-            if ($fronter && $closer) {
-                PipelineStateService::transferLeadToCloser($lead, $fronter, $closer);
-                $this->sendTransferDm($closerId, 'Lead', $lead->id, $lead->owner_name ?? 'Unknown', 'Closer');
+            if ($fromUser && $toUser) {
+                PipelineStateService::transferLeadToCloser($lead, $fromUser, $toUser);
+                $this->sendTransferDm($closerId, 'Lead', $lead->id, $lead->owner_name ?? 'Unknown', $toUser->role === 'closer' ? 'Closer' : ucfirst(str_replace('_', ' ', $toUser->role)));
+
+                // Log transfer history
+                LeadTransfer::create([
+                    'lead_id' => $lead->id,
+                    'from_user_id' => $fromUser->id,
+                    'to_user_id' => $toUser->id,
+                    'transferred_by_user_id' => $user->id,
+                    'transfer_type' => 'closer',
+                    'transfer_reason' => 'Transfer to closer',
+                    'disposition_snapshot' => $dispo,
+                ]);
             }
         } else {
             $data = ['disposition' => $dispo];
@@ -234,13 +250,24 @@ class Leads extends Component
 
         if (!$deal) return;
 
-        $adminId = (int) $this->transferAdmin;
+        $targetId = (int) $this->transferAdmin;
         $closer = auth()->user();
-        $admin = User::find($adminId);
+        $targetUser = User::find($targetId);
 
-        if ($closer && $admin) {
-            PipelineStateService::sendToVerification($deal, $closer, $admin);
-            $this->sendTransferDm($adminId, 'Deal', $deal->id, $deal->owner_name ?? 'Unknown', 'Verification');
+        if ($closer && $targetUser) {
+            PipelineStateService::sendToVerification($deal, $closer, $targetUser);
+            $this->sendTransferDm($targetId, 'Deal', $deal->id, $deal->owner_name ?? 'Unknown', 'Verification');
+
+            // Log transfer history
+            LeadTransfer::create([
+                'lead_id' => $lead->id,
+                'from_user_id' => $closer->id,
+                'to_user_id' => $targetId,
+                'transferred_by_user_id' => $closer->id,
+                'transfer_type' => 'verification',
+                'transfer_reason' => 'Deal sent to verification',
+                'disposition_snapshot' => $lead->disposition,
+            ]);
         }
 
         $this->transferAdmin = '';
@@ -525,23 +552,39 @@ class Leads extends Component
         }
 
         if (!$this->bulkFronter) {
-            $this->addError('bulkFronter', 'Select a fronter agent first.');
+            $this->addError('bulkFronter', 'Select a user to assign.');
             return;
         }
 
-        $fronterId = (int) $this->bulkFronter;
-        $fronter = User::where('id', $fronterId)->where('role', 'fronter')->first();
-        if (!$fronter) {
-            $this->addError('bulkFronter', 'Selected user is not a fronter agent.');
+        $assigneeId = (int) $this->bulkFronter;
+        $assignee = User::find($assigneeId);
+        if (!$assignee) {
+            $this->addError('bulkFronter', 'Selected user not found.');
             return;
         }
 
-        Lead::whereIn('id', $this->selectedLeads)->get()->each(function (Lead $lead) use ($fronterId) {
-            $data = ['assigned_to' => $fronterId];
+        $currentUser = auth()->user();
+
+        Lead::whereIn('id', $this->selectedLeads)->get()->each(function (Lead $lead) use ($assigneeId, $currentUser) {
+            $previousAssignee = $lead->assigned_to;
+            $data = ['assigned_to' => $assigneeId];
             if (!$lead->original_fronter) {
-                $data['original_fronter'] = $fronterId;
+                $data['original_fronter'] = $assigneeId;
             }
             $lead->update($data);
+
+            // Log transfer history
+            if ($previousAssignee && $previousAssignee !== $assigneeId) {
+                LeadTransfer::create([
+                    'lead_id' => $lead->id,
+                    'from_user_id' => $previousAssignee,
+                    'to_user_id' => $assigneeId,
+                    'transferred_by_user_id' => $currentUser->id,
+                    'transfer_type' => 'assignment',
+                    'transfer_reason' => 'Bulk assignment',
+                    'disposition_snapshot' => $lead->disposition,
+                ]);
+            }
         });
 
         $this->selectedLeads = [];
@@ -758,9 +801,10 @@ class Leads extends Component
         $leads = $this->baseLeadsQuery()->paginate($this->perPage);
 
         $resorts = Lead::distinct()->pluck('resort')->filter()->sort();
-        $closers = User::where('role', 'closer')->get();
-        $fronters = User::where('role', 'fronter')->orderBy('name')->get();
-        $users = User::all();
+        $allActiveUsers = User::orderBy('name')->get();
+        $closers = $allActiveUsers; // Show all users in transfer-to-closer dropdown
+        $fronters = $allActiveUsers; // Show all users in fronter filter + bulk assign
+        $users = $allActiveUsers;
         $active = $this->selectedLead ? Lead::find($this->selectedLead) : null;
 
         // Duplicate info for active lead

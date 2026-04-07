@@ -33,24 +33,33 @@ class MeetingRoom extends Component
 
     public function render()
     {
-        $meeting = $this->meetingId ? Meeting::with(['participants.user', 'host'])->find($this->meetingId) : null;
+        try {
+            $meeting = $this->meetingId ? Meeting::with(['participants.user', 'host'])->find($this->meetingId) : null;
 
-        if ($meeting) {
-            $this->meetingStatus = $meeting->status;
+            if ($meeting) {
+                $this->meetingStatus = $meeting->status;
+            }
+
+            $participants = $meeting ? $meeting->participants->map(fn ($p) => [
+                'id'     => $p->user_id,
+                'name'   => $p->user?->name ?? 'Unknown',
+                'avatar' => $p->user?->avatar ?? substr($p->user?->name ?? '?', 0, 2),
+                'color'  => $p->user?->color ?? '#6b7280',
+                'role'   => $p->role ?? 'participant',
+                'status' => $p->attendance_status ?? 'unknown',
+                'joined' => (bool) ($p->joined_at ?? false),
+            ]) : collect();
+
+            $isHost = $meeting && $meeting->host_user_id === auth()->id();
+
+            return view('livewire.meeting-room', compact('meeting', 'participants', 'isHost'));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('MeetingRoom render error', ['error' => $e->getMessage(), 'meeting' => $this->meetingId]);
+            $this->meetingStatus = 'ended';
+            $meeting = null;
+            $participants = collect();
+            $isHost = false;
+            return view('livewire.meeting-room', compact('meeting', 'participants', 'isHost'));
         }
-
-        $participants = $meeting ? $meeting->participants->map(fn ($p) => [
-            'id'     => $p->user_id,
-            'name'   => $p->user?->name ?? 'Unknown',
-            'avatar' => $p->user?->avatar ?? substr($p->user?->name ?? '?', 0, 2),
-            'color'  => $p->user?->color ?? '#6b7280',
-            'role'   => $p->role,
-            'status' => $p->attendance_status,
-            'joined' => (bool) $p->joined_at,
-        ]) : collect();
-
-        $isHost = $meeting && $meeting->host_user_id === auth()->id();
-
-        return view('livewire.meeting-room', compact('meeting', 'participants', 'isHost'));
     }
 }

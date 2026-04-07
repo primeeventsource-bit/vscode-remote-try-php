@@ -551,6 +551,13 @@
         </div>
     @endif
 
+    {{-- AI Trainer Coach Panel --}}
+    @if($active)
+        <div class="mb-4">
+            @livewire('ai-trainer-panel', ['module' => 'deals', 'entityId' => $selectedDeal], key('ai-trainer-deal-' . $selectedDeal))
+        </div>
+    @endif
+
     {{-- Edit Deal Modal --}}
     @if($showModal)
         <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center backdrop-blur-sm" wire:click.self="$set('showModal', false)">
