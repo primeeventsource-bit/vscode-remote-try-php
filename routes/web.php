@@ -292,14 +292,20 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::post('/meetings/{uuid}/leave', function (string $uuid) {
-        $meeting = \App\Models\Meeting::where('uuid', $uuid)->first();
-        if ($meeting) \App\Services\Meetings\MeetingService::leave($meeting, auth()->user());
+        try {
+            $meeting = \App\Models\Meeting::where('uuid', $uuid)->first();
+            $user = auth()->user();
+            if ($meeting && $user) \App\Services\Meetings\MeetingService::leave($meeting, $user);
+        } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('Meeting leave error', ['error' => $e->getMessage()]); }
         return response()->json(['ok' => true]);
     });
 
     Route::post('/meetings/{uuid}/end', function (string $uuid) {
-        $meeting = \App\Models\Meeting::where('uuid', $uuid)->first();
-        if ($meeting) \App\Services\Meetings\MeetingService::endMeeting($meeting, auth()->user());
+        try {
+            $meeting = \App\Models\Meeting::where('uuid', $uuid)->first();
+            $user = auth()->user();
+            if ($meeting && $user) \App\Services\Meetings\MeetingService::endMeeting($meeting, $user);
+        } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('Meeting end error', ['error' => $e->getMessage()]); }
         return response()->json(['ok' => true]);
     });
 
