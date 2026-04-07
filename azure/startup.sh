@@ -5,13 +5,24 @@
 # Starts: queue worker + scheduler as background processes.
 # ═══════════════════════════════════════════════════════
 
-cd /home/site/wwwroot
-
 echo "[Startup] $(date) — Initializing Laravel CRM..."
 
+# ── Copy .env to ALL possible app roots ──────────────
+# Azure Oryx copies code to /var/www/html but may skip hidden files.
+# The CI-generated .env is in /home/site/wwwroot/.env
+# We also save it as env.production (non-hidden) as a backup.
+if [ -f /home/site/wwwroot/.env ]; then
+    cp -f /home/site/wwwroot/.env /var/www/html/.env 2>/dev/null || true
+    echo "[Startup] Copied .env to /var/www/html/"
+fi
+if [ -f /home/site/wwwroot/env.production ]; then
+    cp -f /home/site/wwwroot/env.production /var/www/html/.env 2>/dev/null || true
+    echo "[Startup] Copied env.production to /var/www/html/.env"
+fi
+
+cd /home/site/wwwroot
+
 # ── Generate .env from Azure App Settings ────────────
-# GitHub Actions deploy wipes wwwroot — .env must be recreated every boot.
-# Azure injects App Settings as process env vars, so we dump them to .env.
 echo "[Startup] Writing .env from Azure App Settings..."
 cat > /home/site/wwwroot/.env << 'DOTENVEOF'
 APP_NAME="Prime CRM"

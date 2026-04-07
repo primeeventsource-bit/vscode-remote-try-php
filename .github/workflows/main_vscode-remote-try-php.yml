@@ -78,6 +78,7 @@ jobs:
             "OPENAI_API_KEY=${ENV_OPENAI_API_KEY}" \
             'OPENAI_MODEL=gpt-4o-mini' \
             > .env
+          cp .env env.production
           echo ".env generated with $(wc -l < .env) lines"
           grep -c "TWILIO" .env && echo "Twilio vars present"
 
