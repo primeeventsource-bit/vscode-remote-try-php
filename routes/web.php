@@ -29,8 +29,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/chat', fn () => redirect('/dashboard'))->name('chat');
     Route::get('/documents', \App\Livewire\Documents::class)->name('documents');
     Route::get('/spreadsheets', \App\Livewire\Spreadsheets::class)->name('spreadsheets');
+    // Prime Connect — standalone communication module
     Route::get('/calls', \App\Livewire\Calls::class)->name('calls');
-    Route::get('/video-call/{room?}', \App\Livewire\VideoCall::class)->name('video-call');
+    Route::get('/video-call/{room?}', fn() => redirect('/calls'))->name('video-call');
     Route::get('/meetings', fn() => redirect('/calls'))->name('meetings');
     Route::get('/training', \App\Livewire\Onboarding::class)->name('training');
     Route::get('/sales-training', \App\Livewire\SalesTraining::class)->name('sales-training');

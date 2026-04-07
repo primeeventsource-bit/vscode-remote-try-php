@@ -1,71 +1,164 @@
-<div class="h-[calc(100vh-3rem)] flex flex-col bg-gray-900" wire:ignore x-data="meetingApp()" x-init="init()">
+<style>
+    @keyframes pc-connect-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(37,99,235,0.4); } 50% { box-shadow: 0 0 0 12px rgba(37,99,235,0); } }
+    @keyframes pc-ring-wave { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(2.5); opacity: 0; } }
+    @keyframes pc-waveform { 0%, 100% { transform: scaleY(0.3); } 50% { transform: scaleY(1); } }
+    .pc-connecting { animation: pc-connect-pulse 2s ease-in-out infinite; }
+</style>
+
+<div class="h-[calc(100vh-3rem)] flex flex-col bg-pc-dark" wire:ignore x-data="meetingApp()" x-init="init()">
+
+    {{-- ═══ NOT FOUND STATE ═══ --}}
     @if($meetingStatus === 'not_found')
         <div class="flex-1 flex items-center justify-center">
-            <div class="text-center"><div class="text-4xl mb-3">❌</div><div class="text-white text-lg font-bold">Meeting not found</div><a href="/meetings" class="mt-4 inline-block px-4 py-2 text-sm text-white bg-blue-600 rounded-lg">Back to Meetings</a></div>
-        </div>
-    @elseif($meetingStatus === 'ended' || $meetingStatus === 'declined')
-        <div class="flex-1 flex items-center justify-center" x-init="cleanup()">
-            <div class="text-center"><div class="text-4xl mb-3">📴</div><div class="text-white text-lg font-bold">Meeting Ended</div><a href="/meetings" class="mt-4 inline-block px-4 py-2 text-sm text-white bg-blue-600 rounded-lg">Back to Meetings</a></div>
-        </div>
-    @elseif($meeting)
-        {{-- Header --}}
-        <div class="flex items-center justify-between px-4 py-3 bg-gray-800 flex-shrink-0">
-            <div class="flex items-center gap-3">
-                <span class="w-2.5 h-2.5 rounded-full animate-pulse" :class="connected ? 'bg-emerald-400' : 'bg-amber-400'"></span>
-                <span class="text-white text-sm font-semibold">{{ $meeting->title ?? 'Meeting' }}</span>
-                <span class="text-gray-400 text-xs" x-text="participantCount + ' in call'"></span>
-                <span class="text-gray-500 text-[10px]" x-show="!connected" x-cloak>Connecting...</span>
-            </div>
-            <div class="flex items-center gap-2">
-                @if($isHost)
-                    <button @click="endMeeting()" class="px-3 py-1.5 text-xs font-bold text-white bg-red-600 rounded-lg hover:bg-red-700">End Meeting</button>
-                @endif
-                <button @click="leaveMeeting()" class="px-3 py-1.5 text-xs font-bold text-gray-300 bg-gray-700 rounded-lg hover:bg-gray-600">Leave</button>
+            <div class="text-center max-w-sm">
+                <div class="w-20 h-20 mx-auto mb-5 rounded-2xl bg-pc-surface flex items-center justify-center">
+                    <svg class="w-10 h-10 text-pc-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                </div>
+                <div class="text-white text-lg font-bold mb-1">Session Not Found</div>
+                <p class="text-pc-muted text-sm mb-6">This Prime Connect session doesn't exist or has expired.</p>
+                <a href="/calls" class="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-pc-primary to-pc-accent rounded-xl hover:shadow-lg hover:shadow-pc-primary/30 transition-all">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                    Back to Prime Connect
+                </a>
             </div>
         </div>
 
-        {{-- Media error --}}
-        <div x-show="!!mediaError" x-cloak class="mx-4 mt-2 px-4 py-3 bg-amber-900/90 rounded-xl flex-shrink-0">
+    {{-- ═══ ENDED / DECLINED STATE ═══ --}}
+    @elseif($meetingStatus === 'ended' || $meetingStatus === 'declined')
+        <div class="flex-1 flex items-center justify-center" x-init="cleanup()">
+            <div class="text-center max-w-sm">
+                <div class="w-20 h-20 mx-auto mb-5 rounded-2xl bg-pc-surface flex items-center justify-center">
+                    <svg class="w-10 h-10 text-pc-end" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.517l2.257-1.13a1 1 0 00.502-1.21L9.228 3.683A1 1 0 008.279 3H5z"/>
+                    </svg>
+                </div>
+                <div class="text-white text-lg font-bold mb-1">Session Ended</div>
+                <p class="text-pc-muted text-sm mb-6">This Prime Connect session has ended.</p>
+                <a href="/calls" class="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-pc-primary to-pc-accent rounded-xl hover:shadow-lg hover:shadow-pc-primary/30 transition-all">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                    Back to Prime Connect
+                </a>
+            </div>
+        </div>
+
+    {{-- ═══ ACTIVE MEETING ═══ --}}
+    @elseif($meeting)
+        {{-- Header --}}
+        <div class="flex items-center justify-between px-5 py-3 bg-pc-surface/80 backdrop-blur-sm flex-shrink-0 border-b border-white/5">
             <div class="flex items-center gap-3">
-                <span class="text-amber-300 text-lg">⚠️</span>
+                {{-- Logo --}}
+                <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-pc-primary to-pc-accent flex items-center justify-center shadow-sm">
+                    <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0"/>
+                        <circle cx="12" cy="18" r="1" fill="currentColor" stroke="none"/>
+                    </svg>
+                </div>
+                {{-- Status --}}
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-white text-sm font-bold">{{ $meeting->title ?? 'Prime Connect' }}</span>
+                        <span class="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold" :class="connected ? 'bg-pc-live/20 text-pc-live' : 'bg-pc-ring/20 text-pc-ring'">
+                            <span class="w-1.5 h-1.5 rounded-full" :class="connected ? 'bg-pc-live animate-pulse' : 'bg-pc-ring animate-pulse'"></span>
+                            <span x-text="connected ? 'Live' : 'Connecting...'"></span>
+                        </span>
+                    </div>
+                    <div class="text-pc-muted text-[11px] mt-0.5">
+                        <span x-text="participantCount"></span> participant<span x-show="participantCount !== 1">s</span>
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                @if($isHost)
+                    <button @click="endMeeting()" class="px-4 py-2 text-xs font-bold text-white bg-pc-end rounded-lg hover:brightness-110 transition flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                        End for All
+                    </button>
+                @endif
+                <button @click="leaveMeeting()" class="px-4 py-2 text-xs font-bold text-pc-muted bg-pc-panel rounded-lg hover:bg-white/10 transition">Leave</button>
+            </div>
+        </div>
+
+        {{-- Media Error --}}
+        <div x-show="!!mediaError" x-cloak x-transition class="mx-4 mt-3 px-4 py-3 bg-pc-ring/10 border border-pc-ring/30 rounded-xl flex-shrink-0">
+            <div class="flex items-center gap-3">
+                <svg class="w-5 h-5 text-pc-ring flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
                 <div class="flex-1">
-                    <div class="text-amber-200 text-xs" x-text="mediaError"></div>
-                    <button @click="retryMedia()" class="mt-1 px-3 py-1 text-[10px] font-bold text-white bg-blue-500 rounded-lg">Retry</button>
+                    <div class="text-pc-ring text-xs font-medium" x-text="mediaError"></div>
+                    <button @click="retryMedia()" class="mt-1.5 px-3 py-1 text-[10px] font-bold text-white bg-pc-primary rounded-lg hover:brightness-110 transition">Retry Camera & Mic</button>
                 </div>
             </div>
         </div>
 
-        {{-- Video grid --}}
+        {{-- Video Grid --}}
         <div class="flex-1 p-4 overflow-hidden">
-            <div class="grid gap-3 h-full" :class="participantCount <= 1 ? 'grid-cols-1' : (participantCount <= 4 ? 'grid-cols-2' : 'grid-cols-3')" id="meeting-video-grid">
-                {{-- Local preview --}}
-                <div class="relative bg-gray-800 rounded-lg overflow-hidden">
+            <div class="grid gap-3 h-full" :class="participantCount <= 1 ? 'grid-cols-1 max-w-2xl mx-auto' : (participantCount <= 4 ? 'grid-cols-2' : 'grid-cols-2 lg:grid-cols-3')" id="meeting-video-grid">
+                {{-- Local Preview --}}
+                <div class="relative bg-pc-surface rounded-2xl overflow-hidden shadow-lg ring-1 ring-white/10">
                     <video id="local-video" autoplay muted playsinline class="w-full h-full object-cover"></video>
-                    <div x-show="!cameraOn" class="absolute inset-0 flex items-center justify-center bg-gray-700">
-                        <div class="w-20 h-20 rounded-full bg-blue-600 flex items-center justify-center text-white text-3xl font-bold">{{ substr(auth()->user()->name, 0, 2) }}</div>
+                    <div x-show="!cameraOn" class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-pc-surface to-pc-dark">
+                        <div class="w-20 h-20 rounded-full bg-gradient-to-br from-pc-primary to-pc-accent flex items-center justify-center text-white text-3xl font-bold shadow-lg">{{ substr(auth()->user()->name, 0, 2) }}</div>
                     </div>
-                    <div class="absolute bottom-2 left-2 px-2 py-0.5 bg-black/60 rounded text-white text-[10px] font-semibold">You</div>
-                    <span x-show="!micOn" class="absolute top-2 right-2 px-1.5 py-0.5 bg-red-500/80 rounded text-white text-[8px]">Muted</span>
+                    <div class="absolute bottom-3 left-3 flex items-center gap-1.5 px-2.5 py-1 bg-black/50 backdrop-blur-sm rounded-lg">
+                        <span class="text-white text-[11px] font-semibold">You</span>
+                    </div>
+                    <span x-show="!micOn" x-cloak class="absolute top-3 right-3 w-7 h-7 flex items-center justify-center bg-pc-end/90 rounded-full shadow-sm">
+                        <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/><path stroke-linecap="round" stroke-linejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/></svg>
+                    </span>
                 </div>
                 {{-- Remote participants render here dynamically via JS --}}
             </div>
         </div>
 
-        {{-- Controls --}}
-        <div class="flex items-center justify-center gap-4 py-4 bg-gray-800 flex-shrink-0">
-            <button @click="toggleMic()" :class="micOn ? 'bg-gray-600 hover:bg-gray-500' : 'bg-red-600 hover:bg-red-700'" class="w-12 h-12 rounded-full flex items-center justify-center text-white text-lg transition">
-                <span x-text="micOn ? '🎙️' : '🔇'"></span>
+        {{-- Control Dock --}}
+        <div class="flex items-center justify-center gap-3 py-5 bg-pc-surface/60 backdrop-blur-sm flex-shrink-0 border-t border-white/5">
+            {{-- Mic Toggle --}}
+            <button @click="toggleMic()" class="group relative w-14 h-14 rounded-full flex items-center justify-center text-white transition-all duration-200"
+                :class="micOn ? 'bg-pc-panel hover:bg-white/15' : 'bg-pc-end hover:brightness-110'">
+                <template x-if="micOn">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
+                </template>
+                <template x-if="!micOn">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/><path stroke-linecap="round" stroke-linejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/></svg>
+                </template>
+                <span class="absolute -bottom-5 text-[9px] font-semibold" :class="micOn ? 'text-pc-muted' : 'text-pc-end'" x-text="micOn ? 'Mic On' : 'Muted'"></span>
             </button>
-            <button @click="toggleCamera()" :class="cameraOn ? 'bg-gray-600 hover:bg-gray-500' : 'bg-red-600 hover:bg-red-700'" class="w-12 h-12 rounded-full flex items-center justify-center text-white text-lg transition">
-                <span x-text="cameraOn ? '📹' : '📷'"></span>
+
+            {{-- Camera Toggle --}}
+            <button @click="toggleCamera()" class="group relative w-14 h-14 rounded-full flex items-center justify-center text-white transition-all duration-200"
+                :class="cameraOn ? 'bg-pc-panel hover:bg-white/15' : 'bg-pc-end hover:brightness-110'">
+                <template x-if="cameraOn">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                </template>
+                <template x-if="!cameraOn">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/><path stroke-linecap="round" stroke-linejoin="round" d="M3 3l18 18"/></svg>
+                </template>
+                <span class="absolute -bottom-5 text-[9px] font-semibold" :class="cameraOn ? 'text-pc-muted' : 'text-pc-end'" x-text="cameraOn ? 'Camera On' : 'Camera Off'"></span>
             </button>
-            <button @click="leaveMeeting()" class="w-14 h-14 rounded-full bg-red-600 hover:bg-red-700 flex items-center justify-center text-white transition shadow-lg" title="Leave">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.517l2.257-1.13a1 1 0 00.502-1.21L9.228 3.683A1 1 0 008.279 3H5z"/></svg>
+
+            {{-- End Call --}}
+            <button @click="leaveMeeting()" class="group relative w-16 h-16 rounded-full bg-pc-end hover:brightness-110 flex items-center justify-center text-white transition-all duration-200 shadow-lg shadow-pc-end/30 hover:shadow-pc-end/50 hover:scale-105">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.517l2.257-1.13a1 1 0 00.502-1.21L9.228 3.683A1 1 0 008.279 3H5z"/></svg>
+                <span class="absolute -bottom-5 text-[9px] font-semibold text-pc-end">End</span>
             </button>
         </div>
+
+    {{-- ═══ LOADING STATE ═══ --}}
     @else
         <div class="flex-1 flex items-center justify-center">
-            <div class="text-center"><div class="text-3xl mb-3 animate-spin">⏳</div><div class="text-gray-400 text-sm">Loading meeting...</div></div>
+            <div class="text-center">
+                <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-pc-primary to-pc-accent flex items-center justify-center pc-connecting">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0"/>
+                        <circle cx="12" cy="18" r="1" fill="currentColor" stroke="none"/>
+                    </svg>
+                </div>
+                <div class="text-white text-sm font-semibold">Connecting to Prime Connect...</div>
+                <div class="flex items-center justify-center gap-[3px] h-4 mt-3">
+                    @for($i = 0; $i < 5; $i++)
+                        <div class="w-[3px] bg-pc-primary rounded-full" style="animation: pc-waveform 1s ease-in-out {{ $i * 0.12 }}s infinite; height: 100%;"></div>
+                    @endfor
+                </div>
+            </div>
         </div>
     @endif
 </div>
@@ -73,10 +166,9 @@
 @if($meeting && !$meeting->isEnded())
 <script src="https://sdk.twilio.com/js/video/releases/2.28.1/twilio-video.min.js"></script>
 <script>
-// Store Twilio objects OUTSIDE Alpine to avoid Proxy conflicts.
 let _twilioRoom = null;
 let _twilioLocalTracks = [];
-let _twilioConnecting = false;  // Guard against duplicate connect calls
+let _twilioConnecting = false;
 
 function meetingApp() {
     return {
@@ -88,9 +180,7 @@ function meetingApp() {
         meetingUuid: @json($uuid),
 
         async init() {
-            // Guard: if already connected or connecting, skip
             if (_twilioRoom || _twilioConnecting) {
-                console.log('[Meeting] Already connected/connecting, skipping init');
                 if (_twilioRoom) this.connected = true;
                 return;
             }
@@ -98,32 +188,25 @@ function meetingApp() {
         },
 
         async connectToRoom() {
-            // Double-check guard
-            if (_twilioRoom || _twilioConnecting) {
-                console.log('[Meeting] Blocked duplicate connect');
-                return;
-            }
+            if (_twilioRoom || _twilioConnecting) return;
             _twilioConnecting = true;
 
             try {
-                // 1. Get token
                 const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
-                console.log('[Meeting] Requesting token...');
                 const res = await fetch('/meetings/' + this.meetingUuid + '/token', {
                     method: 'POST', credentials: 'same-origin',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
                 });
                 if (!res.ok) {
-                    let errMsg = 'Failed to get meeting token (' + res.status + ')';
+                    let errMsg = 'Failed to get session token (' + res.status + ')';
                     try { const body = await res.json(); errMsg += ': ' + (body.error || ''); } catch(e) {}
                     this.mediaError = errMsg;
                     _twilioConnecting = false;
                     return;
                 }
                 const data = await res.json();
-                console.log('[Meeting] Token received, room:', data.room);
 
-                // 2. Get local media
+                // Get local media with graceful fallback
                 let localTracks = [];
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -136,9 +219,9 @@ function meetingApp() {
                         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                         localTracks = [new Twilio.Video.LocalAudioTrack(stream.getAudioTracks()[0])];
                         this.cameraOn = false;
-                        this.mediaError = 'Camera unavailable. Audio only.';
+                        this.mediaError = 'Camera unavailable — audio only mode.';
                     } catch(e2) {
-                        this.mediaError = 'Camera and mic blocked. Click lock icon to allow.';
+                        this.mediaError = 'Camera and mic blocked. Click the lock icon in your browser to allow.';
                         this.micOn = false; this.cameraOn = false;
                     }
                 }
@@ -150,8 +233,7 @@ function meetingApp() {
                 }
                 _twilioLocalTracks = localTracks;
 
-                // 3. Connect to Twilio Video Room
-                console.log('[Meeting] Connecting to Twilio room:', data.room);
+                // Connect to Twilio
                 _twilioRoom = await Twilio.Video.connect(data.token, {
                     name: data.room,
                     tracks: localTracks,
@@ -162,47 +244,25 @@ function meetingApp() {
                 _twilioConnecting = false;
                 this.connected = true;
                 this.participantCount = _twilioRoom.participants.size + 1;
-                console.log('[Meeting] Connected! Room SID:', _twilioRoom.sid, 'Participants:', _twilioRoom.participants.size);
 
-                // 4. Handle existing participants
                 _twilioRoom.participants.forEach(p => this.handleParticipant(p));
 
-                // 5. Room event listeners (registered ONCE)
                 _twilioRoom.on('participantConnected', p => {
-                    console.log('[Meeting] Participant joined:', p.identity);
                     this.handleParticipant(p);
                     if (_twilioRoom) this.participantCount = _twilioRoom.participants.size + 1;
                 });
 
                 _twilioRoom.on('participantDisconnected', p => {
-                    console.log('[Meeting] Participant left:', p.identity);
                     const el = document.getElementById('remote-' + p.identity);
                     if (el) el.remove();
                     if (_twilioRoom) this.participantCount = _twilioRoom.participants.size + 1;
                 });
 
-                _twilioRoom.on('reconnecting', error => {
-                    console.warn('[Meeting] Reconnecting...', error?.message);
-                    this.mediaError = 'Reconnecting...';
-                });
-
-                _twilioRoom.on('reconnected', () => {
-                    console.log('[Meeting] Reconnected');
-                    this.mediaError = '';
-                    this.connected = true;
-                });
-
-                _twilioRoom.on('disconnected', (room, error) => {
-                    console.log('[Meeting] Disconnected', error?.message || 'clean');
-                    this.connected = false;
-                    // Do NOT call cleanup() here — it causes re-entrant disconnect.
-                    // Just null the reference so init() guard allows reconnect if needed.
-                    _twilioRoom = null;
-                    _twilioConnecting = false;
-                });
+                _twilioRoom.on('reconnecting', () => { this.mediaError = 'Reconnecting...'; });
+                _twilioRoom.on('reconnected', () => { this.mediaError = ''; this.connected = true; });
+                _twilioRoom.on('disconnected', () => { this.connected = false; _twilioRoom = null; _twilioConnecting = false; });
 
             } catch(e) {
-                console.error('[Meeting] Connect error:', e);
                 this.mediaError = 'Connection failed: ' + e.message;
                 _twilioConnecting = false;
             }
@@ -216,10 +276,10 @@ function meetingApp() {
             if (!container) {
                 container = document.createElement('div');
                 container.id = 'remote-' + participant.identity;
-                container.className = 'relative bg-gray-800 rounded-lg overflow-hidden';
+                container.className = 'relative bg-pc-surface rounded-2xl overflow-hidden shadow-lg ring-1 ring-white/10';
                 const label = document.createElement('div');
-                label.className = 'absolute bottom-2 left-2 px-2 py-0.5 bg-black/60 rounded text-white text-[10px] font-semibold z-10';
-                label.textContent = participant.identity.replace('user-', 'User ');
+                label.className = 'absolute bottom-3 left-3 flex items-center gap-1.5 px-2.5 py-1 bg-black/50 backdrop-blur-sm rounded-lg z-10';
+                label.innerHTML = '<span class="text-white text-[11px] font-semibold">' + participant.identity.replace('user-', 'User ') + '</span>';
                 container.appendChild(label);
                 grid.appendChild(container);
             }
@@ -276,35 +336,19 @@ function meetingApp() {
         },
 
         cleanup() {
-            console.log('[Meeting] Cleanup called');
-            if (_twilioRoom) {
-                try { _twilioRoom.disconnect(); } catch(e) {}
-                _twilioRoom = null;
-            }
+            if (_twilioRoom) { try { _twilioRoom.disconnect(); } catch(e) {} _twilioRoom = null; }
             _twilioConnecting = false;
-            _twilioLocalTracks.forEach(t => {
-                try { t.stop(); } catch(e) {}
-                try { t.detach().forEach(el => el.remove()); } catch(e) {}
-            });
+            _twilioLocalTracks.forEach(t => { try { t.stop(); } catch(e) {} try { t.detach().forEach(el => el.remove()); } catch(e) {} });
             _twilioLocalTracks = [];
             document.querySelectorAll('audio[autoplay]').forEach(el => el.remove());
-        },
-
-        destroy() {
-            // Called when Alpine component is destroyed (page leave)
-            this.cleanup();
         }
     }
 }
 
-// Clean disconnect on page unload
 window.addEventListener('beforeunload', () => {
-    if (_twilioRoom) {
-        try { _twilioRoom.disconnect(); } catch(e) {}
-        _twilioRoom = null;
-    }
+    if (_twilioRoom) { try { _twilioRoom.disconnect(); } catch(e) {} _twilioRoom = null; }
 });
 </script>
 @else
-<script>function meetingApp() { return { micOn: true, cameraOn: true, connected: false, mediaError: '', participantCount: 0, meetingUuid: '', init() {}, toggleMic() {}, toggleCamera() {}, cleanup() {}, leaveMeeting() {}, endMeeting() {}, retryMedia() {} } }</script>
+<script>function meetingApp() { return { micOn:true, cameraOn:true, connected:false, mediaError:'', participantCount:0, meetingUuid:'', init(){}, toggleMic(){}, toggleCamera(){}, cleanup(){}, leaveMeeting(){}, endMeeting(){}, retryMedia(){} } }</script>
 @endif
