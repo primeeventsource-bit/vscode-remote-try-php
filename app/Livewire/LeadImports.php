@@ -28,6 +28,33 @@ class LeadImports extends Component
         $this->failureFilter = 'all';
     }
 
+    public function forceCompleteBatch(int $id): void
+    {
+        $user = auth()->user();
+        if (!$user || !$user->hasRole('master_admin', 'admin')) return;
+
+        $batch = LeadImportBatch::find($id);
+        if (!$batch || !in_array($batch->status, ['pending', 'processing'])) return;
+
+        // Count actual leads imported for this batch
+        $importedCount = \App\Models\Lead::where('import_batch_id', $id)->count();
+
+        $batch->update([
+            'status' => 'completed',
+            'completed_at' => now(),
+            'successful_rows' => $importedCount,
+            'processed_rows' => $batch->total_rows,
+            'summary_json' => [
+                'total' => $batch->total_rows,
+                'imported' => $importedCount,
+                'duplicates' => $batch->duplicate_rows,
+                'invalid' => $batch->invalid_rows,
+                'failed' => $batch->total_rows - $importedCount - $batch->duplicate_rows - $batch->invalid_rows,
+                'force_completed' => true,
+            ],
+        ]);
+    }
+
     public function retryBatch(int $id): void
     {
         $batch = LeadImportBatch::find($id);

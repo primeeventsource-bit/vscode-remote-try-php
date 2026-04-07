@@ -79,6 +79,9 @@
                                     @if($import->status === 'failed' && auth()->user()?->hasRole('master_admin', 'admin'))
                                         <button wire:click="retryBatch({{ $import->id }})" class="px-2 py-1 text-[10px] font-semibold rounded bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 transition">Retry</button>
                                     @endif
+                                    @if(in_array($import->status, ['pending', 'processing']) && auth()->user()?->hasRole('master_admin', 'admin'))
+                                        <button wire:click="forceCompleteBatch({{ $import->id }})" wire:confirm="Force-complete this stuck batch? It will count actual imported leads." class="px-2 py-1 text-[10px] font-semibold rounded bg-amber-50 text-amber-600 border border-amber-200 hover:bg-amber-100 transition">Force Complete</button>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
