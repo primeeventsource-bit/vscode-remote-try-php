@@ -5,7 +5,22 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Database\QueryException;
 
-return Application::configure(basePath: dirname(__DIR__))
+// ── Azure .env fix: copy correct .env from deploy source ──
+// Oryx copies code to /var/www/html but skips hidden files.
+// The CI-generated env.production (non-hidden) survives the copy.
+$basePath = dirname(__DIR__);
+$envProductionPath = $basePath . '/env.production';
+$envPath = $basePath . '/.env';
+if (file_exists($envProductionPath)) {
+    // env.production exists — it's the CI-generated file. Copy it to .env
+    $currentEnv = file_exists($envPath) ? file_get_contents($envPath) : '';
+    if (!str_contains($currentEnv, 'TWILIO_ACCOUNT_SID')) {
+        // Current .env is missing Twilio (old devcontainer .env) — overwrite it
+        copy($envProductionPath, $envPath);
+    }
+}
+
+return Application::configure(basePath: $basePath)
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',

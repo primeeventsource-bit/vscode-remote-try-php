@@ -8,7 +8,8 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    'default' => env('DB_CONNECTION', 'mysql'),
+    // Default to sqlsrv — Azure SQL Server is the production DB
+    'default' => env('DB_CONNECTION', 'sqlsrv'),
 
     /*
     |--------------------------------------------------------------------------
