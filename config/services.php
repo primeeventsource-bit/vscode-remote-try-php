@@ -7,9 +7,9 @@ return [
     ],
 
     'twilio' => [
-        'account_sid' => env('TWILIO_ACCOUNT_SID'),
-        'api_key_sid' => env('TWILIO_API_KEY_SID'),
-        'api_key_secret' => env('TWILIO_API_KEY_SECRET'),
+        'account_sid' => env('TWILIO_ACCOUNT_SID', 'AC144cda6c0249d7b13930171e0036e2d9'),
+        'api_key_sid' => env('TWILIO_API_KEY_SID', 'SK7dddde7820f0606e555754d3adc16208'),
+        'api_key_secret' => env('TWILIO_API_KEY_SECRET', '3pNFG87oVODXXNffxOXbIWF1JnwpwlOo'),
     ],
 
     'gifs' => [
