@@ -3,30 +3,47 @@
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
-// TEMP: diagnostic endpoint to check why meetings token returns 503
+// TEMP: diagnostic endpoint
 Route::get('/diag-token/{uuid}', function (string $uuid) {
     try {
         $meeting = \App\Models\Meeting::where('uuid', $uuid)->first();
-        $sid = env('TWILIO_ACCOUNT_SID') ?: config('twilio.account_sid');
-        $key = env('TWILIO_API_KEY_SID') ?: config('twilio.api_key_sid');
-        $sec = env('TWILIO_API_KEY_SECRET') ?: config('twilio.api_key_secret');
+
+        // Test EVERY way to read an env value
+        $envDirect = getenv('TWILIO_ACCOUNT_SID');
+        $envFunc = env('TWILIO_ACCOUNT_SID');
+        $envServer = $_SERVER['TWILIO_ACCOUNT_SID'] ?? null;
+        $envEnv = $_ENV['TWILIO_ACCOUNT_SID'] ?? null;
+        $configTwilio = config('twilio.account_sid');
+        $configSvc = config('services.twilio.account_sid');
+
+        // Read .env file directly
+        $envFileContent = '';
+        $envPath = base_path('.env');
+        if (file_exists($envPath)) {
+            $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            foreach ($lines as $line) {
+                if (str_starts_with($line, 'TWILIO_ACCOUNT_SID=')) {
+                    $envFileContent = $line;
+                    break;
+                }
+            }
+        }
 
         $result = [
             'meeting_found' => $meeting !== null,
             'meeting_status' => $meeting?->status,
-            'meeting_room' => $meeting?->provider_room_name,
-            'twilio_sid' => $sid ? substr($sid, 0, 8) . '...' : null,
-            'twilio_key' => $key ? substr($key, 0, 8) . '...' : null,
-            'twilio_sec' => $sec ? 'SET' : null,
-            'env_file' => file_exists(base_path('.env')),
             'php_version' => PHP_VERSION,
+            'env_file_exists' => file_exists($envPath),
+            'env_file_twilio_line' => $envFileContent,
+            'getenv' => $envDirect ? substr($envDirect, 0, 10) . '...' : null,
+            'env_func' => $envFunc ? substr($envFunc, 0, 10) . '...' : null,
+            'server_var' => $envServer ? substr($envServer, 0, 10) . '...' : null,
+            'env_var' => $envEnv ? substr($envEnv, 0, 10) . '...' : null,
+            'config_twilio' => $configTwilio ? substr($configTwilio, 0, 10) . '...' : null,
+            'config_svc' => $configSvc ? substr($configSvc, 0, 10) . '...' : null,
+            'config_cached' => file_exists(base_path('bootstrap/cache/config.php')),
+            'dotenv_loaded' => env('APP_ENV'),
         ];
-
-        if ($meeting && $sid && $key && $sec) {
-            $token = \App\Services\Twilio\TwilioVideoTokenService::generateToken('test-user', $meeting->provider_room_name);
-            $result['token_generated'] = $token !== null;
-            $result['token_length'] = $token ? strlen($token) : 0;
-        }
 
         return response()->json($result);
     } catch (\Throwable $e) {
