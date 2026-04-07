@@ -51,8 +51,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/chat', \App\Livewire\ChatPage::class)->name('chat');
     Route::get('/documents', \App\Livewire\Documents::class)->name('documents');
     Route::get('/spreadsheets', \App\Livewire\Spreadsheets::class)->name('spreadsheets');
+    Route::get('/calls', \App\Livewire\Calls::class)->name('calls');
     Route::get('/video-call/{room?}', \App\Livewire\VideoCall::class)->name('video-call');
-    Route::get('/meetings', \App\Livewire\Meetings::class)->name('meetings');
+    Route::get('/meetings', fn() => redirect('/calls'))->name('meetings');
     Route::get('/training', \App\Livewire\Onboarding::class)->name('training');
     Route::get('/sales-training', \App\Livewire\SalesTraining::class)->name('sales-training');
     Route::get('/daily-sales', \App\Livewire\DailySalesSystem::class)->name('daily-sales');

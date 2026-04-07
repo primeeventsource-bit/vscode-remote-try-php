@@ -103,8 +103,7 @@
                     ]],
                     ['title' => 'COMMUNICATION', 'items' => [
                         ['route' => 'chat',         'icon' => '💬', 'label' => 'Chat',            'perm' => null, 'enabled' => $chatEnabled],
-                        ['route' => 'meetings',     'icon' => '🎥', 'label' => 'Meetings',        'perm' => null],
-                        ['route' => 'video-call',   'icon' => '📹', 'label' => 'Video Calls',      'perm' => null],
+                        ['route' => 'calls',        'icon' => '📞', 'label' => 'Calls',           'perm' => null],
                     ]],
                     ['title' => 'WORKSPACE', 'items' => [
                         ['route' => 'documents',    'icon' => '📄', 'label' => 'Documents',       'perm' => 'view_documents', 'enabled' => $documentsEnabled],
