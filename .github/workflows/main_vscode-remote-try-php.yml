@@ -57,7 +57,7 @@ jobs:
             'DB_PORT=1433' \
             "DB_DATABASE=${ENV_DB_DATABASE}" \
             "DB_USERNAME=${ENV_DB_USERNAME}" \
-            "DB_PASSWORD=${ENV_DB_PASSWORD}" \
+            "DB_PASSWORD='${ENV_DB_PASSWORD}'" \
             'SESSION_DRIVER=file' \
             'SESSION_LIFETIME=120' \
             'SESSION_ENCRYPT=true' \
