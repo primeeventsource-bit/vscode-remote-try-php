@@ -129,6 +129,10 @@
                             @if($chatUnread > 0)
                                 <span class="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full {{ $isDm ? 'badge-blink-blue' : 'badge-blink-red' }}"></span>
                             @endif
+                            @if($isDm && $other)
+                                @php $ps = $other->presence_status ?? 'offline'; @endphp
+                                <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white {{ match($ps) { 'online' => 'bg-emerald-500', 'idle' => 'bg-amber-400', default => 'bg-gray-400' } }}" title="{{ match($ps) { 'online' => 'Active', 'idle' => 'Idle', default => 'Offline' } }}"></span>
+                            @endif
                         </div>
                         {{-- Content --}}
                         <div class="min-w-0 flex-1">
@@ -233,9 +237,19 @@
                     <span class="text-crm-t3">#</span>
                 @endif
                 <h4 class="text-sm font-bold">{{ $activeChat->name ?? 'Chat' }}</h4>
-                <span class="text-[10px] text-crm-t3">
-                    {{ count($memberIds) }} member{{ count($memberIds) !== 1 ? 's' : '' }}
-                </span>
+                @if($activeChat->isDirect())
+                    @php
+                        $otherId = collect($memberIds)->first(fn($m) => (int)$m !== auth()->id());
+                        $otherUser = $otherId ? ($users[$otherId] ?? null) : null;
+                    @endphp
+                    @if($otherUser)
+                        @include('livewire.partials.presence-badge', ['user' => $otherUser])
+                    @endif
+                @else
+                    <span class="text-[10px] text-crm-t3">
+                        {{ count($memberIds) }} member{{ count($memberIds) !== 1 ? 's' : '' }}
+                    </span>
+                @endif
                 {{-- Call buttons — Video + Audio --}}
                 <div class="ml-auto flex items-center gap-1.5">
                     @if($activeChat->type === 'dm')

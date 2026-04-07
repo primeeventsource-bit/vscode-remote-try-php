@@ -167,10 +167,22 @@
                             <div class="relative flex-shrink-0">
                                 <div class="flex h-8 w-8 items-center justify-center rounded-full text-[9px] font-bold text-white" style="background:{{ $bg }}">{{ $initials }}</div>
                                 @if($chatUnread > 0)<span class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full wdg-badge-red"></span>@endif
+                                @if($other ?? false)
+                                    @php $ps = $other->presence_status ?? 'offline'; @endphp
+                                    <span class="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-white {{ match($ps) { 'online' => 'bg-emerald-500', 'idle' => 'bg-amber-400', default => 'bg-gray-400' } }}"></span>
+                                @endif
                             </div>
                             <div class="min-w-0 flex-1">
                                 <div class="truncate text-xs {{ $chatUnread > 0 ? 'font-bold' : 'font-semibold' }}">{{ $displayName }}</div>
-                                <div class="text-[10px] text-crm-t3">{{ $chat->updated_at?->diffForHumans() ?? '' }}</div>
+                                <div class="text-[10px] text-crm-t3">
+                                    @if(($other ?? false) && ($other->presence_status ?? 'offline') === 'online')
+                                        <span class="text-emerald-500">Active</span>
+                                    @elseif(($other ?? false) && ($other->presence_status ?? 'offline') === 'idle')
+                                        <span class="text-amber-500">Idle</span>
+                                    @else
+                                        {{ $chat->updated_at?->diffForHumans() ?? '' }}
+                                    @endif
+                                </div>
                             </div>
                             @if($chatUnread > 0)
                                 <span class="min-w-[16px] h-[16px] flex items-center justify-center text-[8px] font-bold text-white rounded-full px-1 wdg-badge-red">{{ $chatUnread }}</span>
