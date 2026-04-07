@@ -29,11 +29,19 @@ Route::get('/diag-token/{uuid}', function (string $uuid) {
             }
         }
 
+        // Also get file line count and all TWILIO lines
+        $allLines = file_exists($envPath) ? file($envPath, FILE_IGNORE_NEW_LINES) : [];
+        $twilioLines = array_filter($allLines, fn($l) => str_starts_with($l, 'TWILIO'));
+
         $result = [
             'meeting_found' => $meeting !== null,
             'meeting_status' => $meeting?->status,
             'php_version' => PHP_VERSION,
+            'base_path' => base_path(),
+            'env_path' => $envPath,
             'env_file_exists' => file_exists($envPath),
+            'env_line_count' => count($allLines),
+            'env_twilio_lines' => array_values($twilioLines),
             'env_file_twilio_line' => $envFileContent,
             'getenv' => $envDirect ? substr($envDirect, 0, 10) . '...' : null,
             'env_func' => $envFunc ? substr($envFunc, 0, 10) . '...' : null,
