@@ -10,14 +10,17 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Database\QueryException;
 
-// Also try to fix .env file from env.production if available
+// Also try to fix .env file from env.production if available (Azure only)
 $basePath = dirname(__DIR__);
-$envProductionPath = $basePath . '/env.production';
-$envPath = $basePath . '/.env';
-if (file_exists($envProductionPath)) {
-    $currentEnv = file_exists($envPath) ? file_get_contents($envPath) : '';
-    if (!str_contains($currentEnv, 'TWILIO_ACCOUNT_SID')) {
-        @copy($envProductionPath, $envPath);
+$isAzure = getenv('WEBSITE_SITE_NAME') || isset($_SERVER['WEBSITE_SITE_NAME']);
+if ($isAzure) {
+    $envProductionPath = $basePath . '/env.production';
+    $envPath = $basePath . '/.env';
+    if (file_exists($envProductionPath)) {
+        $currentEnv = file_exists($envPath) ? file_get_contents($envPath) : '';
+        if (!str_contains($currentEnv, 'TWILIO_ACCOUNT_SID')) {
+            @copy($envProductionPath, $envPath);
+        }
     }
 }
 

@@ -11,6 +11,13 @@
  * before Laravel's Dotenv parser reads it.
  */
 
+// Only run on Azure App Service — skip on Laravel Cloud and local dev
+if (!isset($_SERVER['APP_PLATFORM']) || $_SERVER['APP_PLATFORM'] !== 'azure') {
+    if (!getenv('WEBSITE_SITE_NAME') && !isset($_SERVER['WEBSITE_SITE_NAME'])) {
+        return; // Not Azure — do nothing
+    }
+}
+
 $envPath = dirname(__DIR__) . '/.env';
 
 // Quick check: does the current .env have the wrong DB connection?

@@ -15,13 +15,13 @@ return new class extends Migration
 
             if (!in_array('created_by', $cols)) {
                 Schema::table('onboarding_flows', function (Blueprint $table) {
-                    $table->unsignedBigInteger('created_by')->nullable()->after('version');
-                    $table->unsignedBigInteger('updated_by')->nullable()->after('created_by');
-                    $table->boolean('is_published')->default(true)->after('is_active');
-                    $table->boolean('auto_start_on_first_login')->default(true)->after('is_published');
-                    $table->boolean('allow_skip')->default(true)->after('auto_start_on_first_login');
-                    $table->boolean('lock_ui_during_training')->default(false)->after('allow_skip');
-                    $table->string('cover_image_path')->nullable()->after('description');
+                    $table->unsignedBigInteger('created_by')->nullable();
+                    $table->unsignedBigInteger('updated_by')->nullable();
+                    $table->boolean('is_published')->default(true);
+                    $table->boolean('auto_start_on_first_login')->default(true);
+                    $table->boolean('allow_skip')->default(true);
+                    $table->boolean('lock_ui_during_training')->default(false);
+                    $table->string('cover_image_path')->nullable();
                 });
             }
         }
@@ -32,21 +32,17 @@ return new class extends Migration
 
             if (!in_array('step_type', $cols)) {
                 Schema::table('onboarding_steps', function (Blueprint $table) {
-                    $table->string('step_type', 30)->default('tooltip')->after('description');
-                    // tooltip, action, info, screenshot
-                    $table->string('action_event', 100)->nullable()->after('target_selector');
-                    // e.g. 'click', 'input', 'navigate' — what user must do
-                    $table->string('action_value', 255)->nullable()->after('action_event');
-                    // e.g. route name or selector to click
-                    $table->string('tooltip_position', 20)->default('bottom')->after('action_value');
-                    // top, bottom, left, right
-                    $table->string('image_path')->nullable()->after('help_link');
-                    $table->string('image_caption')->nullable()->after('image_path');
-                    $table->text('tip_text')->nullable()->after('image_caption');
-                    $table->boolean('is_enabled')->default(true)->after('is_required');
-                    $table->boolean('highlight_element')->default(true)->after('is_enabled');
-                    $table->boolean('dim_background')->default(true)->after('highlight_element');
-                    $table->boolean('auto_scroll')->default(true)->after('dim_background');
+                    $table->string('step_type', 30)->default('tooltip');
+                    $table->string('action_event', 100)->nullable();
+                    $table->string('action_value', 255)->nullable();
+                    $table->string('tooltip_position', 20)->default('bottom');
+                    $table->string('image_path')->nullable();
+                    $table->string('image_caption')->nullable();
+                    $table->text('tip_text')->nullable();
+                    $table->boolean('is_enabled')->default(true);
+                    $table->boolean('highlight_element')->default(true);
+                    $table->boolean('dim_background')->default(true);
+                    $table->boolean('auto_scroll')->default(true);
                 });
             }
         }
@@ -57,8 +53,8 @@ return new class extends Migration
 
             if (!in_array('started_at', $cols)) {
                 Schema::table('user_onboarding_progress', function (Blueprint $table) {
-                    $table->timestamp('started_at')->nullable()->after('status');
-                    $table->timestamp('last_viewed_at')->nullable()->after('skipped_at');
+                    $table->timestamp('started_at')->nullable();
+                    $table->timestamp('last_viewed_at')->nullable();
                 });
             }
         }
@@ -104,7 +100,6 @@ return new class extends Migration
         if (!Schema::hasTable('onboarding_steps')) return;
         if (!Schema::hasColumn('onboarding_steps', 'step_type')) return;
 
-        // Map existing step keys to interactive selectors and types
         $selectorMap = [
             'welcome'          => ['step_type' => 'info',    'target_selector' => null, 'tooltip_position' => 'bottom'],
             'dashboard'        => ['step_type' => 'tooltip', 'target_selector' => '[data-training="nav-dashboard"]', 'tooltip_position' => 'right'],
