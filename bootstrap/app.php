@@ -1,28 +1,11 @@
 <?php
 
-// Force-set critical env vars BEFORE anything else loads.
-// Azure's Oryx copies an OLD .env with wrong values (mysql, cookie session).
-// This guarantees correct DB, session, queue config regardless of .env content.
-require_once __DIR__ . '/env_override.php';
-
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Database\QueryException;
 
-// Also try to fix .env file from env.production if available (Azure only)
 $basePath = dirname(__DIR__);
-$isAzure = getenv('WEBSITE_SITE_NAME') || isset($_SERVER['WEBSITE_SITE_NAME']);
-if ($isAzure) {
-    $envProductionPath = $basePath . '/env.production';
-    $envPath = $basePath . '/.env';
-    if (file_exists($envProductionPath)) {
-        $currentEnv = file_exists($envPath) ? file_get_contents($envPath) : '';
-        if (!str_contains($currentEnv, 'TWILIO_ACCOUNT_SID')) {
-            @copy($envProductionPath, $envPath);
-        }
-    }
-}
 
 $app = Application::configure(basePath: $basePath)
     ->withRouting(
@@ -100,15 +83,5 @@ $app = Application::configure(basePath: $basePath)
                 : redirect()->route('login')->with('error', 'Run migrations and reload.');
         });
     })->create();
-
-// AFTER create but before the app boots, tell it to use env.production
-// if the current .env has wrong values (Oryx's read-only bad .env)
-if (file_exists($app->basePath('env.production'))) {
-    $app->loadEnvironmentFrom('env.production');
-    // Force re-read of env file with correct name
-    // Use Dotenv with OVERWRITE repository so it replaces .env values
-    $repository = \Dotenv\Repository\RepositoryBuilder::createWithDefaultAdapters()->make();
-    \Dotenv\Dotenv::create($repository, $app->basePath(), 'env.production')->load();
-}
 
 return $app;

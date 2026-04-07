@@ -4,9 +4,11 @@
 name: Build and deploy PHP app to Azure Web App - vscode-remote-try-php
 
 on:
-  push:
-    branches:
-      - main
+  # Azure auto-deploy disabled — Laravel Cloud is now the primary deployment target.
+  # Uncomment push trigger below to re-enable Azure deploys if needed for rollback.
+  # push:
+  #   branches:
+  #     - main
   workflow_dispatch:
 
 jobs:
