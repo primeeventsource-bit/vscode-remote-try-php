@@ -254,7 +254,15 @@ function meetingApp() {
 
                 _twilioRoom.on('reconnecting', () => { this.mediaError = 'Reconnecting...'; });
                 _twilioRoom.on('reconnected', () => { this.mediaError = ''; this.connected = true; });
-                _twilioRoom.on('disconnected', () => { this.connected = false; _twilioRoom = null; _twilioConnecting = false; });
+                _twilioRoom.on('disconnected', (room, error) => {
+                    console.warn('[Prime Connect] Disconnected:', error?.message || 'clean disconnect');
+                    this.connected = false;
+                    if (error) {
+                        this.mediaError = 'Connection lost: ' + (error.message || 'Unknown error') + '. Try leaving and rejoining.';
+                    }
+                    _twilioRoom = null;
+                    _twilioConnecting = false;
+                });
 
             } catch(e) {
                 this.mediaError = 'Connection failed: ' + e.message;

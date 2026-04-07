@@ -106,8 +106,13 @@ class Calls extends Component
         $allUsers = User::orderBy('name')->get();
         $isAdmin = $user->hasRole('master_admin', 'admin');
 
+        // Check Twilio credentials for admin visibility
+        $twilioConfigured = !empty(config('twilio.account_sid'))
+            && !empty(config('twilio.api_key_sid'))
+            && !empty(config('twilio.api_key_secret'));
+
         return view('livewire.calls', compact(
-            'activeMeetings', 'pastMeetings', 'pendingInvites', 'allUsers', 'isAdmin'
+            'activeMeetings', 'pastMeetings', 'pendingInvites', 'allUsers', 'isAdmin', 'twilioConfigured'
         ));
     }
 }
