@@ -103,11 +103,9 @@ $app = Application::configure(basePath: $basePath)
 if (file_exists($app->basePath('env.production'))) {
     $app->loadEnvironmentFrom('env.production');
     // Force re-read of env file with correct name
-    \Dotenv\Dotenv::create(
-        \Illuminate\Support\Env::getRepository(),
-        $app->basePath(),
-        'env.production'
-    )->load();
+    // Use Dotenv with OVERWRITE repository so it replaces .env values
+    $repository = \Dotenv\Repository\RepositoryBuilder::createWithDefaultAdapters()->make();
+    \Dotenv\Dotenv::create($repository, $app->basePath(), 'env.production')->load();
 }
 
 return $app;
