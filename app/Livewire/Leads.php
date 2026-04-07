@@ -39,6 +39,7 @@ class Leads extends Component
     public string $fronterFilter = 'all';
     public string $ageFilter = 'all';
     public string $duplicateFilter = 'all';
+    public string $roleFilter = 'all';
     public int $perPage = 25;
 
     // ── Lead Selection & Detail ─────────────────────────────
@@ -83,6 +84,7 @@ class Leads extends Component
     public function updatedFronterFilter() { $this->resetPage(); }
     public function updatedAgeFilter() { $this->resetPage(); }
     public function updatedDuplicateFilter() { $this->resetPage(); }
+    public function updatedRoleFilter() { $this->fronterFilter = 'all'; $this->resetPage(); }
     public function updatedPerPage()   { $this->resetPage(); }
 
     // ── Lead Selection ──────────────────────────────────────
@@ -389,28 +391,29 @@ class Leads extends Component
                 'duplicate_strategy' => $this->duplicateStrategy,
             ]);
 
-            // Chunk and dispatch jobs
+            // Process import chunks synchronously to avoid pending queue issues
             $chunks = array_chunk($rows, self::IMPORT_CHUNK_SIZE);
             $rowOffset = 1;
 
             foreach ($chunks as $i => $chunk) {
                 $isLast = ($i === count($chunks) - 1);
                 try {
-                    ProcessLeadImportChunk::dispatch(
+                    ProcessLeadImportChunk::dispatchSync(
                         $batch->id,
                         $chunk,
                         $rowOffset,
                         $isLast
                     );
                 } catch (\Throwable $e) {
-                    \Log::error('Failed to dispatch import chunk', ['batch' => $batch->id, 'chunk' => $i, 'error' => $e->getMessage()]);
-                    $this->importStatus = "Import partially queued — some chunks failed to dispatch. Check system monitor.";
+                    \Log::error('Failed to process import chunk', ['batch' => $batch->id, 'chunk' => $i, 'error' => $e->getMessage()]);
+                    $this->importStatus = "Import partially completed — some chunks failed. Check Import History.";
                     return;
                 }
                 $rowOffset += count($chunk);
             }
 
-            $this->importStatus = "Import queued: {$batch->total_rows} rows in " . count($chunks) . " batch(es). Track progress on the Imports page.";
+            $batch->refresh();
+            $this->importStatus = "Import complete: {$batch->successful_rows} of {$batch->total_rows} rows imported successfully.";
             $this->leadFile = null;
             $this->csvText = '';
             $this->showImportModal = false;
@@ -735,6 +738,12 @@ class Leads extends Component
             $query->where('resort', $this->resortFilter);
         }
 
+        // Role filter — restrict to users in a specific role
+        if ($this->roleFilter !== 'all') {
+            $roleUserIds = User::where('role', $this->roleFilter)->pluck('id');
+            $query->whereIn('assigned_to', $roleUserIds);
+        }
+
         // Fronter filter
         if ($this->fronterFilter === 'unassigned') {
             $query->whereNull('assigned_to');
@@ -805,6 +814,11 @@ class Leads extends Component
         $closers = $allActiveUsers; // Show all users in transfer-to-closer dropdown
         $fronters = $allActiveUsers; // Show all users in fronter filter + bulk assign
         $users = $allActiveUsers;
+        $roles = $allActiveUsers->pluck('role')->unique()->filter()->sort()->values();
+        // Users filtered by selected role for the cascading dropdown
+        $roleUsers = $this->roleFilter !== 'all'
+            ? $allActiveUsers->where('role', $this->roleFilter)->values()
+            : collect();
         $active = $this->selectedLead ? Lead::find($this->selectedLead) : null;
 
         // Duplicate info for active lead
@@ -869,7 +883,7 @@ class Leads extends Component
         return view('livewire.leads', compact(
             'leads', 'resorts', 'closers', 'fronters', 'users', 'active',
             'isAdmin', 'fronterStats', 'totalLeads', 'duplicateCounts',
-            'activeDuplicates', 'recentImports'
+            'activeDuplicates', 'recentImports', 'roles', 'roleUsers'
         ));
     }
 }

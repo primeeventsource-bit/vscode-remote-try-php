@@ -1,10 +1,10 @@
-<style>
-    @keyframes pulse-badge { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .7; transform: scale(1.15); } }
-    .badge-blink-blue { animation: pulse-badge 1.5s ease-in-out infinite; background: #3b82f6; }
-    .badge-blink-red { animation: pulse-badge 1.5s ease-in-out infinite; background: #ef4444; }
-    .msg-unread { background: rgba(59,130,246,0.06); border-left: 3px solid #3b82f6; }
-</style>
 <div class="flex h-[calc(100vh-3rem)]" wire:poll.visible.15s="refreshUnreadCounts">
+    <style>
+        @keyframes pulse-badge { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .7; transform: scale(1.15); } }
+        .badge-blink-blue { animation: pulse-badge 1.5s ease-in-out infinite; background: #3b82f6; }
+        .badge-blink-red { animation: pulse-badge 1.5s ease-in-out infinite; background: #ef4444; }
+        .msg-unread { background: rgba(59,130,246,0.06); border-left: 3px solid #3b82f6; }
+    </style>
     {{-- Left Panel: Advanced Chat Workspace --}}
     <div class="w-80 border-r border-crm-border bg-crm-surface flex flex-col flex-shrink-0">
         {{-- Header --}}

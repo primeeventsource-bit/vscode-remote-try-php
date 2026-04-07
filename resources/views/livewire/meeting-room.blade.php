@@ -1,11 +1,10 @@
-<style>
-    @keyframes pc-connect-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(37,99,235,0.4); } 50% { box-shadow: 0 0 0 12px rgba(37,99,235,0); } }
-    @keyframes pc-ring-wave { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(2.5); opacity: 0; } }
-    @keyframes pc-waveform { 0%, 100% { transform: scaleY(0.3); } 50% { transform: scaleY(1); } }
-    .pc-connecting { animation: pc-connect-pulse 2s ease-in-out infinite; }
-</style>
-
 <div class="h-[calc(100vh-3rem)] flex flex-col bg-pc-dark" wire:ignore x-data="meetingApp()" x-init="init()">
+    <style>
+        @keyframes pc-connect-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(37,99,235,0.4); } 50% { box-shadow: 0 0 0 12px rgba(37,99,235,0); } }
+        @keyframes pc-ring-wave { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(2.5); opacity: 0; } }
+        @keyframes pc-waveform { 0%, 100% { transform: scaleY(0.3); } 50% { transform: scaleY(1); } }
+        .pc-connecting { animation: pc-connect-pulse 2s ease-in-out infinite; }
+    </style>
 
     {{-- ═══ NOT FOUND STATE ═══ --}}
     @if($meetingStatus === 'not_found')

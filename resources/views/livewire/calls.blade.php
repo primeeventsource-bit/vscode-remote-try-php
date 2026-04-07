@@ -1,12 +1,11 @@
-<style>
-    @keyframes pc-gradient-shift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
-    @keyframes pc-fade-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes pc-live-dot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .6; transform: scale(1.3); } }
-    .pc-card-enter { animation: pc-fade-in 0.3s ease-out both; }
-    .pc-live-pulse { animation: pc-live-dot 1.5s ease-in-out infinite; }
-</style>
-
 <div class="p-5">
+    <style>
+        @keyframes pc-gradient-shift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+        @keyframes pc-fade-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pc-live-dot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .6; transform: scale(1.3); } }
+        .pc-card-enter { animation: pc-fade-in 0.3s ease-out both; }
+        .pc-live-pulse { animation: pc-live-dot 1.5s ease-in-out infinite; }
+    </style>
     {{-- Prime Connect Header --}}
     <div class="flex items-center justify-between mb-6">
         <div class="flex items-center gap-3">
@@ -21,7 +20,7 @@
                 <p class="text-[11px] text-crm-t3 mt-0.5">Video meetings, voice calls & call history</p>
             </div>
         </div>
-        <button wire:click="$set('showCreate', true)"
+        <button wire:click="switchToCreate"
             class="px-5 py-2.5 text-xs font-bold text-white bg-gradient-to-r from-pc-primary to-pc-accent rounded-xl hover:shadow-lg hover:shadow-pc-primary/30 hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
             New Call
@@ -55,7 +54,7 @@
                     </div>
                     <div class="flex gap-2">
                         <a href="{{ route('meeting-room', ['uuid' => $invite->meeting?->uuid]) }}" class="px-4 py-2 text-xs font-bold text-white bg-pc-live rounded-lg hover:brightness-110 transition">Accept</a>
-                        <button class="px-3 py-2 text-xs font-semibold text-pc-end bg-pc-end/10 rounded-lg hover:bg-pc-end/20 transition">Decline</button>
+                        <button wire:click="declineInvite({{ $invite->id }})" class="px-3 py-2 text-xs font-semibold text-pc-end bg-pc-end/10 rounded-lg hover:bg-pc-end/20 transition">Decline</button>
                     </div>
                 </div>
             @endforeach
@@ -64,13 +63,21 @@
 
     {{-- Tabs --}}
     <div class="flex gap-1 bg-crm-surface border border-crm-border rounded-xl p-1 mb-5">
-        @foreach(['active' => 'Active (' . $activeMeetings->count() . ')', 'past' => 'History', 'create' => '+ Create'] as $k => $l)
-            <button wire:click="$set('tab', '{{ $k }}')"
-                class="px-4 py-2 text-xs font-semibold rounded-lg transition-all duration-200
-                {{ $tab === $k ? 'bg-gradient-to-r from-pc-primary to-pc-accent text-white shadow-sm' : 'text-crm-t3 hover:text-crm-t1 hover:bg-crm-hover' }}">
-                {{ $l }}
-            </button>
-        @endforeach
+        <button wire:click="switchTab('active')"
+            class="px-4 py-2 text-xs font-semibold rounded-lg transition-all duration-200
+            {{ $tab === 'active' ? 'bg-gradient-to-r from-pc-primary to-pc-accent text-white shadow-sm' : 'text-crm-t3 hover:text-crm-t1 hover:bg-crm-hover' }}">
+            Active ({{ $activeMeetings->count() }})
+        </button>
+        <button wire:click="switchTab('past')"
+            class="px-4 py-2 text-xs font-semibold rounded-lg transition-all duration-200
+            {{ $tab === 'past' ? 'bg-gradient-to-r from-pc-primary to-pc-accent text-white shadow-sm' : 'text-crm-t3 hover:text-crm-t1 hover:bg-crm-hover' }}">
+            History
+        </button>
+        <button wire:click="switchToCreate"
+            class="px-4 py-2 text-xs font-semibold rounded-lg transition-all duration-200
+            {{ $tab === 'create' ? 'bg-gradient-to-r from-pc-primary to-pc-accent text-white shadow-sm' : 'text-crm-t3 hover:text-crm-t1 hover:bg-crm-hover' }}">
+            + Create
+        </button>
     </div>
 
     {{-- Create Call Panel --}}
@@ -128,7 +135,7 @@
                 </div>
 
                 <div class="flex gap-3 pt-1">
-                    <button wire:click="$set('showCreate', false); $set('tab', 'active')"
+                    <button wire:click="cancelCreate"
                         class="flex-1 px-4 py-2.5 text-sm font-semibold text-crm-t2 bg-crm-surface rounded-xl hover:bg-crm-hover transition">Cancel</button>
                     <button wire:click="createCall"
                         class="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-pc-primary to-pc-accent rounded-xl hover:shadow-lg hover:shadow-pc-primary/20 transition-all duration-200"

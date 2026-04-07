@@ -28,6 +28,35 @@ class Calls extends Component
     // Active call state
     public ?int $activeCallId = null;
 
+    public function switchTab(string $tab): void
+    {
+        $this->tab = $tab;
+        $this->showCreate = false;
+    }
+
+    public function switchToCreate(): void
+    {
+        $this->tab = 'create';
+        $this->showCreate = true;
+    }
+
+    public function cancelCreate(): void
+    {
+        $this->showCreate = false;
+        $this->tab = 'active';
+    }
+
+    public function declineInvite(int $participantId): void
+    {
+        $participant = MeetingParticipant::where('id', $participantId)
+            ->where('user_id', auth()->id())
+            ->first();
+
+        if ($participant) {
+            app(CallService::class)->declineInvite($participant);
+        }
+    }
+
     public function createCall(): void
     {
         $user = auth()->user();

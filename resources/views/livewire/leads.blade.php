@@ -104,37 +104,75 @@
 
     {{-- Lead Age Category Tabs --}}
     <div class="flex items-center gap-1 mb-4 bg-crm-card border border-crm-border rounded-lg p-0.5">
-        @foreach(['all' => 'All Leads', 'new' => 'New Today', 'this_week' => 'This Week', 'last_month' => 'Last Month', 'old' => 'Older'] as $key => $label)
-            <button wire:click="$set('ageFilter', '{{ $key }}')"
-                class="px-3 py-1.5 text-xs font-semibold rounded-md transition {{ $ageFilter === $key ? 'bg-blue-600 text-white shadow-sm' : 'text-crm-t3 hover:text-crm-t1 hover:bg-crm-hover' }}">
-                {{ $label }}
-            </button>
-        @endforeach
+        <button wire:click="$set('ageFilter', 'all')"
+            class="px-3 py-1.5 text-xs font-semibold rounded-md transition {{ $ageFilter === 'all' ? 'bg-blue-600 text-white shadow-sm' : 'text-crm-t3 hover:text-crm-t1 hover:bg-crm-hover' }}">
+            All Leads
+        </button>
+        <button wire:click="$set('ageFilter', 'new')"
+            class="px-3 py-1.5 text-xs font-semibold rounded-md transition {{ $ageFilter === 'new' ? 'bg-blue-600 text-white shadow-sm' : 'text-crm-t3 hover:text-crm-t1 hover:bg-crm-hover' }}">
+            New Today
+        </button>
+        <button wire:click="$set('ageFilter', 'this_week')"
+            class="px-3 py-1.5 text-xs font-semibold rounded-md transition {{ $ageFilter === 'this_week' ? 'bg-blue-600 text-white shadow-sm' : 'text-crm-t3 hover:text-crm-t1 hover:bg-crm-hover' }}">
+            This Week
+        </button>
+        <button wire:click="$set('ageFilter', 'last_month')"
+            class="px-3 py-1.5 text-xs font-semibold rounded-md transition {{ $ageFilter === 'last_month' ? 'bg-blue-600 text-white shadow-sm' : 'text-crm-t3 hover:text-crm-t1 hover:bg-crm-hover' }}">
+            Last Month
+        </button>
+        <button wire:click="$set('ageFilter', 'old')"
+            class="px-3 py-1.5 text-xs font-semibold rounded-md transition {{ $ageFilter === 'old' ? 'bg-blue-600 text-white shadow-sm' : 'text-crm-t3 hover:text-crm-t1 hover:bg-crm-hover' }}">
+            Older
+        </button>
     </div>
 
     {{-- Search + Filters --}}
     <div class="flex flex-wrap items-center gap-3 mb-4">
-        <input id="fld-search" wire:model.live.debounce.300ms="search" type="text" placeholder="Search leads..." class="flex-1 min-w-[200px] px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+        <input id="fld-search" wire:model.live.debounce.300ms="search" type="text" placeholder="Search by name, resort, phone, or email..." class="flex-1 min-w-[220px] px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20">
         <select id="fld-resortFilter" wire:model.live="resortFilter" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
             <option value="all">All Resorts</option>
             @foreach($resorts as $r)
                 <option value="{{ $r }}">{{ $r }}</option>
             @endforeach
         </select>
-        <select id="fld-fronterFilter" wire:model.live="fronterFilter" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
-            <option value="all">All Assigned Users</option>
-            <option value="unassigned">Unassigned Leads</option>
-            @foreach($users as $u)
-                <option value="{{ $u->id }}">{{ $u->name }} ({{ ucfirst(str_replace('_', ' ', $u->role)) }})</option>
+
+        {{-- Role filter — pick a role, then see users in that role --}}
+        <select id="fld-roleFilter" wire:model.live="roleFilter" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
+            <option value="all">All Roles</option>
+            @foreach($roles as $role)
+                <option value="{{ $role }}">{{ ucfirst(str_replace('_', ' ', $role)) }}</option>
             @endforeach
         </select>
+
+        {{-- User filter — shows all users, or only users in selected role --}}
+        <select id="fld-fronterFilter" wire:model.live="fronterFilter" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
+            @if($roleFilter === 'all')
+                <option value="all">All Assigned Users</option>
+                <option value="unassigned">Unassigned Leads</option>
+                @foreach($users as $u)
+                    <option value="{{ $u->id }}">{{ $u->name }} ({{ ucfirst(str_replace('_', ' ', $u->role)) }})</option>
+                @endforeach
+            @else
+                <option value="all">All {{ ucfirst(str_replace('_', ' ', $roleFilter)) }}s</option>
+                @foreach($roleUsers as $u)
+                    <option value="{{ $u->id }}">{{ $u->name }}</option>
+                @endforeach
+            @endif
+        </select>
+
         <div class="flex items-center gap-1 bg-crm-card border border-crm-border rounded-lg p-0.5">
-            @foreach(['all' => 'All', 'undisposed' => 'Undisposed', 'transferred' => 'Transferred'] as $key => $label)
-                <button wire:click="$set('filter', '{{ $key }}')"
-                    class="px-3 py-1.5 text-xs font-semibold rounded-md transition {{ $filter === $key ? 'bg-white text-blue-600 shadow-sm' : 'text-crm-t3 hover:text-crm-t1' }}">
-                    {{ $label }}
-                </button>
-            @endforeach
+            <button wire:click="$set('filter', 'all')"
+                class="px-3 py-1.5 text-xs font-semibold rounded-md transition {{ $filter === 'all' ? 'bg-white text-blue-600 shadow-sm' : 'text-crm-t3 hover:text-crm-t1' }}">
+                All
+            </button>
+            <button wire:click="$set('filter', 'undisposed')"
+                class="px-3 py-1.5 text-xs font-semibold rounded-md transition {{ $filter === 'undisposed' ? 'bg-white text-blue-600 shadow-sm' : 'text-crm-t3 hover:text-crm-t1' }}">
+                Undisposed
+            </button>
+            <button wire:click="$set('filter', 'transferred')"
+                class="px-3 py-1.5 text-xs font-semibold rounded-md transition {{ $filter === 'transferred' ? 'bg-white text-blue-600 shadow-sm' : 'text-crm-t3 hover:text-crm-t1' }}">
+                Transferred
+            </button>
         </div>
         @if($isAdmin)
         <select id="fld-duplicateFilter" wire:model.live="duplicateFilter" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">

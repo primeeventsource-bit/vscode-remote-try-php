@@ -52,7 +52,7 @@ class LeadImports extends Component
             'failed_rows' => 0,
         ]);
 
-        \App\Jobs\ProcessLeadImportChunk::dispatch(
+        \App\Jobs\ProcessLeadImportChunk::dispatchSync(
             $batch->id,
             $rows,
             1,
