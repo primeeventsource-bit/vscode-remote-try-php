@@ -30,7 +30,7 @@
                 'sales_training_settings' => 'Sales Training',
                 'onboarding_settings' => 'Onboarding & Training',
                 'presence_settings' => 'User Presence',
-                'video_call_settings' => 'Video Calls',
+                'video_call_settings' => 'Prime Connect',
                 'avatar_settings' => 'Avatars & Profiles',
                 'task_settings' => 'Automatic Tasks',
                 'transfers' => 'Transfers',

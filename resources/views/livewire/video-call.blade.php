@@ -30,7 +30,7 @@
     {{-- Page Header --}}
     <div class="flex items-center justify-between mb-5">
         <div>
-            <h2 class="text-xl font-bold">Video Calls</h2>
+            <h2 class="text-xl font-bold">Prime Connect</h2>
             <p class="text-xs text-crm-t3 mt-1">Internal group video calls</p>
         </div>
         @if($canCreate)
@@ -158,7 +158,7 @@
             <div class="text-5xl mb-4">📴</div>
             <div class="text-white text-xl font-bold mb-2">Call Ended</div>
             <p class="text-gray-400 text-sm mb-6">This call has been ended.</p>
-            <a href="{{ route('video-call') }}" class="px-6 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">Back to Video Calls</a>
+            <a href="{{ route('video-call') }}" class="px-6 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">Back to Prime Connect</a>
         </div>
 
     {{-- ═══════════════════════════════════════════════
@@ -168,7 +168,7 @@
         @if($activeRooms->isNotEmpty())
             <div class="bg-crm-card border border-crm-border rounded-lg mb-4">
                 <div class="px-4 py-3 border-b border-crm-border">
-                    <div class="text-sm font-bold">Active Calls</div>
+                    <div class="text-sm font-bold">Active Sessions</div>
                 </div>
                 @foreach($activeRooms as $ar)
                     <div class="flex items-center justify-between px-4 py-3 border-b border-crm-border last:border-0">

@@ -16,7 +16,7 @@ use Livewire\Component;
  * Supports both voice and video via Twilio.
  */
 #[Layout('components.layouts.app')]
-#[Title('Calls')]
+#[Title('Prime Connect')]
 class Calls extends Component
 {
     public string $tab = 'active';       // active, past, create

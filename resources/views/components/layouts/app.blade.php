@@ -104,7 +104,7 @@
                     ]],
                     ['title' => 'COMMUNICATION', 'items' => [
                         // Sidebar chat disabled — use bubble chat (bottom-right)
-                        ['route' => 'calls',        'icon' => '📞', 'label' => 'Calls',           'perm' => null, 'training' => 'nav-calls'],
+                        ['route' => 'calls',        'icon' => '📞', 'label' => 'Prime Connect',    'perm' => null, 'training' => 'nav-calls'],
                     ]],
                     ['title' => 'WORKSPACE', 'items' => [
                         ['route' => 'documents',    'icon' => '📄', 'label' => 'Documents',       'perm' => 'view_documents', 'enabled' => $documentsEnabled, 'training' => 'nav-documents'],

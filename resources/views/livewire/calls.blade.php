@@ -2,7 +2,7 @@
     {{-- Header --}}
     <div class="flex items-center justify-between mb-5">
         <div>
-            <h2 class="text-xl font-bold">Calls</h2>
+            <h2 class="text-xl font-bold">Prime Connect</h2>
             <p class="text-xs text-crm-t3 mt-0.5">Voice calls, video meetings, and call history</p>
         </div>
         <button wire:click="$set('showCreate', true)" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">+ New Call</button>
