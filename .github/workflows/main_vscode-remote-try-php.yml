@@ -34,39 +34,52 @@ jobs:
         run: composer validate --no-check-publish && composer install --prefer-dist --no-progress
 
       - name: Generate .env from GitHub Secrets
+        env:
+          ENV_APP_KEY: ${{ secrets.APP_KEY }}
+          ENV_DB_HOST: ${{ secrets.DB_HOST }}
+          ENV_DB_DATABASE: ${{ secrets.DB_DATABASE }}
+          ENV_DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          ENV_DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          ENV_TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+          ENV_TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+          ENV_TWILIO_API_KEY_SID: ${{ secrets.TWILIO_API_KEY_SID }}
+          ENV_TWILIO_API_KEY_SECRET: ${{ secrets.TWILIO_API_KEY_SECRET }}
+          ENV_OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          cat > .env << 'EOF'
-          APP_NAME="Prime CRM"
-          APP_ENV=production
-          APP_DEBUG=false
-          APP_URL=https://crmprime.online
-          EOF
-          echo "APP_KEY=${{ secrets.APP_KEY }}" >> .env
-          echo "DB_CONNECTION=sqlsrv" >> .env
-          echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
-          echo "DB_PORT=1433" >> .env
-          echo "DB_DATABASE=${{ secrets.DB_DATABASE }}" >> .env
-          echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> .env
-          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
-          echo "SESSION_DRIVER=file" >> .env
-          echo "SESSION_LIFETIME=120" >> .env
-          echo "SESSION_ENCRYPT=true" >> .env
-          echo "SESSION_SECURE_COOKIE=true" >> .env
-          echo "CACHE_STORE=file" >> .env
-          echo "QUEUE_CONNECTION=database" >> .env
-          echo "FILESYSTEM_DISK=public" >> .env
-          echo "LOG_CHANNEL=stderr" >> .env
-          echo "LOG_LEVEL=warning" >> .env
-          echo "TWILIO_ACCOUNT_SID=${{ secrets.TWILIO_ACCOUNT_SID }}" >> .env
-          echo "TWILIO_AUTH_TOKEN=${{ secrets.TWILIO_AUTH_TOKEN }}" >> .env
-          echo "TWILIO_API_KEY_SID=${{ secrets.TWILIO_API_KEY_SID }}" >> .env
-          echo "TWILIO_API_KEY_SECRET=${{ secrets.TWILIO_API_KEY_SECRET }}" >> .env
-          echo "TWILIO_SMS_ENABLED=true" >> .env
-          echo "TWILIO_WEBHOOK_VALIDATE_SIGNATURE=true" >> .env
-          echo "TWILIO_DEFAULT_COUNTRY=US" >> .env
-          echo "TWILIO_LOG_RAW_WEBHOOKS=true" >> .env
-          echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
-          echo "OPENAI_MODEL=gpt-4o-mini" >> .env
+          printf '%s\n' \
+            'APP_NAME="Prime CRM"' \
+            'APP_ENV=production' \
+            'APP_DEBUG=false' \
+            'APP_URL=https://crmprime.online' \
+            "APP_KEY=${ENV_APP_KEY}" \
+            'DB_CONNECTION=sqlsrv' \
+            "DB_HOST=${ENV_DB_HOST}" \
+            'DB_PORT=1433' \
+            "DB_DATABASE=${ENV_DB_DATABASE}" \
+            "DB_USERNAME=${ENV_DB_USERNAME}" \
+            "DB_PASSWORD=${ENV_DB_PASSWORD}" \
+            'SESSION_DRIVER=file' \
+            'SESSION_LIFETIME=120' \
+            'SESSION_ENCRYPT=true' \
+            'SESSION_SECURE_COOKIE=true' \
+            'CACHE_STORE=file' \
+            'QUEUE_CONNECTION=database' \
+            'FILESYSTEM_DISK=public' \
+            'LOG_CHANNEL=stderr' \
+            'LOG_LEVEL=warning' \
+            "TWILIO_ACCOUNT_SID=${ENV_TWILIO_ACCOUNT_SID}" \
+            "TWILIO_AUTH_TOKEN=${ENV_TWILIO_AUTH_TOKEN}" \
+            "TWILIO_API_KEY_SID=${ENV_TWILIO_API_KEY_SID}" \
+            "TWILIO_API_KEY_SECRET=${ENV_TWILIO_API_KEY_SECRET}" \
+            'TWILIO_SMS_ENABLED=true' \
+            'TWILIO_WEBHOOK_VALIDATE_SIGNATURE=true' \
+            'TWILIO_DEFAULT_COUNTRY=US' \
+            'TWILIO_LOG_RAW_WEBHOOKS=true' \
+            "OPENAI_API_KEY=${ENV_OPENAI_API_KEY}" \
+            'OPENAI_MODEL=gpt-4o-mini' \
+            > .env
+          echo ".env generated with $(wc -l < .env) lines"
+          grep -c "TWILIO" .env && echo "Twilio vars present"
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
