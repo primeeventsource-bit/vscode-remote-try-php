@@ -31,9 +31,8 @@ class TrainingOverlay extends Component
             $user = auth()->user();
             $dismissed = session()->get('training_dismissed', false);
 
-            if ($user && !$dismissed) {
-                $walkthroughData = OnboardingService::getWalkthroughData($user);
-            }
+            // Training overlay disabled — auto-start blocks page interaction.
+            // Users can access training from the Training & Help page instead.
         } catch (\Throwable $e) {
             // Never crash other components — training overlay is non-critical
         }
