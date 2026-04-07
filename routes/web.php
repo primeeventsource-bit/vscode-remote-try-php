@@ -5,6 +5,16 @@ use Illuminate\Support\Facades\Route;
 
 // TEMP: diagnose 500 errors
 Route::get('/diag-500', function () {
+    // Extra: check env.production
+    $envProd = base_path('env.production');
+    $envFile = base_path('.env');
+    $extra = [
+        'env_production_exists' => file_exists($envProd),
+        'env_production_size' => file_exists($envProd) ? filesize($envProd) : 0,
+        'env_file_first_line' => file_exists($envFile) ? explode("\n", file_get_contents($envFile))[0] : 'N/A',
+        'env_file_has_sqlsrv' => file_exists($envFile) && str_contains(file_get_contents($envFile), 'sqlsrv'),
+        'ls_base' => implode(', ', array_filter(scandir(base_path()), fn($f) => str_starts_with($f, 'env') || $f === '.env')),
+    ];
     try {
         // Test the exact thing livewire/update does — render a component
         $user = auth()->user();
@@ -23,7 +33,7 @@ Route::get('/diag-500', function () {
             'db_connection' => config('database.default'),
             'db_host' => config('database.connections.' . config('database.default') . '.host') ? 'SET' : null,
             'db_password' => config('database.connections.' . config('database.default') . '.password') ? 'SET' : null,
-        ]);
+        ] + $extra);
     } catch (\Throwable $e) {
         return response()->json([
             'error' => $e->getMessage(),
