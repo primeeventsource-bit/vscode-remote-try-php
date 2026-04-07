@@ -82,39 +82,40 @@
 
                 $sections = [
                     ['title' => 'SALES', 'items' => [
-                        ['route' => 'dashboard',    'icon' => '◫',  'label' => 'Dashboard',      'perm' => 'view_dashboard'],
-                        ['route' => 'leads',        'icon' => '✏️',  'label' => 'Leads',           'perm' => 'view_leads'],
-                        ['route' => 'pipeline',     'icon' => '📈', 'label' => 'Pipeline',        'perm' => 'view_pipeline'],
-                        ['route' => 'deals',        'icon' => '📋', 'label' => 'Deals',           'perm' => 'view_deals'],
-                        ['route' => 'verification', 'icon' => '✓',  'label' => 'Verification',    'perm' => 'view_verification'],
-                        ['route' => 'clients',      'icon' => '💰', 'label' => 'Clients',         'perm' => 'view_all_leads'],
+                        ['route' => 'dashboard',    'icon' => '◫',  'label' => 'Dashboard',      'perm' => 'view_dashboard', 'training' => 'nav-dashboard'],
+                        ['route' => 'leads',        'icon' => '✏️',  'label' => 'Leads',           'perm' => 'view_leads', 'training' => 'nav-leads'],
+                        ['route' => 'pipeline',     'icon' => '📈', 'label' => 'Pipeline',        'perm' => 'view_pipeline', 'training' => 'nav-pipeline'],
+                        ['route' => 'deals',        'icon' => '📋', 'label' => 'Deals',           'perm' => 'view_deals', 'training' => 'nav-deals'],
+                        ['route' => 'verification', 'icon' => '✓',  'label' => 'Verification',    'perm' => 'view_verification', 'training' => 'nav-verification'],
+                        ['route' => 'clients',      'icon' => '💰', 'label' => 'Clients',         'perm' => 'view_all_leads', 'training' => 'nav-clients'],
                     ]],
                     ['title' => 'PERFORMANCE', 'items' => [
-                        ['route' => 'stats',        'icon' => '📊', 'label' => 'Statistics',      'perm' => 'view_stats'],
-                        ['route' => 'tasks',        'icon' => '☑',  'label' => 'Task List',       'perm' => null],
-                        ['route' => 'payroll',      'icon' => '💵', 'label' => 'Payroll',         'perm' => 'view_payroll'],
-                        ['route' => 'chargebacks',  'icon' => '⚠️',  'label' => 'Chargebacks',     'perm' => null],
+                        ['route' => 'stats',              'icon' => '📊', 'label' => 'Statistics',           'perm' => 'view_stats', 'training' => 'nav-stats'],
+                        ['route' => 'sales-intelligence', 'icon' => '🧠', 'label' => 'Sales Intelligence',  'perm' => null, 'training' => 'nav-sales-intelligence'],
+                        ['route' => 'tasks',              'icon' => '☑',  'label' => 'Task List',            'perm' => null, 'training' => 'nav-tasks'],
+                        ['route' => 'payroll',            'icon' => '💵', 'label' => 'Payroll',              'perm' => 'view_payroll', 'training' => 'nav-payroll'],
+                        ['route' => 'chargebacks',        'icon' => '⚠️',  'label' => 'Chargebacks',          'perm' => null, 'training' => 'nav-chargebacks'],
                     ]],
                     ['title' => 'TRAINING', 'items' => [
-                        ['route' => 'sales-training','icon' => '🎯', 'label' => 'Sales Training',   'perm' => null],
-                        ['route' => 'script-editor', 'icon' => '📜', 'label' => 'Script Editor',    'perm' => 'edit_users'],
-                        ['route' => 'daily-sales',  'icon' => '📅', 'label' => 'Daily Sales System','perm' => null],
-                        ['route' => 'training',     'icon' => '📚', 'label' => 'Training & Help',  'perm' => null],
+                        ['route' => 'sales-training','icon' => '🎯', 'label' => 'Sales Training',   'perm' => null, 'training' => 'nav-sales-training'],
+                        ['route' => 'script-editor', 'icon' => '📜', 'label' => 'Script Editor',    'perm' => 'edit_users', 'training' => 'nav-script-editor'],
+                        ['route' => 'daily-sales',  'icon' => '📅', 'label' => 'Daily Sales System','perm' => null, 'training' => 'nav-daily-sales'],
+                        ['route' => 'training',     'icon' => '📚', 'label' => 'Training & Help',  'perm' => null, 'training' => 'nav-training'],
                     ]],
                     ['title' => 'COMMUNICATION', 'items' => [
-                        ['route' => 'chat',         'icon' => '💬', 'label' => 'Chat',            'perm' => null, 'enabled' => $chatEnabled],
-                        ['route' => 'calls',        'icon' => '📞', 'label' => 'Calls',           'perm' => null],
+                        ['route' => 'chat',         'icon' => '💬', 'label' => 'Chat',            'perm' => null, 'enabled' => $chatEnabled, 'training' => 'nav-chat'],
+                        ['route' => 'calls',        'icon' => '📞', 'label' => 'Calls',           'perm' => null, 'training' => 'nav-calls'],
                     ]],
                     ['title' => 'WORKSPACE', 'items' => [
-                        ['route' => 'documents',    'icon' => '📄', 'label' => 'Documents',       'perm' => 'view_documents', 'enabled' => $documentsEnabled],
-                        ['route' => 'spreadsheets', 'icon' => '🧮', 'label' => 'Spreadsheets',    'perm' => 'view_spreadsheets', 'enabled' => $spreadsheetsEnabled],
-                        ['route' => 'tracker',      'icon' => '📅', 'label' => 'Tracker',         'perm' => null],
-                        ['route' => 'transfers',    'icon' => '♻️',  'label' => 'Transfers',       'perm' => null],
+                        ['route' => 'documents',    'icon' => '📄', 'label' => 'Documents',       'perm' => 'view_documents', 'enabled' => $documentsEnabled, 'training' => 'nav-documents'],
+                        ['route' => 'spreadsheets', 'icon' => '🧮', 'label' => 'Spreadsheets',    'perm' => 'view_spreadsheets', 'enabled' => $spreadsheetsEnabled, 'training' => 'nav-spreadsheets'],
+                        ['route' => 'tracker',      'icon' => '📅', 'label' => 'Tracker',         'perm' => null, 'training' => 'nav-tracker'],
+                        ['route' => 'transfers',    'icon' => '♻️',  'label' => 'Transfers',       'perm' => null, 'training' => 'nav-transfers'],
                     ]],
                     ['title' => 'SYSTEM', 'items' => [
-                        ['route' => 'users',          'icon' => '👥', 'label' => 'Users',           'perm' => 'view_users'],
-                        ['route' => 'settings',       'icon' => '⚙️',  'label' => 'Settings',        'perm' => null],
-                        ['route' => 'system-monitor', 'icon' => '📡', 'label' => 'System Monitor',  'perm' => 'master_override'],
+                        ['route' => 'users',          'icon' => '👥', 'label' => 'Users',           'perm' => 'view_users', 'training' => 'nav-users'],
+                        ['route' => 'settings',       'icon' => '⚙️',  'label' => 'Settings',        'perm' => null, 'training' => 'nav-settings'],
+                        ['route' => 'system-monitor', 'icon' => '📡', 'label' => 'System Monitor',  'perm' => 'master_override', 'training' => 'nav-system-monitor'],
                     ]],
                 ];
             @endphp
@@ -133,6 +134,7 @@
                     @foreach($visibleItems as $item)
                         @php try { $navHref = route($item['route']); } catch (\Throwable $e) { $navHref = '/' . $item['route']; } @endphp
                         <a href="{{ $navHref }}" @click="drawerOpen = false"
+                           data-training="{{ $item['training'] ?? $item['route'] }}"
                            class="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition
                                   {{ request()->routeIs($item['route']) ? 'bg-blue-50 text-blue-600' : 'text-crm-t2 hover:bg-crm-hover' }}">
                             <span class="w-5 text-center text-sm">{{ $item['icon'] }}</span>
@@ -208,6 +210,11 @@
     {{-- Global incoming call notification — polls for pending invites on every page --}}
     @auth
         @livewire('incoming-call-alert')
+    @endauth
+
+    {{-- Global interactive training walkthrough overlay --}}
+    @auth
+        @livewire('training-overlay')
     @endauth
 
     @livewireScripts

@@ -27,7 +27,7 @@
     ══════════════════════════════════════════════ --}}
     @if($userRole === 'fronter')
         {{-- FRONTER: My Pipeline Stats --}}
-        <div class="mb-6">
+        <div class="mb-6" data-training="fronter-stats">
             <div class="text-xs text-crm-t3 uppercase tracking-wider font-semibold mb-3">My Pipeline Performance</div>
             <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
                 <div class="bg-crm-card border border-crm-border rounded-lg p-4 border-t-[3px] border-t-blue-500">

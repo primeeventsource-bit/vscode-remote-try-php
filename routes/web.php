@@ -164,6 +164,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/daily-sales', \App\Livewire\DailySalesSystem::class)->name('daily-sales');
     Route::get('/script-editor/{id?}', \App\Livewire\ScriptEditor::class)->name('script-editor');
     Route::get('/system-monitor', \App\Livewire\SystemMonitor::class)->name('system-monitor');
+    Route::get('/sales-intelligence', \App\Livewire\SalesIntelligence::class)->name('sales-intelligence');
 
     // Enterprise Lead Management
     Route::get('/leads/duplicates', \App\Livewire\DuplicateReview::class)->name('duplicate-review');
