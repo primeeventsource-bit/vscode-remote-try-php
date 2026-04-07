@@ -48,10 +48,7 @@
             <div class="flex items-center gap-3">
                 {{-- Logo --}}
                 <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-pc-primary to-pc-accent flex items-center justify-center shadow-sm">
-                    <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0"/>
-                        <circle cx="12" cy="18" r="1" fill="currentColor" stroke="none"/>
-                    </svg>
+                    <span class="text-sm">🔗</span>
                 </div>
                 {{-- Status --}}
                 <div>
@@ -147,10 +144,7 @@
         <div class="flex-1 flex items-center justify-center">
             <div class="text-center">
                 <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-pc-primary to-pc-accent flex items-center justify-center pc-connecting">
-                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0"/>
-                        <circle cx="12" cy="18" r="1" fill="currentColor" stroke="none"/>
-                    </svg>
+                    <span class="text-3xl">🔗</span>
                 </div>
                 <div class="text-white text-sm font-semibold">Connecting to Prime Connect...</div>
                 <div class="flex items-center justify-center gap-[3px] h-4 mt-3">

@@ -39,10 +39,7 @@
             <div class="bg-gradient-to-r from-pc-dark to-pc-surface px-5 pt-4 pb-3">
                 <div class="flex items-center gap-2 mb-3">
                     <div class="w-5 h-5 rounded-lg bg-gradient-to-br from-pc-primary to-pc-accent flex items-center justify-center">
-                        <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0"/>
-                            <circle cx="12" cy="18" r="1" fill="currentColor" stroke="none"/>
-                        </svg>
+                        <span class="text-[10px]">🔗</span>
                     </div>
                     <span class="text-[11px] font-bold uppercase tracking-widest text-pc-primary">Prime Connect</span>
                 </div>
