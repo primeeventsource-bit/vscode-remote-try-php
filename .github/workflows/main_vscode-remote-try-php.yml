@@ -29,9 +29,9 @@ jobs:
         with:
           files: 'composer.json'
 
-      - name: Run composer install if composer.json exists
+      - name: Install composer dependencies
         if: steps.check_files.outputs.files_exists == 'true'
-        run: composer validate --no-check-publish && composer install --prefer-dist --no-progress
+        run: composer update --prefer-dist --no-progress --no-dev --no-interaction
 
       - name: Generate .env from GitHub Secrets
         env:

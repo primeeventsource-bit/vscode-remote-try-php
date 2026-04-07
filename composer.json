@@ -46,6 +46,9 @@
         "sort-packages": true,
         "allow-plugins": {
             "php-http/discovery": true
+        },
+        "platform": {
+            "php": "8.3.30"
         }
     },
     "minimum-stability": "stable",
