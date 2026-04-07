@@ -43,7 +43,13 @@ OPENAI_MODEL=gpt-4o-mini
 ENV;
 
         // Try to overwrite — may fail if filesystem is read-only
-        @file_put_contents($envPath, $correctEnv);
+        $written = @file_put_contents($envPath, $correctEnv);
+
+        // If overwrite failed (read-only FS), DELETE the bad .env so Dotenv
+        // can't load wrong values. Our putenv() values will be used instead.
+        if (!$written) {
+            @unlink($envPath);
+        }
 
         // Also force-set via putenv as backup
         $lines = explode("\n", $correctEnv);
