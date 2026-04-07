@@ -13,8 +13,8 @@ return new class extends Migration
             $table->date('timestamp')->nullable();
             $table->date('charged_date')->nullable();
             $table->string('was_vd', 3)->default('No');
-            $table->foreignId('fronter')->nullable()->constrained('users')->onDelete('set null');
-            $table->foreignId('closer')->nullable()->constrained('users')->onDelete('set null');
+            $table->foreignId('fronter')->nullable()->constrained('users')->onDelete('no action');
+            $table->foreignId('closer')->nullable()->constrained('users')->onDelete('no action');
             $table->decimal('fee', 12, 2)->default(0.00);
             $table->string('owner_name')->nullable();
             $table->string('mailing_address')->nullable();
@@ -52,7 +52,7 @@ return new class extends Migration
             $table->string('login')->nullable();
             $table->string('merchant')->nullable();
             $table->string('app_login')->nullable();
-            $table->foreignId('assigned_admin')->nullable()->constrained('users')->onDelete('set null');
+            $table->foreignId('assigned_admin')->nullable()->constrained('users')->onDelete('no action');
             $table->string('status', 50)->default('pending_admin');
             $table->string('charged', 10)->default('no');
             $table->string('charged_back', 10)->default('no');
