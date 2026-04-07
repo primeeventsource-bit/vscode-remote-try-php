@@ -23,9 +23,9 @@ export default {
           t3: '#9ca3af',
         },
         pc: {
-          primary: '#6366f1',
-          'primary-h': '#4f46e5',
-          accent: '#8b5cf6',
+          primary: '#2563eb',
+          'primary-h': '#1d4ed8',
+          accent: '#3b82f6',
           live: '#10b981',
           ring: '#f59e0b',
           end: '#ef4444',
