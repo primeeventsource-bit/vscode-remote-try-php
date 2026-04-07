@@ -116,34 +116,40 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::post('/meetings/{uuid}/token', function (string $uuid) {
-        $user = auth()->user();
-        $meeting = \App\Models\Meeting::where('uuid', $uuid)->first();
-        if (! $meeting) return response()->json(['error' => 'Meeting not found'], 404);
-        if ($meeting->isEnded()) return response()->json(['error' => 'Meeting has ended'], 410);
+        try {
+            $user = auth()->user();
+            if (!$user) return response()->json(['error' => 'Not authenticated'], 401);
 
-        $participant = $meeting->participants()->where('user_id', $user->id)->first();
-        if (! $participant) return response()->json(['error' => 'Not a participant'], 403);
+            $meeting = \App\Models\Meeting::where('uuid', $uuid)->first();
+            if (!$meeting) return response()->json(['error' => 'Meeting not found', 'uuid' => $uuid], 404);
+            if ($meeting->isEnded()) return response()->json(['error' => 'Meeting has ended'], 410);
 
-        $identity = 'user-' . $user->id;
+            $participant = $meeting->participants()->where('user_id', $user->id)->first();
+            if (!$participant) return response()->json(['error' => 'Not a participant', 'user_id' => $user->id, 'meeting_id' => $meeting->id], 403);
 
-        // Read Twilio credentials directly from env — config() is unreliable on Azure
-        $sid = env('TWILIO_ACCOUNT_SID') ?: config('twilio.account_sid') ?: config('services.twilio.account_sid');
-        $key = env('TWILIO_API_KEY_SID') ?: config('twilio.api_key_sid') ?: config('services.twilio.api_key_sid');
-        $sec = env('TWILIO_API_KEY_SECRET') ?: config('twilio.api_key_secret') ?: config('services.twilio.api_key_secret');
+            $identity = 'user-' . $user->id;
 
-        \Illuminate\Support\Facades\Log::info('Twilio token request', [
-            'meeting' => $uuid, 'user' => $user->id,
-            'sid_set' => !empty($sid), 'key_set' => !empty($key), 'sec_set' => !empty($sec),
-        ]);
+            // Read Twilio credentials — try every possible source
+            $sid = env('TWILIO_ACCOUNT_SID') ?: config('twilio.account_sid') ?: config('services.twilio.account_sid');
+            $key = env('TWILIO_API_KEY_SID') ?: config('twilio.api_key_sid') ?: config('services.twilio.api_key_sid');
+            $sec = env('TWILIO_API_KEY_SECRET') ?: config('twilio.api_key_secret') ?: config('services.twilio.api_key_secret');
 
-        if (!$sid || !$key || !$sec) {
-            return response()->json([
-                'error' => 'Twilio credentials not configured. Set TWILIO_ACCOUNT_SID, TWILIO_API_KEY_SID, TWILIO_API_KEY_SECRET in Azure App Settings.',
-                'missing' => array_filter([
-                    !$sid ? 'TWILIO_ACCOUNT_SID' : null,
-                    !$key ? 'TWILIO_API_KEY_SID' : null,
-                    !$sec ? 'TWILIO_API_KEY_SECRET' : null,
-                ]),
+            if (!$sid || !$key || !$sec) {
+                return response()->json([
+                    'error' => 'Twilio credentials not configured',
+                    'debug' => [
+                        'env_file_exists' => file_exists(base_path('.env')),
+                        'sid_set' => !empty($sid),
+                        'key_set' => !empty($key),
+                        'sec_set' => !empty($sec),
+                        'env_sid' => env('TWILIO_ACCOUNT_SID') ? 'yes' : 'no',
+                        'cfg_sid' => config('twilio.account_sid') ? 'yes' : 'no',
+                    ],
+                    'missing' => array_filter([
+                        !$sid ? 'TWILIO_ACCOUNT_SID' : null,
+                        !$key ? 'TWILIO_API_KEY_SID' : null,
+                        !$sec ? 'TWILIO_API_KEY_SECRET' : null,
+                    ]),
             ], 503);
         }
 
@@ -159,6 +165,12 @@ Route::middleware('auth')->group(function () {
             'room'     => $meeting->provider_room_name,
             'meeting'  => ['uuid' => $meeting->uuid, 'title' => $meeting->title, 'type' => $meeting->type, 'status' => $meeting->status],
         ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Meeting token endpoint crashed', [
+                'uuid' => $uuid, 'error' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine(),
+            ]);
+            return response()->json(['error' => $e->getMessage(), 'file' => basename($e->getFile()), 'line' => $e->getLine()], 500);
+        }
     });
 
     Route::post('/meetings/{uuid}/accept', function (string $uuid) {
