@@ -5,4 +5,4 @@ storage/*.key
 .phpunit.result.cache
 .env
 .env.backup
-.env.production
+# .env.production is tracked — deployed as .env to Azure via GitHub Actions
