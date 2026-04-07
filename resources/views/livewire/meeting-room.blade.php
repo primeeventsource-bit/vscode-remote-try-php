@@ -1,4 +1,4 @@
-<div class="h-[calc(100vh-3rem)] flex flex-col bg-gray-900" x-data="meetingApp()" x-init="init()">
+<div class="h-[calc(100vh-3rem)] flex flex-col bg-gray-900" wire:ignore x-data="meetingApp()" x-init="init()">
     @if($meetingStatus === 'not_found')
         <div class="flex-1 flex items-center justify-center">
             <div class="text-center"><div class="text-4xl mb-3">❌</div><div class="text-white text-lg font-bold">Meeting not found</div><a href="/meetings" class="mt-4 inline-block px-4 py-2 text-sm text-white bg-blue-600 rounded-lg">Back to Meetings</a></div>
@@ -74,10 +74,9 @@
 <script src="https://sdk.twilio.com/js/video/releases/2.28.1/twilio-video.min.js"></script>
 <script>
 // Store Twilio objects OUTSIDE Alpine to avoid Proxy conflicts.
-// Alpine wraps reactive data in Proxies, but Twilio Room/Track objects
-// have read-only native Map properties that break under Proxy.
 let _twilioRoom = null;
 let _twilioLocalTracks = [];
+let _twilioConnecting = false;  // Guard against duplicate connect calls
 
 function meetingApp() {
     return {
@@ -89,13 +88,27 @@ function meetingApp() {
         meetingUuid: @json($uuid),
 
         async init() {
+            // Guard: if already connected or connecting, skip
+            if (_twilioRoom || _twilioConnecting) {
+                console.log('[Meeting] Already connected/connecting, skipping init');
+                if (_twilioRoom) this.connected = true;
+                return;
+            }
             await this.connectToRoom();
         },
 
         async connectToRoom() {
+            // Double-check guard
+            if (_twilioRoom || _twilioConnecting) {
+                console.log('[Meeting] Blocked duplicate connect');
+                return;
+            }
+            _twilioConnecting = true;
+
             try {
-                // 1. Get token from server
+                // 1. Get token
                 const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+                console.log('[Meeting] Requesting token...');
                 const res = await fetch('/meetings/' + this.meetingUuid + '/token', {
                     method: 'POST', credentials: 'same-origin',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
@@ -104,9 +117,11 @@ function meetingApp() {
                     let errMsg = 'Failed to get meeting token (' + res.status + ')';
                     try { const body = await res.json(); errMsg += ': ' + (body.error || ''); } catch(e) {}
                     this.mediaError = errMsg;
+                    _twilioConnecting = false;
                     return;
                 }
                 const data = await res.json();
+                console.log('[Meeting] Token received, room:', data.room);
 
                 // 2. Get local media
                 let localTracks = [];
@@ -123,7 +138,7 @@ function meetingApp() {
                         this.cameraOn = false;
                         this.mediaError = 'Camera unavailable. Audio only.';
                     } catch(e2) {
-                        this.mediaError = 'Camera and mic blocked. Click lock icon in browser to allow.';
+                        this.mediaError = 'Camera and mic blocked. Click lock icon to allow.';
                         this.micOn = false; this.cameraOn = false;
                     }
                 }
@@ -131,46 +146,65 @@ function meetingApp() {
                 // Attach local preview
                 const localVideo = document.getElementById('local-video');
                 for (const t of localTracks) {
-                    if (t.kind === 'video' && localVideo) { t.attach(localVideo); }
+                    if (t.kind === 'video' && localVideo) t.attach(localVideo);
                 }
                 _twilioLocalTracks = localTracks;
 
-                // 3. Connect to Twilio Video Room (stored OUTSIDE Alpine)
+                // 3. Connect to Twilio Video Room
+                console.log('[Meeting] Connecting to Twilio room:', data.room);
                 _twilioRoom = await Twilio.Video.connect(data.token, {
                     name: data.room,
                     tracks: localTracks,
                     dominantSpeaker: true,
+                    networkQuality: { local: 1, remote: 1 },
                 });
 
+                _twilioConnecting = false;
                 this.connected = true;
                 this.participantCount = _twilioRoom.participants.size + 1;
-                console.log('Connected to room:', data.room, 'Participants:', _twilioRoom.participants.size);
+                console.log('[Meeting] Connected! Room SID:', _twilioRoom.sid, 'Participants:', _twilioRoom.participants.size);
 
                 // 4. Handle existing participants
                 _twilioRoom.participants.forEach(p => this.handleParticipant(p));
 
-                // 5. Handle new participants
+                // 5. Room event listeners (registered ONCE)
                 _twilioRoom.on('participantConnected', p => {
-                    console.log('Participant connected:', p.identity);
+                    console.log('[Meeting] Participant joined:', p.identity);
                     this.handleParticipant(p);
-                    this.participantCount = _twilioRoom.participants.size + 1;
+                    if (_twilioRoom) this.participantCount = _twilioRoom.participants.size + 1;
                 });
 
                 _twilioRoom.on('participantDisconnected', p => {
-                    console.log('Participant disconnected:', p.identity);
+                    console.log('[Meeting] Participant left:', p.identity);
                     const el = document.getElementById('remote-' + p.identity);
                     if (el) el.remove();
-                    this.participantCount = _twilioRoom.participants.size + 1;
+                    if (_twilioRoom) this.participantCount = _twilioRoom.participants.size + 1;
                 });
 
-                _twilioRoom.on('disconnected', () => {
+                _twilioRoom.on('reconnecting', error => {
+                    console.warn('[Meeting] Reconnecting...', error?.message);
+                    this.mediaError = 'Reconnecting...';
+                });
+
+                _twilioRoom.on('reconnected', () => {
+                    console.log('[Meeting] Reconnected');
+                    this.mediaError = '';
+                    this.connected = true;
+                });
+
+                _twilioRoom.on('disconnected', (room, error) => {
+                    console.log('[Meeting] Disconnected', error?.message || 'clean');
                     this.connected = false;
-                    this.cleanup();
+                    // Do NOT call cleanup() here — it causes re-entrant disconnect.
+                    // Just null the reference so init() guard allows reconnect if needed.
+                    _twilioRoom = null;
+                    _twilioConnecting = false;
                 });
 
             } catch(e) {
-                console.error('Meeting connect error:', e);
+                console.error('[Meeting] Connect error:', e);
                 this.mediaError = 'Connection failed: ' + e.message;
+                _twilioConnecting = false;
             }
         },
 
@@ -242,13 +276,34 @@ function meetingApp() {
         },
 
         cleanup() {
-            if (_twilioRoom) { _twilioRoom.disconnect(); _twilioRoom = null; }
-            _twilioLocalTracks.forEach(t => { t.stop(); t.detach().forEach(el => el.remove()); });
+            console.log('[Meeting] Cleanup called');
+            if (_twilioRoom) {
+                try { _twilioRoom.disconnect(); } catch(e) {}
+                _twilioRoom = null;
+            }
+            _twilioConnecting = false;
+            _twilioLocalTracks.forEach(t => {
+                try { t.stop(); } catch(e) {}
+                try { t.detach().forEach(el => el.remove()); } catch(e) {}
+            });
             _twilioLocalTracks = [];
             document.querySelectorAll('audio[autoplay]').forEach(el => el.remove());
+        },
+
+        destroy() {
+            // Called when Alpine component is destroyed (page leave)
+            this.cleanup();
         }
     }
 }
+
+// Clean disconnect on page unload
+window.addEventListener('beforeunload', () => {
+    if (_twilioRoom) {
+        try { _twilioRoom.disconnect(); } catch(e) {}
+        _twilioRoom = null;
+    }
+});
 </script>
 @else
 <script>function meetingApp() { return { micOn: true, cameraOn: true, connected: false, mediaError: '', participantCount: 0, meetingUuid: '', init() {}, toggleMic() {}, toggleCamera() {}, cleanup() {}, leaveMeeting() {}, endMeeting() {}, retryMedia() {} } }</script>
