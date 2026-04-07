@@ -304,13 +304,14 @@ function videoCallApp() {
         micOn: true,
         cameraOn: true,
         localStream: null,
-        peers: {},
+        peers: {},          // { remoteUserId: RTCPeerConnection }
+        makingOffer: {},    // { remoteUserId: bool } — prevents concurrent offers
         roomId: @json($roomId),
         userId: @json(auth()->id()),
         pollInterval: null,
         iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
-
         mediaError: '',
+        processedSignals: new Set(), // deduplicate signals
 
         async init() {
             await this.fetchIceServers();
@@ -319,12 +320,17 @@ function videoCallApp() {
             // Auto-join: mark this user as joined in DB
             try { await this.$wire.joinRoom(); } catch(e) {}
 
-            // Auto-initiate: send WebRTC offers to all other joined participants
+            // Auto-initiate: only the user with the HIGHER ID sends offers
+            // This prevents both peers from sending offers simultaneously (glare)
             try {
                 const otherIds = await this.$wire.getOtherJoinedParticipantIds();
                 console.log('Other joined participants:', otherIds);
                 for (const uid of otherIds) {
-                    await this.initiateCallTo(uid);
+                    if (this.userId > uid) {
+                        // We are the "impolite" peer — we initiate
+                        await this.initiateCallTo(uid);
+                    }
+                    // If userId < uid, we wait for THEIR offer (polite peer)
                 }
             } catch(e) { console.warn('Auto-initiate failed:', e.message); }
 
@@ -348,60 +354,45 @@ function videoCallApp() {
 
         async initMedia() {
             this.mediaError = '';
-
-            // Step 1: Try full video + audio
             try {
                 this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                 this.attachLocalStream();
                 return;
             } catch (e) {
                 if (e.name === 'NotAllowedError') {
-                    this.cameraOn = false;
-                    this.micOn = false;
-                    this.mediaError = 'Camera and microphone access was blocked. Click the lock/camera icon in your browser address bar, allow access, then click Retry below.';
+                    this.cameraOn = false; this.micOn = false;
+                    this.mediaError = 'Camera and microphone access was blocked. Click the lock icon in your browser address bar, allow access, then click Retry.';
                     return;
                 }
             }
-
-            // Step 2: Try audio-only (camera busy, missing, or denied)
             try {
                 this.localStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
                 this.cameraOn = false;
-                this.mediaError = 'Camera unavailable — audio only. To enable camera: click the lock icon in your browser address bar and allow camera access, then click Retry.';
+                this.mediaError = 'Camera unavailable — audio only.';
                 this.attachLocalStream();
                 return;
             } catch (e) {
                 if (e.name === 'NotAllowedError') {
-                    this.cameraOn = false;
-                    this.micOn = false;
-                    this.mediaError = 'Microphone access was blocked. Click the lock/camera icon in your browser address bar, allow microphone access, then click Retry below.';
+                    this.cameraOn = false; this.micOn = false;
+                    this.mediaError = 'Microphone access was blocked. Allow access and click Retry.';
                     return;
                 }
             }
-
-            // Step 3: Try video-only (no mic)
             try {
                 this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
                 this.micOn = false;
-                this.mediaError = 'Microphone unavailable — video only. To enable mic: click the lock icon in your browser address bar and allow microphone access.';
+                this.mediaError = 'Microphone unavailable — video only.';
                 this.attachLocalStream();
                 return;
             } catch (e) {}
-
-            // Step 4: Nothing works
-            this.cameraOn = false;
-            this.micOn = false;
-            this.mediaError = 'Camera and microphone are unavailable. This may be because access was blocked or no devices were found. Click the lock icon in your browser address bar to check permissions, then click Retry.';
+            this.cameraOn = false; this.micOn = false;
+            this.mediaError = 'Camera and microphone are unavailable. Check permissions and click Retry.';
         },
 
         async retryMedia() {
             this.mediaError = '';
-            if (this.localStream) {
-                this.localStream.getTracks().forEach(t => t.stop());
-                this.localStream = null;
-            }
-            this.micOn = true;
-            this.cameraOn = true;
+            if (this.localStream) { this.localStream.getTracks().forEach(t => t.stop()); this.localStream = null; }
+            this.micOn = true; this.cameraOn = true;
             await this.initMedia();
         },
 
@@ -412,31 +403,26 @@ function videoCallApp() {
 
         toggleMic() {
             this.micOn = !this.micOn;
-            if (this.localStream) {
-                this.localStream.getAudioTracks().forEach(t => t.enabled = this.micOn);
-            }
+            if (this.localStream) this.localStream.getAudioTracks().forEach(t => t.enabled = this.micOn);
             this.$wire.toggleMic();
         },
 
         toggleCamera() {
             this.cameraOn = !this.cameraOn;
-            if (this.localStream) {
-                this.localStream.getVideoTracks().forEach(t => t.enabled = this.cameraOn);
-            }
+            if (this.localStream) this.localStream.getVideoTracks().forEach(t => t.enabled = this.cameraOn);
             this.$wire.toggleCamera();
         },
 
         async pollForSignals() {
             try {
-                // Check if room was ended by someone else
                 const status = this.$wire.roomStatus;
-                if (status === 'ended' || status === 'none') {
-                    this.cleanup();
-                    return;
-                }
-
+                if (status === 'ended' || status === 'none') { this.cleanup(); return; }
                 const signals = await this.$wire.pollSignals();
                 for (const sig of signals) {
+                    // Deduplicate — skip signals we already processed
+                    const sigKey = sig.id || (sig.from + '-' + sig.type + '-' + (sig.payload || '').substring(0, 20));
+                    if (this.processedSignals.has(sigKey)) continue;
+                    this.processedSignals.add(sigKey);
                     await this.handleSignal(sig);
                 }
             } catch (e) {}
@@ -445,18 +431,45 @@ function videoCallApp() {
         async handleSignal(sig) {
             try {
                 const fromId = sig.from;
+                const pc = this.getOrCreatePeer(fromId);
+
                 if (sig.type === 'offer') {
-                    const pc = this.getOrCreatePeer(fromId);
+                    // "Polite peer" pattern: if we have a pending local offer and
+                    // the remote peer has higher ID, we rollback ours and accept theirs.
+                    const isPolite = this.userId < fromId;
+                    const offerCollision = this.makingOffer[fromId] ||
+                        (pc.signalingState !== 'stable' && pc.signalingState !== 'have-remote-offer');
+
+                    if (offerCollision && !isPolite) {
+                        // We are impolite and we collided — ignore their offer, they'll accept ours
+                        console.log('Ignoring colliding offer from', fromId, '(we are impolite)');
+                        return;
+                    }
+
+                    if (offerCollision && isPolite) {
+                        // We are polite — rollback our offer and accept theirs
+                        console.log('Rolling back our offer to accept offer from', fromId);
+                        await pc.setLocalDescription({ type: 'rollback' });
+                    }
+
                     await pc.setRemoteDescription(JSON.parse(sig.payload));
                     const answer = await pc.createAnswer();
                     await pc.setLocalDescription(answer);
                     this.$wire.sendSignal(fromId, 'answer', JSON.stringify(answer));
+
                 } else if (sig.type === 'answer') {
-                    const pc = this.peers[fromId];
-                    if (pc) await pc.setRemoteDescription(JSON.parse(sig.payload));
+                    if (pc.signalingState === 'have-local-offer') {
+                        await pc.setRemoteDescription(JSON.parse(sig.payload));
+                    } else {
+                        console.log('Ignoring stale answer from', fromId, 'state:', pc.signalingState);
+                    }
+
                 } else if (sig.type === 'ice') {
-                    const pc = this.peers[fromId];
-                    if (pc) await pc.addIceCandidate(JSON.parse(sig.payload));
+                    try {
+                        await pc.addIceCandidate(JSON.parse(sig.payload));
+                    } catch (e) {
+                        // ICE candidate may arrive before remote description — safe to ignore
+                    }
                 }
             } catch (e) {
                 console.warn('Signal handling error:', e.message);
@@ -466,9 +479,7 @@ function videoCallApp() {
         getOrCreatePeer(remoteUserId) {
             if (this.peers[remoteUserId]) return this.peers[remoteUserId];
 
-            const pc = new RTCPeerConnection({
-                iceServers: this.iceServers
-            });
+            const pc = new RTCPeerConnection({ iceServers: this.iceServers });
 
             pc.onicecandidate = (e) => {
                 if (e.candidate) {
@@ -485,8 +496,13 @@ function videoCallApp() {
                 }
             };
 
+            // Add local tracks in DETERMINISTIC order: audio first, then video
+            // This prevents m-line order mismatch across peers
             if (this.localStream) {
-                this.localStream.getTracks().forEach(t => pc.addTrack(t, this.localStream));
+                const audioTracks = this.localStream.getAudioTracks();
+                const videoTracks = this.localStream.getVideoTracks();
+                audioTracks.forEach(t => pc.addTrack(t, this.localStream));
+                videoTracks.forEach(t => pc.addTrack(t, this.localStream));
             }
 
             this.peers[remoteUserId] = pc;
@@ -494,10 +510,20 @@ function videoCallApp() {
         },
 
         async initiateCallTo(remoteUserId) {
-            const pc = this.getOrCreatePeer(remoteUserId);
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
-            this.$wire.sendSignal(remoteUserId, 'offer', JSON.stringify(offer));
+            if (this.makingOffer[remoteUserId]) return; // prevent concurrent offers
+            this.makingOffer[remoteUserId] = true;
+            try {
+                const pc = this.getOrCreatePeer(remoteUserId);
+                const offer = await pc.createOffer();
+                if (pc.signalingState !== 'stable' && pc.signalingState !== 'have-local-offer') {
+                    console.log('Skipping offer — peer not in stable state:', pc.signalingState);
+                    return;
+                }
+                await pc.setLocalDescription(offer);
+                this.$wire.sendSignal(remoteUserId, 'offer', JSON.stringify(offer));
+            } finally {
+                this.makingOffer[remoteUserId] = false;
+            }
         },
 
         cleanup() {
@@ -505,6 +531,8 @@ function videoCallApp() {
             if (this.localStream) this.localStream.getTracks().forEach(t => t.stop());
             Object.values(this.peers).forEach(pc => pc.close());
             this.peers = {};
+            this.makingOffer = {};
+            this.processedSignals.clear();
         }
     }
 }
