@@ -22,12 +22,26 @@
         @endforeach
     </div>
 
-    {{-- Flash Messages --}}
-    @if(session('finance_success'))
-        <div class="mb-4 px-4 py-2 bg-emerald-50 border border-emerald-300 text-emerald-700 text-sm rounded-lg">{{ session('finance_success') }}</div>
+    {{-- Notification Banner --}}
+    @if($successMessage)
+        <div class="mb-4 px-4 py-3 bg-emerald-50 border border-emerald-400 text-emerald-800 text-sm rounded-lg flex items-start gap-3 shadow-sm">
+            <span class="text-emerald-600 text-lg leading-none mt-0.5">&#10003;</span>
+            <div class="flex-1">
+                <div class="font-bold text-emerald-700 mb-0.5">Success</div>
+                {{ $successMessage }}
+            </div>
+            <button wire:click="clearMessages" class="text-emerald-400 hover:text-emerald-600 text-lg leading-none">&times;</button>
+        </div>
     @endif
-    @if(session('finance_error'))
-        <div class="mb-4 px-4 py-2 bg-red-50 border border-red-300 text-red-700 text-sm rounded-lg">{{ session('finance_error') }}</div>
+    @if($errorMessage)
+        <div class="mb-4 px-4 py-3 bg-red-50 border border-red-400 text-red-800 text-sm rounded-lg flex items-start gap-3 shadow-sm">
+            <span class="text-red-500 text-lg leading-none mt-0.5">&#10007;</span>
+            <div class="flex-1">
+                <div class="font-bold text-red-700 mb-0.5">Error</div>
+                {{ $errorMessage }}
+            </div>
+            <button wire:click="clearMessages" class="text-red-400 hover:text-red-600 text-lg leading-none">&times;</button>
+        </div>
     @endif
 
     {{-- Tab Buttons --}}
@@ -40,29 +54,39 @@
     {{-- ═══ UPLOAD TAB ═══ --}}
     @if($tab === 'upload')
     <div class="bg-crm-card border border-crm-border rounded-lg p-5">
-        <div class="text-sm font-bold mb-4">Upload Statement File</div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="md:col-span-2">
-                <label class="block text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mb-1">Statement File (CSV, PDF, Excel)</label>
-                <input type="file" wire:model="file" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100">
-                <div wire:loading wire:target="file" class="text-xs text-blue-500 mt-1">Uploading file...</div>
+        <div class="text-sm font-bold mb-1">Upload Statement File</div>
+        <p class="text-xs text-crm-t3 mb-4">Upload a processor statement (CSV, PDF, or Excel). The system will auto-detect the MID, processor, and extract all transactions, chargebacks, fees, and reserves.</p>
+
+        <form wire:submit="upload">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="md:col-span-2">
+                    <label for="fld-stmt-file" class="block text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mb-1">Statement File</label>
+                    <input id="fld-stmt-file" type="file" wire:model="file" accept=".pdf,.csv,.txt,.xlsx,.xls"
+                        class="w-full px-3 py-2 text-sm bg-white border-2 border-dashed border-crm-border rounded-lg focus:outline-none focus:border-blue-400 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-600 file:text-white hover:file:bg-blue-700 file:cursor-pointer cursor-pointer">
+                    <div wire:loading wire:target="file" class="text-xs text-blue-500 mt-2 font-semibold">Uploading file to server...</div>
+                    @error('file') <div class="text-xs text-red-500 mt-1">{{ $message }}</div> @enderror
+                </div>
+                <div>
+                    <label for="fld-stmt-mid" class="block text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mb-1">Assign to MID (optional)</label>
+                    <select id="fld-stmt-mid" wire:model="midFilter" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                        <option value="">Auto-detect from statement</option>
+                        @foreach($mids as $mid)
+                            <option value="{{ $mid->id }}">{{ $mid->account_name }} ({{ $mid->mid_number }})</option>
+                        @endforeach
+                    </select>
+                    <div class="text-[10px] text-crm-t3 mt-1">Leave empty to auto-detect MID from the file</div>
+                </div>
             </div>
-            <div>
-                <label class="block text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mb-1">Assign to MID</label>
-                <select wire:model="midFilter" class="w-full px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
-                    <option value="">Auto-detect</option>
-                    @foreach($mids as $mid)
-                        <option value="{{ $mid->id }}">{{ $mid->account_name }} ({{ $mid->mid_number }})</option>
-                    @endforeach
-                </select>
+            <div class="mt-4 flex items-center gap-3">
+                <button type="submit"
+                    class="px-6 py-2.5 text-sm font-bold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    wire:loading.attr="disabled" wire:target="file,upload">
+                    <span wire:loading.remove wire:target="upload">Upload & Analyze</span>
+                    <span wire:loading wire:target="upload">Analyzing Statement...</span>
+                </button>
+                <span wire:loading wire:target="upload" class="text-xs text-blue-500 font-semibold">This may take a few seconds for AI extraction...</span>
             </div>
-        </div>
-        <div class="mt-4">
-            <button wire:click="upload" class="px-4 py-1.5 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition" wire:loading.attr="disabled">
-                <span wire:loading.remove wire:target="upload">Upload & Analyze</span>
-                <span wire:loading wire:target="upload">Processing...</span>
-            </button>
-        </div>
+        </form>
     </div>
     @endif
 
