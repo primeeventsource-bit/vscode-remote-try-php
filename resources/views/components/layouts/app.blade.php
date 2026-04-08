@@ -307,9 +307,12 @@
     }
     </script>
 
-    {{-- iPhone PWA Install Prompt --}}
+    {{-- PWA Install Prompt (all platforms) --}}
     @auth
-    <div x-data="pwaInstall()" x-show="show" x-cloak x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-4" class="fixed bottom-20 left-4 right-4 z-[99990] sm:left-auto sm:right-5 sm:w-[360px]" style="display:none">
+    <div x-data="pwaInstall()" x-show="show" x-cloak
+         x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-4"
+         class="fixed bottom-20 left-4 right-4 z-[99990] sm:left-auto sm:right-5 sm:w-[360px]" style="display:none">
         <div class="rounded-2xl overflow-hidden shadow-2xl border border-blue-200/50 bg-white">
             {{-- Header --}}
             <div class="bg-gradient-to-r from-[#0f172a] to-[#1e293b] px-5 pt-4 pb-3">
@@ -322,30 +325,53 @@
                 </div>
             </div>
 
-            {{-- Steps --}}
-            <div class="px-5 py-4 space-y-3">
-                <div class="flex items-start gap-3">
-                    <div class="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold flex-shrink-0">1</div>
-                    <div>
-                        <div class="text-sm font-semibold text-gray-800">Tap the <span class="inline-flex items-center"><svg class="w-4 h-4 text-blue-500 mx-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg></span> Share button</div>
-                        <div class="text-xs text-gray-500">Bottom of Safari (or top on iPad)</div>
+            {{-- Android: one-tap install --}}
+            <template x-if="platform === 'android'">
+                <div class="px-5 py-4">
+                    <p class="text-sm text-gray-600 mb-3">Add CRM Prime to your home screen for quick access.</p>
+                    <button @click="nativeInstall()" class="w-full py-2.5 text-sm font-bold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition">Install App</button>
+                </div>
+            </template>
+
+            {{-- iOS: manual steps --}}
+            <template x-if="platform === 'ios'">
+                <div class="px-5 py-4 space-y-3">
+                    <div class="flex items-start gap-3">
+                        <div class="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold flex-shrink-0">1</div>
+                        <div>
+                            <div class="text-sm font-semibold text-gray-800">Tap the <span class="inline-flex items-center"><svg class="w-4 h-4 text-blue-500 mx-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg></span> Share button</div>
+                            <div class="text-xs text-gray-500">Bottom of Safari (or top on iPad)</div>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <div class="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold flex-shrink-0">2</div>
+                        <div>
+                            <div class="text-sm font-semibold text-gray-800">Tap <span class="font-bold">"Add to Home Screen"</span></div>
+                            <div class="text-xs text-gray-500">Scroll down in the share menu</div>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <div class="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold flex-shrink-0">3</div>
+                        <div>
+                            <div class="text-sm font-semibold text-gray-800">Tap <span class="font-bold">"Add"</span> to confirm</div>
+                            <div class="text-xs text-gray-500">CRM Prime appears on your Home Screen</div>
+                        </div>
                     </div>
                 </div>
-                <div class="flex items-start gap-3">
-                    <div class="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold flex-shrink-0">2</div>
-                    <div>
-                        <div class="text-sm font-semibold text-gray-800">Tap <span class="font-bold">"Add to Home Screen"</span></div>
-                        <div class="text-xs text-gray-500">Scroll down in the share menu if needed</div>
-                    </div>
+            </template>
+
+            {{-- Desktop: browser install or bookmark --}}
+            <template x-if="platform === 'desktop'">
+                <div class="px-5 py-4">
+                    <p class="text-sm text-gray-600 mb-3">Install CRM Prime as a desktop app for a cleaner experience.</p>
+                    <template x-if="hasNativePrompt">
+                        <button @click="nativeInstall()" class="w-full py-2.5 text-sm font-bold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition">Install App</button>
+                    </template>
+                    <template x-if="!hasNativePrompt">
+                        <div class="text-xs text-gray-500">Click the install icon <span class="font-mono bg-gray-100 px-1.5 py-0.5 rounded">+</span> in your browser's address bar, or use your browser menu to install.</div>
+                    </template>
                 </div>
-                <div class="flex items-start gap-3">
-                    <div class="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold flex-shrink-0">3</div>
-                    <div>
-                        <div class="text-sm font-semibold text-gray-800">Tap <span class="font-bold">"Add"</span></div>
-                        <div class="text-xs text-gray-500">CRM Prime will appear on your Home Screen</div>
-                    </div>
-                </div>
-            </div>
+            </template>
 
             {{-- Actions --}}
             <div class="border-t border-gray-100 px-5 py-3 bg-gray-50 flex items-center justify-between">
@@ -355,25 +381,65 @@
         </div>
     </div>
     <script>
+    // Capture Android/Chrome beforeinstallprompt globally before Alpine loads
+    window._pwaPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); window._pwaPrompt = e; });
+
     document.addEventListener('alpine:init', () => {
         Alpine.data('pwaInstall', () => ({
             show: false,
+            platform: 'desktop',
+            hasNativePrompt: false,
+
             init() {
-                // Only show on iOS Safari, not already in standalone mode
-                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-                const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+                const ua = navigator.userAgent || '';
+                const isStandalone = window.navigator.standalone === true
+                    || window.matchMedia('(display-mode: standalone)').matches;
                 const dismissed = localStorage.getItem('pwa_install_dismissed');
 
-                if (isIOS && !isStandalone && dismissed !== 'never') {
-                    // If dismissed as "later", show again after 3 days
-                    if (dismissed) {
-                        const ts = parseInt(dismissed, 10);
-                        if (Date.now() - ts < 3 * 24 * 60 * 60 * 1000) return;
+                // Already installed as PWA — never show
+                if (isStandalone) return;
+
+                // Permanently dismissed
+                if (dismissed === 'never') return;
+
+                // "Remind later" — wait 3 days
+                if (dismissed && dismissed !== 'never') {
+                    const ts = parseInt(dismissed, 10);
+                    if (!isNaN(ts) && Date.now() - ts < 3 * 24 * 60 * 60 * 1000) return;
+                }
+
+                // Detect platform
+                const isIOS = /iPad|iPhone|iPod/.test(ua) ||
+                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+                const isAndroid = /Android/.test(ua);
+
+                if (isIOS) {
+                    this.platform = 'ios';
+                } else if (isAndroid) {
+                    this.platform = 'android';
+                } else {
+                    this.platform = 'desktop';
+                }
+
+                // Check for native install prompt (Chrome/Edge on Android or desktop)
+                this.hasNativePrompt = !!window._pwaPrompt;
+
+                // Show after short delay
+                setTimeout(() => { this.show = true; }, 1500);
+            },
+
+            async nativeInstall() {
+                if (window._pwaPrompt) {
+                    window._pwaPrompt.prompt();
+                    const result = await window._pwaPrompt.userChoice;
+                    if (result.outcome === 'accepted') {
+                        this.dismiss('never');
                     }
-                    // Delay showing so it doesn't flash during page load
-                    setTimeout(() => { this.show = true; }, 2000);
+                    window._pwaPrompt = null;
                 }
             },
+
             dismiss(type) {
                 this.show = false;
                 if (type === 'never') {
