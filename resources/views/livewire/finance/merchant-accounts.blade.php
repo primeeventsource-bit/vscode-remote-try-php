@@ -25,12 +25,12 @@
         @endforeach
     </div>
 
-    {{-- Flash Messages --}}
-    @if(session('finance_success'))
-        <div class="mb-4 px-4 py-2 bg-emerald-50 border border-emerald-300 text-emerald-700 text-sm rounded-lg">{{ session('finance_success') }}</div>
+    {{-- Notifications --}}
+    @if($successMessage)
+        <div class="mb-4 px-4 py-3 bg-emerald-50 border border-emerald-400 text-emerald-800 text-sm rounded-lg shadow-sm">&#10003; {{ $successMessage }}</div>
     @endif
-    @if(session('finance_error'))
-        <div class="mb-4 px-4 py-2 bg-red-50 border border-red-300 text-red-700 text-sm rounded-lg">{{ session('finance_error') }}</div>
+    @if($errorMessage)
+        <div class="mb-4 px-4 py-3 bg-red-50 border border-red-400 text-red-800 text-sm rounded-lg shadow-sm">&#10007; {{ $errorMessage }}</div>
     @endif
 
     {{-- Add MID Form --}}

@@ -45,6 +45,16 @@ class StatementIngestionService
                 return ['success' => false, 'error' => 'File content is empty'];
             }
 
+            // For PDFs: extract text from binary content
+            $isPdf = str_contains($upload->mime_type ?? '', 'pdf') || str_ends_with(strtolower($upload->original_filename), '.pdf');
+            if ($isPdf) {
+                $content = self::extractTextFromPdf($content);
+                if (!$content || strlen(trim($content)) < 20) {
+                    // PDF text extraction failed — try sending raw to AI as last resort
+                    $content = 'PDF file: ' . $upload->original_filename . '. Unable to extract text locally. File size: ' . strlen($content) . ' bytes.';
+                }
+            }
+
             // Step 2: Detect processor/format (deterministic first)
             $detection = StatementFormatDetector::detect($content, $upload->original_filename, $upload->mime_type);
 
@@ -314,6 +324,67 @@ class StatementIngestionService
         }
 
         return [];
+    }
+
+    /**
+     * Extract readable text from PDF binary content.
+     */
+    private static function extractTextFromPdf(string $binaryContent): string
+    {
+        $text = '';
+
+        // Method 1: Try writing to temp file and using pdftotext (if installed)
+        try {
+            $tmpFile = tempnam(sys_get_temp_dir(), 'stmt_');
+            file_put_contents($tmpFile, $binaryContent);
+            $txtFile = $tmpFile . '.txt';
+
+            // Try pdftotext (poppler-utils)
+            exec("pdftotext -layout '{$tmpFile}' '{$txtFile}' 2>/dev/null", $output, $exitCode);
+            if ($exitCode === 0 && file_exists($txtFile)) {
+                $text = file_get_contents($txtFile);
+                @unlink($txtFile);
+                @unlink($tmpFile);
+                if (strlen(trim($text)) > 50) return $text;
+            }
+            @unlink($txtFile);
+            @unlink($tmpFile);
+        } catch (\Throwable) {}
+
+        // Method 2: Regex extraction of text streams from PDF binary
+        // PDF text is stored between BT...ET blocks with Tj/TJ operators
+        try {
+            // Extract text between stream...endstream
+            if (preg_match_all('/stream\s*\n(.*?)\nendstream/s', $binaryContent, $streams)) {
+                foreach ($streams[1] as $stream) {
+                    // Try to decompress FlateDecode streams
+                    $decoded = @gzuncompress($stream);
+                    if (!$decoded) $decoded = @gzinflate($stream);
+                    if (!$decoded) $decoded = $stream;
+
+                    // Extract text from Tj and TJ operators
+                    if (preg_match_all('/\(([^)]+)\)\s*Tj/s', $decoded, $tjMatches)) {
+                        $text .= implode(' ', $tjMatches[1]) . "\n";
+                    }
+                    if (preg_match_all('/\[([^\]]+)\]\s*TJ/s', $decoded, $tjMatches)) {
+                        foreach ($tjMatches[1] as $arr) {
+                            if (preg_match_all('/\(([^)]*)\)/', $arr, $parts)) {
+                                $text .= implode('', $parts[1]) . "\n";
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Also grab any readable ASCII strings from the PDF
+            if (strlen($text) < 100) {
+                if (preg_match_all('/([A-Za-z0-9\s\$\.,\-\/\#\@\:]{10,200})/', $binaryContent, $ascii)) {
+                    $text .= implode("\n", array_unique($ascii[1]));
+                }
+            }
+        } catch (\Throwable) {}
+
+        return $text;
     }
 
     private static function readFileContent(MerchantStatementUpload $upload): ?string
