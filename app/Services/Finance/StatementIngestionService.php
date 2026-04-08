@@ -58,16 +58,20 @@ class StatementIngestionService
             // Step 2: Detect processor/format (deterministic first)
             $detection = StatementFormatDetector::detect($content, $upload->original_filename, $upload->mime_type);
 
-            // Step 2b: If low confidence or missing critical fields, try AI extraction
-            if (($detection['confidence'] < 0.6 || !$detection['mid_number']) && strlen($content) > 50) {
+            // Step 2b: Always try AI extraction — it's smarter about field identification
+            if (strlen($content) > 50) {
                 try {
                     $aiData = self::aiAssistedDetection($content, $upload->original_filename);
                     if (!empty($aiData)) {
-                        // Merge AI results into detection (AI fills gaps, doesn't overwrite confident fields)
+                        // AI merchant_info is more reliable for processor/business/owner
+                        // AI OVERRIDES deterministic for these fields since deterministic gets confused
+                        if (!empty($aiData['processor_name'])) $detection['processor'] = $aiData['processor_name'];
+                        if (!empty($aiData['business_name'])) $detection['business_name'] = $aiData['business_name'];
+                        if (!empty($aiData['descriptor'])) $detection['descriptor'] = $aiData['descriptor'];
+                        if (!empty($aiData['owner_name'])) $detection['owner_name'] = $aiData['owner_name'];
+
+                        // AI fills gaps for other fields
                         $detection['mid_number'] = $detection['mid_number'] ?? ($aiData['mid_number'] ?? null);
-                        $detection['processor'] = $detection['processor'] ?? ($aiData['processor_name'] ?? null);
-                        $detection['business_name'] = $detection['business_name'] ?? ($aiData['business_name'] ?? null);
-                        $detection['descriptor'] = $detection['descriptor'] ?? ($aiData['descriptor'] ?? null);
                         $detection['gateway_name'] = $detection['gateway_name'] ?? ($aiData['gateway_name'] ?? null);
                         $detection['currency'] = $detection['currency'] ?? ($aiData['currency'] ?? 'USD');
                         $detection['account_name'] = $detection['account_name'] ?? ($aiData['business_name'] ?? null);
@@ -288,59 +292,27 @@ class StatementIngestionService
     }
 
     /**
-     * Try AI-assisted extraction when deterministic parsing gets low confidence.
-     * Sends text content to OpenAI/Claude to extract structured merchant data.
+     * AI-assisted detection — delegates to StatementAiExtractor and flattens merchant_info.
      */
     public static function aiAssistedDetection(string $content, string $filename): array
     {
-        // Only use first 4000 chars to keep API costs low
-        $excerpt = substr($content, 0, 4000);
-
-        // Redact card numbers before sending to AI
-        $excerpt = preg_replace('/\b\d{13,19}\b/', '[REDACTED]', $excerpt);
-
         try {
-            $apiKey = config('services.openai.api_key') ?: env('OPENAI_API_KEY');
-            if (!$apiKey) return [];
+            $result = StatementAiExtractor::extract($content, $filename, []);
+            $info = $result['merchant_info'] ?? [];
 
-            $prompt = "You are a merchant statement parser. Extract the following fields from this merchant processing statement text. Return ONLY valid JSON with these keys: mid_number, processor_name, business_name, descriptor, gateway_name, currency, statement_start_date, statement_end_date, gross_volume, refunds_total, chargebacks_total, fees_total, reserves_total, payouts_total. Use null for any field you cannot find.\n\nFilename: {$filename}\n\nStatement text:\n{$excerpt}";
-
-            $ch = curl_init('https://api.openai.com/v1/chat/completions');
-            curl_setopt_array($ch, [
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_POST => true,
-                CURLOPT_TIMEOUT => 30,
-                CURLOPT_HTTPHEADER => [
-                    'Content-Type: application/json',
-                    'Authorization: Bearer ' . $apiKey,
-                ],
-                CURLOPT_POSTFIELDS => json_encode([
-                    'model' => 'gpt-4o-mini',
-                    'messages' => [['role' => 'user', 'content' => $prompt]],
-                    'temperature' => 0.1,
-                    'max_tokens' => 500,
-                ]),
+            // Flatten merchant_info to top level for easy merging
+            return array_merge($info, [
+                'mid_number' => $info['mid_number'] ?? null,
+                'processor_name' => $info['processor_name'] ?? null,
+                'business_name' => $info['business_name'] ?? null,
+                'owner_name' => $info['owner_name'] ?? null,
+                'descriptor' => $info['descriptor'] ?? null,
+                'gateway_name' => $info['gateway_name'] ?? null,
             ]);
-
-            $response = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
-
-            if ($httpCode !== 200 || !$response) return [];
-
-            $data = json_decode($response, true);
-            $text = $data['choices'][0]['message']['content'] ?? '';
-
-            // Extract JSON from the response (it might be wrapped in markdown code blocks)
-            if (preg_match('/\{[^{}]*\}/s', $text, $jsonMatch)) {
-                $parsed = json_decode($jsonMatch[0], true);
-                if (is_array($parsed)) return $parsed;
-            }
         } catch (\Throwable $e) {
             report($e);
+            return [];
         }
-
-        return [];
     }
 
     /**

@@ -75,11 +75,19 @@ class StatementAiExtractor
 Parse this merchant processing statement and extract ALL financial data.
 
 Filename: {$filename}
-Detected processor: {$processorHint}
-Detected MID: {$midHint}
+Detected processor hint: {$processorHint}
+Detected MID hint: {$midHint}
 
 Return a JSON object with this exact structure:
 {
+  "merchant_info": {
+    "processor_name": "<the payment processor/acquirer company name — e.g. Nuevi, First Data, TSYS, Elavon. NOT a payment method like PayPal/Visa>",
+    "mid_number": "<merchant ID number>",
+    "business_name": "<the legal business/company name that OWNS this merchant account — e.g. THE TRAVEL ENTERPRISES>",
+    "owner_name": "<the individual person who owns the business — e.g. MELISSA SMITH. This is NOT the descriptor>",
+    "descriptor": "<what appears on cardholder credit card statements — the DBA name>",
+    "gateway_name": "<payment gateway if mentioned — e.g. NMI, Authorize.Net, or null>"
+  },
   "summary": {
     "gross_volume": <number or null>,
     "net_volume": <number or null>,
@@ -144,6 +152,8 @@ Return a JSON object with this exact structure:
 }
 
 IMPORTANT RULES:
+- MERCHANT INFO: processor_name is the PAYMENT PROCESSOR/ACQUIRER (e.g. Nuevi, First Data, TSYS) — NOT a card brand (Visa) or payment method (PayPal). PayPal/Visa/Mastercard are NOT processors unless the statement is literally from PayPal.
+- MERCHANT INFO: business_name is the COMPANY that owns the MID (e.g. "THE TRAVEL ENTERPRISES"). owner_name is the PERSON (e.g. "MELISSA SMITH"). descriptor is what shows on CARDHOLDER statements.
 - Extract EVERY transaction, chargeback, fee, reserve, and payout you can find
 - Chargeback amounts must be POSITIVE numbers
 - Fee amounts should be NEGATIVE (they are deductions)
@@ -264,6 +274,7 @@ PROMPT;
 
         return [
             'summary' => $parsed['summary'] ?? null,
+            'merchant_info' => $parsed['merchant_info'] ?? null,
             'lines' => $lines,
             'ai_source' => true,
         ];
