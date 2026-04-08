@@ -254,7 +254,8 @@ class StatementIngestionService
             ?? $detection['descriptor']
             ?? ('MID ' . $midNumber);
 
-        return MerchantAccount::create([
+        // Use DB::table to insert — bypasses $fillable and handles both old and new column schemas
+        $data = [
             'account_name' => $accountName,
             'mid_number' => $midNumber,
             'processor_name' => $detection['processor'] ?? 'Unknown',
@@ -267,7 +268,23 @@ class StatementIngestionService
             'notes' => 'Auto-created from statement upload',
             'created_by' => $userId,
             'updated_by' => $userId,
-        ]);
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
+
+        // Old table has required 'name', 'mid_masked', 'active' columns
+        if (\Illuminate\Support\Facades\Schema::hasColumn('merchant_accounts', 'name')) {
+            $data['name'] = $accountName;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('merchant_accounts', 'mid_masked')) {
+            $data['mid_masked'] = $midNumber;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('merchant_accounts', 'active')) {
+            $data['active'] = true;
+        }
+
+        $id = \Illuminate\Support\Facades\DB::table('merchant_accounts')->insertGetId($data);
+        return MerchantAccount::find($id);
     }
 
     /**
