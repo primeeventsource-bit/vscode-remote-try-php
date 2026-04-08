@@ -2,39 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-
-    {{-- PWA / App Shell --}}
-    <link rel="manifest" href="{{ asset('manifest.json') }}">
-    <meta name="theme-color" content="#2563eb">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="CRM Prime">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="application-name" content="CRM Prime">
-    <link rel="apple-touch-icon" href="{{ asset('icons/apple-touch-icon.png') }}">
     <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
-    <link rel="icon" type="image/png" sizes="192x192" href="{{ asset('icons/icon-192.png') }}">
-
-    <title>{{ $title ?? 'CRM Prime' }}</title>
+    <title>{{ $title ?? 'Prime CRM' }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('build/app.css') }}?v={{ filemtime(public_path('build/app.css')) }}">
-    <style>
-        [x-cloak]{display:none!important}
-        /* PWA standalone safe areas */
-        @supports(padding: env(safe-area-inset-top)) {
-            .pwa-safe-top { padding-top: env(safe-area-inset-top); }
-            .pwa-safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
-        }
-    </style>
+    <style>[x-cloak]{display:none!important}</style>
     @livewireStyles
 </head>
 <body class="bg-crm-bg font-sans text-crm-t1 min-h-screen" x-data="{ drawerOpen: false }">
 
     {{-- Top Bar --}}
-    <header class="fixed top-0 left-0 right-0 h-12 bg-crm-surface border-b border-crm-border flex items-center px-4 z-40 pwa-safe-top">
+    <header class="fixed top-0 left-0 right-0 h-12 bg-crm-surface border-b border-crm-border flex items-center px-4 z-40">
         <button @click="drawerOpen = !drawerOpen" class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-crm-hover transition">
             <svg class="w-5 h-5 text-crm-t2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
@@ -112,8 +93,7 @@
                         ['route' => 'stats',              'icon' => '📊', 'label' => 'Statistics',           'perm' => 'view_stats', 'training' => 'nav-stats'],
                         ['route' => 'sales-intelligence', 'icon' => '🧠', 'label' => 'Sales Intelligence',  'perm' => null, 'training' => 'nav-sales-intelligence'],
                         ['route' => 'tasks',              'icon' => '☑',  'label' => 'Task List',            'perm' => null, 'training' => 'nav-tasks'],
-                        ['route' => 'payroll',            'icon' => '💵', 'label' => 'Payroll (Legacy)',     'perm' => 'view_payroll', 'training' => 'nav-payroll'],
-                        ['route' => 'payroll-v2',         'icon' => '💎', 'label' => 'Payroll Engine',       'perm' => 'view_payroll', 'training' => 'nav-payroll-v2'],
+                        ['route' => 'payroll',            'icon' => '💵', 'label' => 'Payroll',              'perm' => 'view_payroll', 'training' => 'nav-payroll'],
                         ['route' => 'chargebacks',        'icon' => '⚠️',  'label' => 'Chargebacks',          'perm' => null, 'training' => 'nav-chargebacks'],
                     ]],
                     ['title' => 'TRAINING', 'items' => [
@@ -124,7 +104,7 @@
                     ]],
                     ['title' => 'COMMUNICATION', 'items' => [
                         // Sidebar chat disabled — use bubble chat (bottom-right)
-                        ['route' => 'calls',        'icon' => '🔗', 'label' => 'Prime Connect',    'perm' => null, 'training' => 'nav-calls'],
+                        ['route' => 'calls',        'icon' => '📞', 'label' => 'Calls',           'perm' => null, 'training' => 'nav-calls'],
                     ]],
                     ['title' => 'WORKSPACE', 'items' => [
                         ['route' => 'documents',    'icon' => '📄', 'label' => 'Documents',       'perm' => 'view_documents', 'enabled' => $documentsEnabled, 'training' => 'nav-documents'],
@@ -133,12 +113,7 @@
                         ['route' => 'transfers',    'icon' => '♻️',  'label' => 'Transfers',       'perm' => null, 'training' => 'nav-transfers'],
                     ]],
                     ['title' => 'FINANCE', 'items' => [
-                        ['route' => 'finance',             'icon' => '💳', 'label' => 'Finance Center',    'perm' => null, 'role' => 'master_admin', 'training' => 'nav-finance',             'href' => '/finance'],
-                        ['route' => 'finance.accounts',    'icon' => '🏦', 'label' => 'Merchant Accounts', 'perm' => null, 'role' => 'master_admin', 'training' => 'nav-finance-accounts',    'href' => '/finance/accounts'],
-                        ['route' => 'finance.statements',  'icon' => '📑', 'label' => 'Statements',        'perm' => null, 'role' => 'master_admin', 'training' => 'nav-finance-statements',  'href' => '/finance/statements'],
-                        ['route' => 'finance.transactions','icon' => '💰', 'label' => 'Transactions',      'perm' => null, 'role' => 'master_admin', 'training' => 'nav-finance-transactions','href' => '/finance/transactions'],
-                        ['route' => 'finance.chargebacks', 'icon' => '🔴', 'label' => 'Chargebacks',       'perm' => null, 'role' => 'master_admin', 'training' => 'nav-finance-chargebacks', 'href' => '/finance/chargebacks'],
-                        ['route' => 'finance.entries',     'icon' => '📒', 'label' => 'Financial Entries',  'perm' => null, 'role' => 'master_admin', 'training' => 'nav-finance-entries',     'href' => '/finance/entries'],
+                        ['route' => 'finance.dashboard', 'icon' => '💳', 'label' => 'Finance Center', 'perm' => null, 'roles' => ['master_admin', 'admin'], 'training' => 'nav-finance'],
                     ]],
                     ['title' => 'SYSTEM', 'items' => [
                         ['route' => 'users',          'icon' => '👥', 'label' => 'Users',           'perm' => 'view_users', 'training' => 'nav-users'],
@@ -153,13 +128,7 @@
                     $visibleItems = collect($section['items'])->filter(function ($item) use ($user) {
                         $enabled = $item['enabled'] ?? true;
                         if (!$enabled) return false;
-
-                        // Role-gated items (e.g. Finance = master_admin only)
-                        if (!empty($item['role'])) {
-                            return $user->role === $item['role'];
-                        }
-
-                        // Permission-gated items
+                        if (!empty($item['roles']) && !$user->hasRole(...$item['roles'])) return false;
                         return !$item['perm'] || $user->hasPerm($item['perm']);
                     });
                 @endphp
@@ -168,18 +137,11 @@
                         <span class="text-[9px] text-crm-t3 uppercase tracking-widest font-bold">{{ $section['title'] }}</span>
                     </div>
                     @foreach($visibleItems as $item)
-                        @php
-                            if (!empty($item['href'])) {
-                                $navHref = $item['href'];
-                            } else {
-                                try { $navHref = route($item['route']); } catch (\Throwable $e) { $navHref = '/' . $item['route']; }
-                            }
-                        @endphp
+                        @php try { $navHref = route($item['route']); } catch (\Throwable $e) { $navHref = '/' . $item['route']; } @endphp
                         <a href="{{ $navHref }}" @click="drawerOpen = false"
                            data-training="{{ $item['training'] ?? $item['route'] }}"
-                           @php $navActive = request()->routeIs($item['route']) || (!empty($item['href']) && request()->is(ltrim($item['href'], '/'))); @endphp
                            class="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition
-                                  {{ $navActive ? 'bg-blue-50 text-blue-600' : 'text-crm-t2 hover:bg-crm-hover' }}">
+                                  {{ request()->routeIs($item['route']) ? 'bg-blue-50 text-blue-600' : 'text-crm-t2 hover:bg-crm-hover' }}">
                             <span class="w-5 text-center text-sm">{{ $item['icon'] }}</span>
                             {{ $item['label'] }}
                         </a>
@@ -255,11 +217,6 @@
         @livewire('incoming-call-alert')
     @endauth
 
-    {{-- Global message notification toasts --}}
-    @auth
-        @livewire('message-notification-toast')
-    @endauth
-
     {{-- Global interactive training walkthrough overlay --}}
     @auth
         @livewire('training-overlay')
@@ -272,10 +229,9 @@
     <script>
     (function() {
         let lastActivity = Date.now();
-        const HEARTBEAT_MS = 60000;
+        const HEARTBEAT_MS = 30000;
         const IDLE_MS = 300000;
         let heartbeatStopped = false;
-        let heartbeatInFlight = false;
 
         function getCsrf() {
             return document.querySelector('meta[name="csrf-token"]')?.content || '';
@@ -287,8 +243,7 @@
         document.addEventListener('visibilitychange', () => { if (!document.hidden) lastActivity = Date.now(); });
 
         function sendHeartbeat() {
-            if (heartbeatStopped || heartbeatInFlight) return;
-            heartbeatInFlight = true;
+            if (heartbeatStopped) return;
             const isActive = (Date.now() - lastActivity) < IDLE_MS;
             fetch('/presence/heartbeat', {
                 method: 'POST',
@@ -302,11 +257,12 @@
                 body: JSON.stringify({ active: isActive }),
                 keepalive: true
             }).then(r => {
-                heartbeatInFlight = false;
                 if (r.status === 419) {
+                    // CSRF expired or session gone — stop spamming, reload will fix it
                     heartbeatStopped = true;
+                    console.warn('Heartbeat stopped: session expired (419)');
                 }
-            }).catch(() => { heartbeatInFlight = false; });
+            }).catch(() => {});
         }
 
         sendHeartbeat();
@@ -327,194 +283,6 @@
             }).catch(() => {});
         });
     })();
-    </script>
-    @endauth
-
-    {{-- Service Worker + Push Notifications --}}
-    <script>
-    (function() {
-        if (!('serviceWorker' in navigator)) return;
-
-        navigator.serviceWorker.register('/sw.js').then(function(reg) {
-            // Only attempt push subscription if user is authenticated and browser supports it
-            if (!('PushManager' in window)) return;
-            if (Notification.permission === 'denied') return;
-
-            // Get VAPID key and subscribe
-            fetch('/push/vapid-key', { credentials: 'same-origin' })
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    if (!data.key) return;
-
-                    var vapidKey = urlBase64ToUint8Array(data.key);
-
-                    reg.pushManager.getSubscription().then(function(sub) {
-                        if (sub) {
-                            // Already subscribed — send to server to ensure it's registered
-                            sendSubToServer(sub);
-                            return;
-                        }
-
-                        // Not subscribed yet — request permission and subscribe
-                        if (Notification.permission === 'granted') {
-                            subscribePush(reg, vapidKey);
-                        }
-                        // If permission is 'default', we'll request it from the settings page
-                    });
-                }).catch(function() {});
-        }).catch(function() {});
-
-        function subscribePush(reg, vapidKey) {
-            reg.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: vapidKey
-            }).then(function(sub) {
-                sendSubToServer(sub);
-            }).catch(function() {});
-        }
-
-        function sendSubToServer(sub) {
-            var key = sub.getKey('p256dh');
-            var auth = sub.getKey('auth');
-            fetch('/push/subscribe', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
-                    'Accept': 'application/json',
-                },
-                credentials: 'same-origin',
-                body: JSON.stringify({
-                    endpoint: sub.endpoint,
-                    p256dh_key: btoa(String.fromCharCode.apply(null, new Uint8Array(key))),
-                    auth_token: btoa(String.fromCharCode.apply(null, new Uint8Array(auth))),
-                    content_encoding: (PushManager.supportedContentEncodings || ['aesgcm'])[0],
-                })
-            }).catch(function() {});
-        }
-
-        function urlBase64ToUint8Array(base64String) {
-            var padding = '='.repeat((4 - base64String.length % 4) % 4);
-            var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-            var raw = atob(base64);
-            var arr = new Uint8Array(raw.length);
-            for (var i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
-            return arr;
-        }
-
-        // Expose for settings page
-        window.CRMPush = {
-            requestPermission: function() {
-                return Notification.requestPermission().then(function(perm) {
-                    if (perm === 'granted') {
-                        return navigator.serviceWorker.ready.then(function(reg) {
-                            return fetch('/push/vapid-key', { credentials: 'same-origin' })
-                                .then(function(r) { return r.json(); })
-                                .then(function(data) {
-                                    if (!data.key) return false;
-                                    return subscribePush(reg, urlBase64ToUint8Array(data.key));
-                                });
-                        });
-                    }
-                    return false;
-                });
-            },
-            getPermission: function() { return Notification.permission; }
-        };
-    })();
-    </script>
-
-    {{-- PWA Install Prompt --}}
-    @auth
-    <div id="pwa-install-banner" style="display:none; position:fixed; bottom:80px; left:16px; right:16px; z-index:99990; max-width:360px; margin-left:auto;">
-        <div style="border-radius:16px; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); border:1px solid rgba(191,219,254,0.5); background:#fff;">
-            <div style="background:linear-gradient(to right,#0f172a,#1e293b); padding:16px 20px 12px;">
-                <div style="display:flex; align-items:center; gap:12px;">
-                    <img src="/icons/apple-touch-icon.png" style="width:48px; height:48px; border-radius:12px; box-shadow:0 4px 6px rgba(0,0,0,0.3);" alt="CRM Prime">
-                    <div>
-                        <div style="color:#fff; font-weight:700; font-size:16px;">Install CRM Prime</div>
-                        <div style="color:#93c5fd; font-size:12px; margin-top:2px;">Use as a full-screen app</div>
-                    </div>
-                </div>
-            </div>
-            <div id="pwa-steps" style="padding:16px 20px; font-family:inherit;"></div>
-            <div style="border-top:1px solid #f3f4f6; padding:12px 20px; background:#f9fafb; display:flex; align-items:center; justify-content:space-between;">
-                <button onclick="pwaClose('later')" style="font-size:12px; color:#9ca3af; background:none; border:none; cursor:pointer; font-family:inherit;">Remind me later</button>
-                <button onclick="pwaClose('never')" style="font-size:12px; font-weight:700; color:#2563eb; background:#eff6ff; border:none; border-radius:8px; padding:6px 16px; cursor:pointer; font-family:inherit;">Got it</button>
-            </div>
-        </div>
-    </div>
-    <script>
-    (function() {
-        var banner = document.getElementById('pwa-install-banner');
-        var steps = document.getElementById('pwa-steps');
-        if (!banner || !steps) return;
-
-        var isStandalone = (window.navigator.standalone === true) || window.matchMedia('(display-mode: standalone)').matches;
-        if (isStandalone) return;
-
-        var dismissed = localStorage.getItem('pwa_install_dismissed');
-        if (dismissed === 'never') return;
-        if (dismissed && dismissed !== 'never') {
-            var ts = parseInt(dismissed, 10);
-            if (!isNaN(ts) && Date.now() - ts < 3 * 24 * 60 * 60 * 1000) return;
-        }
-
-        // Detect platform
-        var ua = navigator.userAgent || '';
-        var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
-        if (isIOS) {
-            steps.innerHTML =
-                '<div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;">' +
-                    '<div style="width:28px;height:28px;border-radius:50%;background:#dbeafe;color:#2563eb;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">1</div>' +
-                    '<div><div style="font-size:14px;font-weight:600;color:#1f2937;">Tap the <svg style="display:inline;width:16px;height:16px;vertical-align:middle;color:#3b82f6;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg> Share button</div>' +
-                    '<div style="font-size:11px;color:#6b7280;margin-top:2px;">Bottom of Safari</div></div>' +
-                '</div>' +
-                '<div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;">' +
-                    '<div style="width:28px;height:28px;border-radius:50%;background:#dbeafe;color:#2563eb;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">2</div>' +
-                    '<div><div style="font-size:14px;font-weight:600;color:#1f2937;">Tap <b>"Add to Home Screen"</b></div>' +
-                    '<div style="font-size:11px;color:#6b7280;margin-top:2px;">Scroll down in the share menu</div></div>' +
-                '</div>' +
-                '<div style="display:flex;align-items:flex-start;gap:12px;">' +
-                    '<div style="width:28px;height:28px;border-radius:50%;background:#dbeafe;color:#2563eb;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">3</div>' +
-                    '<div><div style="font-size:14px;font-weight:600;color:#1f2937;">Tap <b>"Add"</b> to confirm</div>' +
-                    '<div style="font-size:11px;color:#6b7280;margin-top:2px;">CRM Prime appears on your Home Screen</div></div>' +
-                '</div>';
-        } else {
-            steps.innerHTML =
-                '<p style="font-size:14px;color:#4b5563;margin:0 0 12px;">Add CRM Prime to your home screen for quick access like a native app.</p>' +
-                '<p style="font-size:12px;color:#6b7280;margin:0;">Use your browser menu or address bar install button.</p>';
-        }
-
-        // Show after delay
-        setTimeout(function() {
-            banner.style.display = 'block';
-            banner.style.opacity = '0';
-            banner.style.transform = 'translateY(20px)';
-            banner.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-            requestAnimationFrame(function() {
-                requestAnimationFrame(function() {
-                    banner.style.opacity = '1';
-                    banner.style.transform = 'translateY(0)';
-                });
-            });
-        }, 1500);
-    })();
-
-    function pwaClose(type) {
-        var banner = document.getElementById('pwa-install-banner');
-        if (banner) {
-            banner.style.opacity = '0';
-            banner.style.transform = 'translateY(20px)';
-            setTimeout(function() { banner.style.display = 'none'; }, 300);
-        }
-        if (type === 'never') {
-            localStorage.setItem('pwa_install_dismissed', 'never');
-        } else {
-            localStorage.setItem('pwa_install_dismissed', String(Date.now()));
-        }
-    }
     </script>
     @endauth
 </body>

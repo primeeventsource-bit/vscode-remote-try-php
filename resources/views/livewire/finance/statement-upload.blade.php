@@ -236,6 +236,7 @@
                     <th class="px-3 py-2 text-center text-[9px] text-crm-t3 uppercase tracking-wider font-semibold">Confidence</th>
                     <th class="px-3 py-2 text-left text-[9px] text-crm-t3 uppercase tracking-wider font-semibold">Period</th>
                     <th class="px-3 py-2 text-left text-[9px] text-crm-t3 uppercase tracking-wider font-semibold">Uploaded</th>
+                        <th class="px-3 py-2 text-center text-[9px] text-crm-t3 uppercase tracking-wider font-semibold">Actions</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-crm-border">
@@ -274,10 +275,18 @@
                         @endif
                     </td>
                     <td class="px-3 py-2 text-xs text-crm-t3">{{ $upload->uploaded_at?->format('M j, Y g:ia') ?? '-' }}</td>
+                    <td class="px-3 py-2 text-center">
+                        <button wire:click="reparse({{ $upload->id }})" wire:loading.attr="disabled" wire:target="reparse({{ $upload->id }})"
+                            class="px-3 py-1 text-[10px] font-bold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+                            title="Re-parse this statement with AI">
+                            <span wire:loading.remove wire:target="reparse({{ $upload->id }})">Re-parse</span>
+                            <span wire:loading wire:target="reparse({{ $upload->id }})">Parsing...</span>
+                        </button>
+                    </td>
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="7" class="px-3 py-8 text-center text-sm text-crm-t3">No statement uploads yet.</td>
+                    <td colspan="8" class="px-3 py-8 text-center text-sm text-crm-t3">No statement uploads yet.</td>
                 </tr>
                 @endforelse
             </tbody>

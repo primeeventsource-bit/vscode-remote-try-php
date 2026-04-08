@@ -150,10 +150,41 @@ class StatementUpload extends Component
         $this->errorMessage = '';
     }
 
+    public function reparse(int $uploadId)
+    {
+        $this->successMessage = '';
+        $this->errorMessage = '';
+
+        try {
+            $upload = MerchantStatementUpload::findOrFail($uploadId);
+
+            // Delete old line items and summary so we get fresh results
+            $upload->lineItems()->delete();
+            if ($upload->summary) {
+                $upload->summary->delete();
+            }
+
+            $upload->update(['processing_status' => 'pending']);
+
+            $result = StatementIngestionService::processUpload($upload);
+
+            if ($result['success']) {
+                $this->successMessage = "Re-parsed successfully: {$result['line_count']} lines found, {$result['review_count']} need review.";
+                $this->previewUploadId = $upload->id;
+                $this->tab = 'preview';
+            } else {
+                $this->errorMessage = 'Re-parse failed: ' . ($result['error'] ?? 'Unknown error');
+            }
+        } catch (\Throwable $e) {
+            report($e);
+            $this->errorMessage = 'Re-parse error: ' . $e->getMessage();
+        }
+    }
+
     public function render()
     {
         $user = auth()->user();
-        if (!$user->hasRole('master_admin') && !$user->hasPerm('view_finance')) abort(403);
+        if (!$user || (!$user->hasRole('master_admin') && !$user->hasPerm('view_finance'))) abort(403);
 
         $mids = collect();
         $previewUpload = null;

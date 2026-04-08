@@ -17,11 +17,17 @@ class RequireRole
         $user = $request->user();
 
         if (! $user) {
-            return response()->json(['error' => 'Unauthorized'], 401);
+            if ($request->expectsJson() || $request->is('api/*') || $request->is('livewire/*')) {
+                return response()->json(['error' => 'Unauthorized'], 401);
+            }
+            return redirect()->route('login');
         }
 
         if (! in_array($user->role, $roles, true)) {
-            return response()->json(['error' => 'Forbidden — insufficient role'], 403);
+            if ($request->expectsJson() || $request->is('api/*') || $request->is('livewire/*')) {
+                return response()->json(['error' => 'Forbidden — insufficient role'], 403);
+            }
+            abort(403, 'Forbidden — insufficient role');
         }
 
         return $next($request);

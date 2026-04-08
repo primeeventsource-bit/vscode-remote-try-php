@@ -19,7 +19,7 @@ class FinanceDashboard extends Component
     public function render()
     {
         $user = auth()->user();
-        if (!$user->hasRole('master_admin') && !$user->hasPerm('view_finance')) {
+        if (!$user || (!$user->hasRole('master_admin') && !$user->hasPerm('view_finance'))) {
             abort(403);
         }
 

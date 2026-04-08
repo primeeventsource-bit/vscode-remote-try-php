@@ -22,8 +22,9 @@ class StatementAiExtractor
         // Redact sensitive card data before sending
         $safe = self::redactSensitiveData($content);
 
-        // Limit to ~6000 chars to control cost (gpt-4o-mini is cheap but be reasonable)
-        $excerpt = substr($safe, 0, 6000);
+        // Send full content up to 30K chars — gpt-4o-mini handles 128K tokens
+        // Chargebacks/fees are often on later pages, truncating loses critical data
+        $excerpt = substr($safe, 0, 30000);
 
         $prompt = self::buildPrompt($excerpt, $filename, $detection);
 
@@ -44,7 +45,7 @@ class StatementAiExtractor
                         ['role' => 'user', 'content' => $prompt],
                     ],
                     'temperature' => 0.05,
-                    'max_tokens' => 4000,
+                    'max_tokens' => 8000,
                 ]),
             ]);
 

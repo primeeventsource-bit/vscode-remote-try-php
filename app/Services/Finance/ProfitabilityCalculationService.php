@@ -24,65 +24,87 @@ class ProfitabilityCalculationService
 {
     public static function calculate(?int $midId = null, $from = null, $to = null): array
     {
-        $settings = self::getSettings();
-
-        $grossVolume = self::sumTransactions($midId, $from, $to, ['approved', 'settled']);
-        $declinedVolume = self::sumTransactions($midId, $from, $to, ['declined']);
-        $refunds = abs(self::sumTransactions($midId, $from, $to, ['refunded', 'partial_refund']));
-        $chargebacks = abs(self::sumChargebacks($midId, $from, $to));
-        $fees = abs(self::sumEntries($midId, $from, $to, 'fee'));
-        $reserveHolds = abs(self::sumEntries($midId, $from, $to, 'reserve_hold'));
-        $reserveReleases = abs(self::sumEntries($midId, $from, $to, 'reserve_release'));
-        $payouts = abs(self::sumEntries($midId, $from, $to, 'payout') + self::sumEntries($midId, $from, $to, 'deposit'));
-        $adjustments = self::sumEntries($midId, $from, $to, 'adjustment');
-
-        $netResult = $grossVolume - $refunds - $chargebacks - $fees;
-
-        if ($settings['include_reserve_holds']) $netResult -= $reserveHolds;
-        if ($settings['include_reserve_releases']) $netResult += $reserveReleases;
-        if ($settings['include_adjustments']) $netResult += $adjustments;
-
-        $txnCount = self::countTransactions($midId, $from, $to);
-        $approvedCount = self::countTransactions($midId, $from, $to, ['approved', 'settled']);
-        $declinedCount = self::countTransactions($midId, $from, $to, ['declined']);
-        $cbCount = self::countChargebacks($midId, $from, $to);
-        $cbRate = $approvedCount > 0 ? round($cbCount / $approvedCount * 100, 2) : 0;
-
-        return [
-            'gross_volume' => $grossVolume,
-            'declined_volume' => $declinedVolume,
-            'refunds' => $refunds,
-            'chargebacks' => $chargebacks,
-            'fees' => $fees,
-            'reserve_holds' => $reserveHolds,
-            'reserve_releases' => $reserveReleases,
-            'payouts' => $payouts,
-            'adjustments' => $adjustments,
-            'net_result' => round($netResult, 2),
-            'transaction_count' => $txnCount,
-            'approved_count' => $approvedCount,
-            'declined_count' => $declinedCount,
-            'chargeback_count' => $cbCount,
-            'chargeback_rate' => $cbRate,
+        $defaults = [
+            'gross_volume' => 0, 'declined_volume' => 0, 'refunds' => 0,
+            'chargebacks' => 0, 'fees' => 0, 'reserve_holds' => 0,
+            'reserve_releases' => 0, 'payouts' => 0, 'adjustments' => 0,
+            'net_result' => 0, 'transaction_count' => 0, 'approved_count' => 0,
+            'declined_count' => 0, 'chargeback_count' => 0, 'chargeback_rate' => 0,
         ];
+
+        try {
+            $settings = self::getSettings();
+
+            $grossVolume = self::sumTransactions($midId, $from, $to, ['approved', 'settled']);
+            $declinedVolume = self::sumTransactions($midId, $from, $to, ['declined']);
+            $refunds = abs(self::sumTransactions($midId, $from, $to, ['refunded', 'partial_refund']));
+            $chargebacks = abs(self::sumChargebacks($midId, $from, $to));
+            $fees = abs(self::sumEntries($midId, $from, $to, 'fee'));
+            $reserveHolds = abs(self::sumEntries($midId, $from, $to, 'reserve_hold'));
+            $reserveReleases = abs(self::sumEntries($midId, $from, $to, 'reserve_release'));
+            $payouts = abs(self::sumEntries($midId, $from, $to, 'payout') + self::sumEntries($midId, $from, $to, 'deposit'));
+            $adjustments = self::sumEntries($midId, $from, $to, 'adjustment');
+
+            $netResult = $grossVolume - $refunds - $chargebacks - $fees;
+
+            if ($settings['include_reserve_holds']) $netResult -= $reserveHolds;
+            if ($settings['include_reserve_releases']) $netResult += $reserveReleases;
+            if ($settings['include_adjustments']) $netResult += $adjustments;
+
+            $txnCount = self::countTransactions($midId, $from, $to);
+            $approvedCount = self::countTransactions($midId, $from, $to, ['approved', 'settled']);
+            $declinedCount = self::countTransactions($midId, $from, $to, ['declined']);
+            $cbCount = self::countChargebacks($midId, $from, $to);
+            $cbRate = $approvedCount > 0 ? round($cbCount / $approvedCount * 100, 2) : 0;
+
+            return [
+                'gross_volume' => $grossVolume,
+                'declined_volume' => $declinedVolume,
+                'refunds' => $refunds,
+                'chargebacks' => $chargebacks,
+                'fees' => $fees,
+                'reserve_holds' => $reserveHolds,
+                'reserve_releases' => $reserveReleases,
+                'payouts' => $payouts,
+                'adjustments' => $adjustments,
+                'net_result' => round($netResult, 2),
+                'transaction_count' => $txnCount,
+                'approved_count' => $approvedCount,
+                'declined_count' => $declinedCount,
+                'chargeback_count' => $cbCount,
+                'chargeback_rate' => $cbRate,
+            ];
+        } catch (\Throwable $e) {
+            report($e);
+            return $defaults;
+        }
     }
 
     public static function calculateByMid($from = null, $to = null): array
     {
-        $mids = MerchantAccount::active()->orderBy('account_name')->get();
-        $rows = [];
+        try {
+            $mids = MerchantAccount::active()->get();
+            $rows = [];
 
-        foreach ($mids as $mid) {
-            $p = self::calculate($mid->id, $from, $to);
-            $rows[] = array_merge([
-                'mid_id' => $mid->id,
-                'mid_number' => $mid->mid_number,
-                'account_name' => $mid->account_name,
-                'processor' => $mid->processor_name,
-            ], $p);
+            foreach ($mids as $mid) {
+                try {
+                    $p = self::calculate($mid->id, $from, $to);
+                    $rows[] = array_merge([
+                        'mid_id' => $mid->id,
+                        'mid_number' => $mid->mid_number,
+                        'account_name' => $mid->account_name,
+                        'processor' => $mid->processor_name,
+                    ], $p);
+                } catch (\Throwable $e) {
+                    report($e);
+                }
+            }
+
+            return $rows;
+        } catch (\Throwable $e) {
+            report($e);
+            return [];
         }
-
-        return $rows;
     }
 
     public static function calculateOverall($from = null, $to = null): array

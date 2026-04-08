@@ -51,7 +51,7 @@ class FinanceChargebacks extends Component
     public function render()
     {
         $user = auth()->user();
-        if (!$user->hasRole('master_admin') && !$user->hasPerm('view_finance')) abort(403);
+        if (!$user || (!$user->hasRole('master_admin') && !$user->hasPerm('view_finance'))) abort(403);
 
         $chargebacks = new \Illuminate\Pagination\LengthAwarePaginator([], 0, $this->perPage);
         $mids = collect();

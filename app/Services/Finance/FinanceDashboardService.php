@@ -16,14 +16,18 @@ class FinanceDashboardService
 {
     public static function getFullDashboard(?int $midId = null, $from = null, $to = null): array
     {
+        $safe = fn(callable $fn, $default = []) => (function () use ($fn, $default) {
+            try { return $fn(); } catch (\Throwable $e) { report($e); return $default; }
+        })();
+
         return [
-            'summary_cards' => self::getSummaryCards($midId, $from, $to),
-            'profitability' => self::getProfitabilitySummary($midId, $from, $to),
-            'mid_breakdown' => self::getMidBreakdown($from, $to),
-            'chargeback_summary' => self::getChargebackSummary($midId, $from, $to),
-            'transaction_trends' => self::getTransactionTrends($midId, $from, $to),
-            'financial_burden' => self::getFinancialBurden($from, $to),
-            'statement_import_health' => self::getStatementImportHealth(),
+            'summary_cards' => $safe(fn() => self::getSummaryCards($midId, $from, $to)),
+            'profitability' => $safe(fn() => self::getProfitabilitySummary($midId, $from, $to)),
+            'mid_breakdown' => $safe(fn() => self::getMidBreakdown($from, $to)),
+            'chargeback_summary' => $safe(fn() => self::getChargebackSummary($midId, $from, $to)),
+            'transaction_trends' => $safe(fn() => self::getTransactionTrends($midId, $from, $to)),
+            'financial_burden' => $safe(fn() => self::getFinancialBurden($from, $to)),
+            'statement_import_health' => $safe(fn() => self::getStatementImportHealth()),
             'meta' => [
                 'generated_at' => now()->toIso8601String(),
                 'mid_filter' => $midId,
@@ -84,8 +88,9 @@ class FinanceDashboardService
 
     public static function getChargebackSummary(?int $midId = null, $from = null, $to = null): array
     {
-        $base = MerchantChargeback::query();
-        if ($midId) $base->where('merchant_account_id', $midId);
+        try {
+            $base = MerchantChargeback::query();
+            if ($midId) $base->where('merchant_account_id', $midId);
 
         $openCount = (clone $base)->open()->count();
         $dueSoon = (clone $base)->dueSoon()->count();
@@ -145,6 +150,10 @@ class FinanceDashboardService
             'reason_codes' => $reasonCodes,
             'status_breakdown' => $statusBreakdown,
         ];
+        } catch (\Throwable $e) {
+            report($e);
+            return [];
+        }
     }
 
     // ═══════════════════════════════════════════════════════
@@ -227,38 +236,45 @@ class FinanceDashboardService
 
     public static function getStatementImportHealth(): array
     {
-        $recent = MerchantStatementUpload::orderByDesc('uploaded_at')
-            ->limit(10)
-            ->get()
-            ->map(function ($u) {
-                $mid = $u->merchantAccount;
-                $summary = $u->summary;
-                $batch = $u->importBatches()->latest()->first();
-                $reviewCount = $u->lineItems()->where('needs_review', true)->count();
+        try {
+            $recent = MerchantStatementUpload::orderByDesc('uploaded_at')
+                ->limit(10)
+                ->get()
+                ->map(function ($u) {
+                    $mid = $u->merchantAccount;
+                    $summary = $u->summary;
+                    $batch = $u->importBatches()->latest()->first();
+                    $reviewCount = 0;
+                    try { $reviewCount = $u->lineItems()->where('needs_review', true)->count(); } catch (\Throwable) {}
 
-                return [
-                    'id' => $u->id,
-                    'filename' => $u->original_filename,
-                    'mid_name' => $mid?->account_name ?? 'Unassigned',
-                    'processor' => $u->detected_processor ?? $mid?->processor_name ?? '--',
-                    'status' => $u->processing_status,
-                    'confidence' => $u->confidence_score,
-                    'period' => $summary ? ($summary->statement_start_date?->format('n/j') . ' - ' . $summary->statement_end_date?->format('n/j/Y')) : '--',
-                    'imported_rows' => $batch?->imported_rows ?? 0,
-                    'failed_rows' => $batch?->failed_rows ?? 0,
-                    'duplicate_rows' => $batch?->duplicate_rows ?? 0,
-                    'review_count' => $reviewCount,
-                    'uploaded_at' => $u->uploaded_at?->format('n/j/Y g:ia'),
-                ];
-            })->toArray();
+                    return [
+                        'id' => $u->id,
+                        'filename' => $u->original_filename,
+                        'mid_name' => $mid?->account_name ?? 'Unassigned',
+                        'processor' => $u->detected_processor ?? $mid?->processor_name ?? '--',
+                        'status' => $u->processing_status,
+                        'confidence' => $u->confidence_score,
+                        'period' => $summary ? ($summary->statement_start_date?->format('n/j') . ' - ' . $summary->statement_end_date?->format('n/j/Y')) : '--',
+                        'imported_rows' => $batch?->imported_rows ?? 0,
+                        'failed_rows' => $batch?->failed_rows ?? 0,
+                        'duplicate_rows' => $batch?->duplicate_rows ?? 0,
+                        'review_count' => $reviewCount,
+                        'uploaded_at' => $u->uploaded_at?->format('n/j/Y g:ia'),
+                    ];
+                })->toArray();
 
-        $totalPending = MerchantStatementUpload::where('processing_status', 'pending')->count();
-        $totalReview = \App\Models\MerchantStatementLineItem::where('needs_review', true)->count();
+            $totalPending = MerchantStatementUpload::where('processing_status', 'pending')->count();
+            $totalReview = 0;
+            try { $totalReview = \App\Models\MerchantStatementLineItem::where('needs_review', true)->count(); } catch (\Throwable) {}
 
-        return [
-            'recent' => $recent,
-            'pending_count' => $totalPending,
-            'review_queue_count' => $totalReview,
-        ];
+            return [
+                'recent' => $recent,
+                'pending_count' => $totalPending,
+                'review_queue_count' => $totalReview,
+            ];
+        } catch (\Throwable $e) {
+            report($e);
+            return ['recent' => [], 'pending_count' => 0, 'review_queue_count' => 0];
+        }
     }
 }
