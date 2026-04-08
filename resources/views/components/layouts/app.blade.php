@@ -2,20 +2,39 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+
+    {{-- PWA / App Shell --}}
+    <link rel="manifest" href="{{ asset('manifest.json') }}">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="CRM Prime">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="CRM Prime">
+    <link rel="apple-touch-icon" href="{{ asset('icons/apple-touch-icon.png') }}">
     <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
-    <title>{{ $title ?? 'Prime CRM' }}</title>
+    <link rel="icon" type="image/png" sizes="192x192" href="{{ asset('icons/icon-192.png') }}">
+
+    <title>{{ $title ?? 'CRM Prime' }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('build/app.css') }}?v={{ filemtime(public_path('build/app.css')) }}">
-    <style>[x-cloak]{display:none!important}</style>
+    <style>
+        [x-cloak]{display:none!important}
+        /* PWA standalone safe areas */
+        @supports(padding: env(safe-area-inset-top)) {
+            .pwa-safe-top { padding-top: env(safe-area-inset-top); }
+            .pwa-safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+        }
+    </style>
     @livewireStyles
 </head>
 <body class="bg-crm-bg font-sans text-crm-t1 min-h-screen" x-data="{ drawerOpen: false }">
 
     {{-- Top Bar --}}
-    <header class="fixed top-0 left-0 right-0 h-12 bg-crm-surface border-b border-crm-border flex items-center px-4 z-40">
+    <header class="fixed top-0 left-0 right-0 h-12 bg-crm-surface border-b border-crm-border flex items-center px-4 z-40 pwa-safe-top">
         <button @click="drawerOpen = !drawerOpen" class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-crm-hover transition">
             <svg class="w-5 h-5 text-crm-t2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
@@ -278,6 +297,93 @@
             }).catch(() => {});
         });
     })();
+    </script>
+    @endauth
+
+    {{-- Service Worker Registration --}}
+    <script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+    </script>
+
+    {{-- iPhone PWA Install Prompt --}}
+    @auth
+    <div x-data="pwaInstall()" x-show="show" x-cloak x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-4" class="fixed bottom-20 left-4 right-4 z-[99990] sm:left-auto sm:right-5 sm:w-[360px]" style="display:none">
+        <div class="rounded-2xl overflow-hidden shadow-2xl border border-blue-200/50 bg-white">
+            {{-- Header --}}
+            <div class="bg-gradient-to-r from-[#0f172a] to-[#1e293b] px-5 pt-4 pb-3">
+                <div class="flex items-center gap-3">
+                    <img src="/icons/apple-touch-icon.png" class="w-12 h-12 rounded-xl shadow-lg" alt="CRM Prime">
+                    <div>
+                        <div class="text-white font-bold text-base">Install CRM Prime</div>
+                        <div class="text-blue-300 text-xs mt-0.5">Use as a full-screen app</div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Steps --}}
+            <div class="px-5 py-4 space-y-3">
+                <div class="flex items-start gap-3">
+                    <div class="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold flex-shrink-0">1</div>
+                    <div>
+                        <div class="text-sm font-semibold text-gray-800">Tap the <span class="inline-flex items-center"><svg class="w-4 h-4 text-blue-500 mx-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg></span> Share button</div>
+                        <div class="text-xs text-gray-500">Bottom of Safari (or top on iPad)</div>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3">
+                    <div class="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold flex-shrink-0">2</div>
+                    <div>
+                        <div class="text-sm font-semibold text-gray-800">Tap <span class="font-bold">"Add to Home Screen"</span></div>
+                        <div class="text-xs text-gray-500">Scroll down in the share menu if needed</div>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3">
+                    <div class="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold flex-shrink-0">3</div>
+                    <div>
+                        <div class="text-sm font-semibold text-gray-800">Tap <span class="font-bold">"Add"</span></div>
+                        <div class="text-xs text-gray-500">CRM Prime will appear on your Home Screen</div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Actions --}}
+            <div class="border-t border-gray-100 px-5 py-3 bg-gray-50 flex items-center justify-between">
+                <button @click="dismiss('later')" class="text-xs text-gray-400 hover:text-gray-600 font-medium transition">Remind me later</button>
+                <button @click="dismiss('never')" class="px-4 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition">Got it</button>
+            </div>
+        </div>
+    </div>
+    <script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('pwaInstall', () => ({
+            show: false,
+            init() {
+                // Only show on iOS Safari, not already in standalone mode
+                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+                const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+                const dismissed = localStorage.getItem('pwa_install_dismissed');
+
+                if (isIOS && !isStandalone && dismissed !== 'never') {
+                    // If dismissed as "later", show again after 3 days
+                    if (dismissed) {
+                        const ts = parseInt(dismissed, 10);
+                        if (Date.now() - ts < 3 * 24 * 60 * 60 * 1000) return;
+                    }
+                    // Delay showing so it doesn't flash during page load
+                    setTimeout(() => { this.show = true; }, 2000);
+                }
+            },
+            dismiss(type) {
+                this.show = false;
+                if (type === 'never') {
+                    localStorage.setItem('pwa_install_dismissed', 'never');
+                } else {
+                    localStorage.setItem('pwa_install_dismissed', String(Date.now()));
+                }
+            }
+        }));
+    });
     </script>
     @endauth
 </body>
