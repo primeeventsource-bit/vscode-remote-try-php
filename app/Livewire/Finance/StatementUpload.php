@@ -43,21 +43,28 @@ class StatementUpload extends Component
         try {
             $user = auth()->user();
             $originalName = $this->file->getClientOriginalName();
-            $path = $this->file->store('merchant-statements', 'local');
+            $mimeType = $this->file->getMimeType();
+            $fileSize = $this->file->getSize();
+
+            // Read file content BEFORE storing — the temp file is guaranteed accessible
+            $rawContent = file_get_contents($this->file->getRealPath());
+
+            // Store to default disk (works on Laravel Cloud, local, S3, etc.)
+            $path = $this->file->store('merchant-statements');
 
             $upload = MerchantStatementUpload::create([
                 'merchant_account_id' => $this->midFilter ?: null,
                 'original_filename' => $originalName,
                 'file_path' => $path,
-                'mime_type' => $this->file->getMimeType(),
-                'file_size' => $this->file->getSize(),
+                'mime_type' => $mimeType,
+                'file_size' => $fileSize,
                 'uploaded_by' => $user->id,
                 'uploaded_at' => now(),
                 'processing_status' => 'pending',
             ]);
 
-            // Process immediately
-            $result = StatementIngestionService::processUpload($upload);
+            // Process with pre-read content (bypasses storage read issues)
+            $result = StatementIngestionService::processUploadWithContent($upload, $rawContent);
 
             $this->previewUploadId = $upload->id;
             $this->file = null;

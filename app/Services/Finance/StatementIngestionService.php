@@ -15,18 +15,34 @@ use Illuminate\Support\Facades\Storage;
 class StatementIngestionService
 {
     /**
-     * Step 1: Process an uploaded file — detect, parse, and create preview.
+     * Process with pre-read content (bypasses storage read issues on cloud).
+     */
+    public static function processUploadWithContent(MerchantStatementUpload $upload, string $rawContent): array
+    {
+        return self::doProcess($upload, $rawContent);
+    }
+
+    /**
+     * Process by reading from storage (fallback).
      */
     public static function processUpload(MerchantStatementUpload $upload): array
+    {
+        $content = self::readFileContent($upload);
+        if (!$content) {
+            $upload->update(['processing_status' => 'failed']);
+            return ['success' => false, 'error' => 'Unable to read file content'];
+        }
+        return self::doProcess($upload, $content);
+    }
+
+    private static function doProcess(MerchantStatementUpload $upload, string $content): array
     {
         $upload->update(['processing_status' => 'processing']);
 
         try {
-            // Read file content
-            $content = self::readFileContent($upload);
-            if (!$content) {
+            if (!$content || strlen($content) === 0) {
                 $upload->update(['processing_status' => 'failed']);
-                return ['success' => false, 'error' => 'Unable to read file content'];
+                return ['success' => false, 'error' => 'File content is empty'];
             }
 
             // Step 2: Detect processor/format (deterministic first)
@@ -302,16 +318,25 @@ class StatementIngestionService
 
     private static function readFileContent(MerchantStatementUpload $upload): ?string
     {
-        try {
-            if (Storage::exists($upload->file_path)) {
-                return Storage::get($upload->file_path);
-            }
-            $fullPath = storage_path('app/' . $upload->file_path);
-            if (file_exists($fullPath)) return file_get_contents($fullPath);
-            if (file_exists($upload->file_path)) return file_get_contents($upload->file_path);
-            return null;
-        } catch (\Throwable) {
-            return null;
+        $path = $upload->file_path;
+
+        // Try every possible storage location
+        $attempts = [
+            fn() => Storage::disk('local')->exists($path) ? Storage::disk('local')->get($path) : null,
+            fn() => Storage::disk('local')->exists('public/' . $path) ? Storage::disk('local')->get('public/' . $path) : null,
+            fn() => Storage::exists($path) ? Storage::get($path) : null,
+            fn() => file_exists(storage_path('app/' . $path)) ? file_get_contents(storage_path('app/' . $path)) : null,
+            fn() => file_exists(storage_path('app/private/' . $path)) ? file_get_contents(storage_path('app/private/' . $path)) : null,
+            fn() => file_exists($path) ? file_get_contents($path) : null,
+        ];
+
+        foreach ($attempts as $attempt) {
+            try {
+                $content = $attempt();
+                if ($content && strlen($content) > 0) return $content;
+            } catch (\Throwable) {}
         }
+
+        return null;
     }
 }
