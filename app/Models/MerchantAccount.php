@@ -54,12 +54,7 @@ class MerchantAccount extends Model
     public function getProcessorNameAttribute($value)
     {
         if ($value && $value !== 'Unknown') return $value;
-        // Fall back to processor relationship
-        try {
-            return $this->processor?->name ?? $value ?? 'Unknown';
-        } catch (\Throwable) {
-            return $value ?? 'Unknown';
-        }
+        return $value ?? 'Unknown';
     }
 
     public function processor()
@@ -114,10 +109,6 @@ class MerchantAccount extends Model
 
     public function scopeActive($query)
     {
-        // Support both old 'active' and new 'is_active' columns
-        if (\Illuminate\Support\Facades\Schema::hasColumn('merchant_accounts', 'is_active')) {
-            return $query->where('is_active', true);
-        }
         return $query->where('active', true);
     }
 }

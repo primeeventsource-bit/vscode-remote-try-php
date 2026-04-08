@@ -16,18 +16,30 @@ class FinanceDashboardService
 {
     public static function getFullDashboard(?int $midId = null, $from = null, $to = null): array
     {
-        $safe = fn(callable $fn, $default = []) => (function () use ($fn, $default) {
-            try { return $fn(); } catch (\Throwable $e) { report($e); return $default; }
-        })();
+        $summaryCards = [];
+        $profitability = [];
+        $midBreakdown = [];
+        $chargebackSummary = [];
+        $transactionTrends = [];
+        $financialBurden = [];
+        $importHealth = [];
+
+        try { $summaryCards = self::getSummaryCards($midId, $from, $to); } catch (\Throwable $e) { report($e); }
+        try { $profitability = self::getProfitabilitySummary($midId, $from, $to); } catch (\Throwable $e) { report($e); }
+        try { $midBreakdown = self::getMidBreakdown($from, $to); } catch (\Throwable $e) { report($e); }
+        try { $chargebackSummary = self::getChargebackSummary($midId, $from, $to); } catch (\Throwable $e) { report($e); }
+        try { $transactionTrends = self::getTransactionTrends($midId, $from, $to); } catch (\Throwable $e) { report($e); }
+        try { $financialBurden = self::getFinancialBurden($from, $to); } catch (\Throwable $e) { report($e); }
+        try { $importHealth = self::getStatementImportHealth(); } catch (\Throwable $e) { report($e); }
 
         return [
-            'summary_cards' => $safe(fn() => self::getSummaryCards($midId, $from, $to)),
-            'profitability' => $safe(fn() => self::getProfitabilitySummary($midId, $from, $to)),
-            'mid_breakdown' => $safe(fn() => self::getMidBreakdown($from, $to)),
-            'chargeback_summary' => $safe(fn() => self::getChargebackSummary($midId, $from, $to)),
-            'transaction_trends' => $safe(fn() => self::getTransactionTrends($midId, $from, $to)),
-            'financial_burden' => $safe(fn() => self::getFinancialBurden($from, $to)),
-            'statement_import_health' => $safe(fn() => self::getStatementImportHealth()),
+            'summary_cards' => $summaryCards,
+            'profitability' => $profitability,
+            'mid_breakdown' => $midBreakdown,
+            'chargeback_summary' => $chargebackSummary,
+            'transaction_trends' => $transactionTrends,
+            'financial_burden' => $financialBurden,
+            'statement_import_health' => $importHealth,
             'meta' => [
                 'generated_at' => now()->toIso8601String(),
                 'mid_filter' => $midId,

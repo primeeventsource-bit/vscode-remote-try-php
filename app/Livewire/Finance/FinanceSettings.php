@@ -87,7 +87,7 @@ class FinanceSettings extends Component
     public function render()
     {
         $user = auth()->user();
-        if (!$user->hasRole('master_admin')) abort(403);
+        if (!$user || !$user->hasRole('master_admin')) abort(403);
         return view('livewire.finance.settings');
     }
 }
