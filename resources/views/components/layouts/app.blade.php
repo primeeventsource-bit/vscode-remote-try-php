@@ -272,9 +272,10 @@
     <script>
     (function() {
         let lastActivity = Date.now();
-        const HEARTBEAT_MS = 30000;
+        const HEARTBEAT_MS = 60000;
         const IDLE_MS = 300000;
         let heartbeatStopped = false;
+        let heartbeatInFlight = false;
 
         function getCsrf() {
             return document.querySelector('meta[name="csrf-token"]')?.content || '';
@@ -286,7 +287,8 @@
         document.addEventListener('visibilitychange', () => { if (!document.hidden) lastActivity = Date.now(); });
 
         function sendHeartbeat() {
-            if (heartbeatStopped) return;
+            if (heartbeatStopped || heartbeatInFlight) return;
+            heartbeatInFlight = true;
             const isActive = (Date.now() - lastActivity) < IDLE_MS;
             fetch('/presence/heartbeat', {
                 method: 'POST',
@@ -300,12 +302,11 @@
                 body: JSON.stringify({ active: isActive }),
                 keepalive: true
             }).then(r => {
+                heartbeatInFlight = false;
                 if (r.status === 419) {
-                    // CSRF expired or session gone — stop spamming, reload will fix it
                     heartbeatStopped = true;
-                    console.warn('Heartbeat stopped: session expired (419)');
                 }
-            }).catch(() => {});
+            }).catch(() => { heartbeatInFlight = false; });
         }
 
         sendHeartbeat();
