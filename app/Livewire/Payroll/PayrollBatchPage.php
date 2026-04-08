@@ -75,18 +75,23 @@ class PayrollBatchPage extends Component
         $user = auth()->user();
         if (!$user->hasRole('master_admin', 'admin')) abort(403);
 
-        $batches = PayrollBatchV2::orderByDesc('period_start')->limit(25)->get();
-
+        $batches = collect();
         $selectedBatch = null;
         $batchItems = collect();
         $batchDeals = collect();
 
-        if ($this->selectedBatchId) {
-            $selectedBatch = PayrollBatchV2::with(['items.user', 'batchDeals.deal', 'batchDeals.dealFinancial'])->find($this->selectedBatchId);
-            if ($selectedBatch) {
-                $batchItems = $selectedBatch->items;
-                $batchDeals = $selectedBatch->batchDeals;
+        try {
+            $batches = PayrollBatchV2::orderByDesc('period_start')->limit(25)->get();
+
+            if ($this->selectedBatchId) {
+                $selectedBatch = PayrollBatchV2::with(['items.user', 'batchDeals.deal', 'batchDeals.dealFinancial'])->find($this->selectedBatchId);
+                if ($selectedBatch) {
+                    $batchItems = $selectedBatch->items;
+                    $batchDeals = $selectedBatch->batchDeals;
+                }
             }
+        } catch (\Throwable $e) {
+            report($e);
         }
 
         $isMaster = $user->hasRole('master_admin');

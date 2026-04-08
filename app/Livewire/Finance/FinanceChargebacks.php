@@ -53,29 +53,37 @@ class FinanceChargebacks extends Component
         $user = auth()->user();
         if (!$user->hasRole('master_admin') && !$user->hasPerm('view_finance')) abort(403);
 
-        $query = MerchantChargeback::with('merchantAccount')->orderByDesc('opened_at');
+        $chargebacks = new \Illuminate\Pagination\LengthAwarePaginator([], 0, $this->perPage);
+        $mids = collect();
+        $counts = ['all' => 0, 'open' => 0, 'due_soon' => 0, 'won' => 0, 'lost' => 0];
 
-        if ($this->midFilter !== 'all') $query->where('merchant_account_id', (int) $this->midFilter);
-        if ($this->statusFilter !== 'all') $query->where('internal_status', $this->statusFilter);
+        try {
+            $query = MerchantChargeback::with('merchantAccount')->orderByDesc('opened_at');
 
-        if ($this->tab === 'open') $query->open();
-        if ($this->tab === 'due_soon') $query->dueSoon();
-        if ($this->tab === 'won') $query->won();
-        if ($this->tab === 'lost') $query->lost();
+            if ($this->midFilter !== 'all') $query->where('merchant_account_id', (int) $this->midFilter);
+            if ($this->statusFilter !== 'all') $query->where('internal_status', $this->statusFilter);
 
-        $chargebacks = $query->paginate($this->perPage);
-        $mids = MerchantAccount::active()->orderBy('account_name')->get();
+            if ($this->tab === 'open') $query->open();
+            if ($this->tab === 'due_soon') $query->dueSoon();
+            if ($this->tab === 'won') $query->won();
+            if ($this->tab === 'lost') $query->lost();
 
-        // Tab counts
-        $countBase = MerchantChargeback::query();
-        if ($this->midFilter !== 'all') $countBase->where('merchant_account_id', (int) $this->midFilter);
-        $counts = [
-            'all' => (clone $countBase)->count(),
-            'open' => (clone $countBase)->open()->count(),
-            'due_soon' => (clone $countBase)->dueSoon()->count(),
-            'won' => (clone $countBase)->won()->count(),
-            'lost' => (clone $countBase)->lost()->count(),
-        ];
+            $chargebacks = $query->paginate($this->perPage);
+            $mids = MerchantAccount::active()->orderBy('account_name')->get();
+
+            // Tab counts
+            $countBase = MerchantChargeback::query();
+            if ($this->midFilter !== 'all') $countBase->where('merchant_account_id', (int) $this->midFilter);
+            $counts = [
+                'all' => (clone $countBase)->count(),
+                'open' => (clone $countBase)->open()->count(),
+                'due_soon' => (clone $countBase)->dueSoon()->count(),
+                'won' => (clone $countBase)->won()->count(),
+                'lost' => (clone $countBase)->lost()->count(),
+            ];
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return view('livewire.finance.chargebacks', compact('chargebacks', 'mids', 'counts'));
     }

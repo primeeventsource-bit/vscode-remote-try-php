@@ -106,15 +106,24 @@ class StatementUpload extends Component
         $user = auth()->user();
         if (!$user->hasRole('master_admin') && !$user->hasPerm('view_finance')) abort(403);
 
-        $mids = MerchantAccount::active()->orderBy('account_name')->get();
+        $mids = collect();
+        $previewUpload = null;
+        $previewLines = collect();
+        $history = collect();
 
-        $previewUpload = $this->previewUploadId ? MerchantStatementUpload::with(['summary', 'lineItems', 'merchantAccount'])->find($this->previewUploadId) : null;
-        $previewLines = $previewUpload ? $previewUpload->lineItems()->orderBy('id')->get() : collect();
+        try {
+            $mids = MerchantAccount::active()->orderBy('account_name')->get();
 
-        $history = MerchantStatementUpload::with(['merchantAccount', 'summary'])
-            ->orderByDesc('uploaded_at')
-            ->limit(25)
-            ->get();
+            $previewUpload = $this->previewUploadId ? MerchantStatementUpload::with(['summary', 'lineItems', 'merchantAccount'])->find($this->previewUploadId) : null;
+            $previewLines = $previewUpload ? $previewUpload->lineItems()->orderBy('id')->get() : collect();
+
+            $history = MerchantStatementUpload::with(['merchantAccount', 'summary'])
+                ->orderByDesc('uploaded_at')
+                ->limit(25)
+                ->get();
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return view('livewire.finance.statement-upload', compact('mids', 'previewUpload', 'previewLines', 'history'));
     }

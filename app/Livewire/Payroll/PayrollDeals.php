@@ -26,22 +26,28 @@ class PayrollDeals extends Component
         $user = auth()->user();
         $isAdmin = $user->hasRole('master_admin', 'admin');
 
-        $query = DealFinancial::with('deal')->orderByDesc('calculated_at');
+        $financials = new \Illuminate\Pagination\LengthAwarePaginator([], 0, $this->perPage);
 
-        // Agents see only their own deals
-        if (!$isAdmin) {
-            $query->whereHas('deal', function ($q) use ($user) {
-                $q->where('fronter', $user->id)->orWhere('closer', $user->id);
-            });
+        try {
+            $query = DealFinancial::with('deal')->orderByDesc('calculated_at');
+
+            // Agents see only their own deals
+            if (!$isAdmin) {
+                $query->whereHas('deal', function ($q) use ($user) {
+                    $q->where('fronter', $user->id)->orWhere('closer', $user->id);
+                });
+            }
+
+            if ($this->statusFilter !== 'all') {
+                $query->whereHas('deal', fn($q) => $q->where('payroll_status', $this->statusFilter));
+            }
+            if ($this->disputedFilter === 'disputed') $query->where('is_disputed', true);
+            if ($this->disputedFilter === 'reversed') $query->where('is_reversed', true);
+
+            $financials = $query->paginate($this->perPage);
+        } catch (\Throwable $e) {
+            report($e);
         }
-
-        if ($this->statusFilter !== 'all') {
-            $query->whereHas('deal', fn($q) => $q->where('payroll_status', $this->statusFilter));
-        }
-        if ($this->disputedFilter === 'disputed') $query->where('is_disputed', true);
-        if ($this->disputedFilter === 'reversed') $query->where('is_reversed', true);
-
-        $financials = $query->paginate($this->perPage);
 
         return view('livewire.payroll.deals', compact('financials', 'isAdmin'));
     }

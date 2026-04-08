@@ -85,20 +85,32 @@ class DealFinancialDetail extends Component
         $isMaster = $user->hasRole('master_admin');
         $isAdmin = $user->hasRole('master_admin', 'admin');
 
-        // Agents can only see their own deals
-        $deal = Deal::findOrFail($this->dealId);
-        if (!$isAdmin && $deal->fronter != $user->id && $deal->closer != $user->id) {
-            abort(403);
+        $deal = null;
+        $financial = null;
+        $audits = collect();
+        $users = collect();
+
+        try {
+            // Agents can only see their own deals
+            $deal = Deal::findOrFail($this->dealId);
+            if (!$isAdmin && $deal->fronter != $user->id && $deal->closer != $user->id) {
+                abort(403);
+            }
+
+            $financial = DealFinancial::where('deal_id', $this->dealId)->first();
+            $audits = FinanceAudit::where('auditable_type', 'DealFinancial')
+                ->where('auditable_id', $financial?->id ?? 0)
+                ->orderByDesc('created_at')
+                ->limit(20)
+                ->get();
+
+            $users = \App\Models\User::all()->keyBy('id');
+        } catch (\Throwable $e) {
+            report($e);
+            if (!$deal) {
+                abort(404);
+            }
         }
-
-        $financial = DealFinancial::where('deal_id', $this->dealId)->first();
-        $audits = FinanceAudit::where('auditable_type', 'DealFinancial')
-            ->where('auditable_id', $financial?->id ?? 0)
-            ->orderByDesc('created_at')
-            ->limit(20)
-            ->get();
-
-        $users = \App\Models\User::all()->keyBy('id');
 
         return view('livewire.payroll.deal-financial-detail', compact('deal', 'financial', 'audits', 'users', 'isMaster', 'isAdmin'));
     }

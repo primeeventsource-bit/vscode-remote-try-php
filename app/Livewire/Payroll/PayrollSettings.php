@@ -26,17 +26,21 @@ class PayrollSettings extends Component
 
     public function mount()
     {
-        $this->fronter_percent = PayrollSettingModel::get('fronter_default_percent', 6.00);
-        $this->closer_percent = PayrollSettingModel::get('closer_default_percent', 12.00);
-        $this->admin_percent = PayrollSettingModel::get('admin_default_percent', 2.00);
-        $this->processing_percent = PayrollSettingModel::get('processing_default_percent', 3.00);
-        $this->reserve_percent = PayrollSettingModel::get('reserve_default_percent', 3.00);
-        $this->marketing_percent = PayrollSettingModel::get('marketing_default_percent', 15.00);
-        $this->hold_enabled = PayrollSettingModel::get('commission_hold_enabled', true);
-        $this->hold_percent = PayrollSettingModel::get('commission_hold_percent', 10.00);
-        $this->hold_days = PayrollSettingModel::get('commission_hold_days', 14);
-        $this->allow_admin_adjustments = PayrollSettingModel::get('allow_admin_adjustments', true);
-        $this->auto_calculate = PayrollSettingModel::get('auto_calculate_on_verified_charged', true);
+        try {
+            $this->fronter_percent = PayrollSettingModel::get('fronter_default_percent', 6.00);
+            $this->closer_percent = PayrollSettingModel::get('closer_default_percent', 12.00);
+            $this->admin_percent = PayrollSettingModel::get('admin_default_percent', 2.00);
+            $this->processing_percent = PayrollSettingModel::get('processing_default_percent', 3.00);
+            $this->reserve_percent = PayrollSettingModel::get('reserve_default_percent', 3.00);
+            $this->marketing_percent = PayrollSettingModel::get('marketing_default_percent', 15.00);
+            $this->hold_enabled = PayrollSettingModel::get('commission_hold_enabled', true);
+            $this->hold_percent = PayrollSettingModel::get('commission_hold_percent', 10.00);
+            $this->hold_days = PayrollSettingModel::get('commission_hold_days', 14);
+            $this->allow_admin_adjustments = PayrollSettingModel::get('allow_admin_adjustments', true);
+            $this->auto_calculate = PayrollSettingModel::get('auto_calculate_on_verified_charged', true);
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 
     public function save()

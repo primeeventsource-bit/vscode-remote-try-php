@@ -27,13 +27,14 @@ class FinanceDashboard extends Component
         $midId = $this->midFilter !== 'all' ? (int) $this->midFilter : null;
 
         $dashboard = [];
+        $mids = collect();
+
         try {
             $dashboard = FinanceDashboardService::getFullDashboard($midId, $from, $to);
+            $mids = MerchantAccount::active()->orderBy('account_name')->get();
         } catch (\Throwable $e) {
             report($e);
         }
-
-        $mids = MerchantAccount::active()->orderBy('account_name')->get();
 
         return view('livewire.finance.dashboard', [
             'dashboard' => $dashboard,

@@ -33,33 +33,37 @@ class FinanceSettings extends Component
 
     public function mount()
     {
-        $settings = FinanceSetting::getMany([
-            'general.default_date_range' => '30d',
-            'general.currency_format' => 'USD',
-            'general.timezone' => 'America/New_York',
-            'profitability.include_reserve_holds' => true,
-            'profitability.include_reserve_releases' => true,
-            'profitability.include_adjustments' => true,
-            'import.max_upload_size' => 20480,
-            'import.confirmation_required' => true,
-            'import.low_confidence_threshold' => 0.7,
-            'import.duplicate_handling' => 'skip',
-            'chargeback.due_soon_days' => 7,
-            'chargeback.overdue_days' => 0,
-        ]);
+        try {
+            $settings = FinanceSetting::getMany([
+                'general.default_date_range' => '30d',
+                'general.currency_format' => 'USD',
+                'general.timezone' => 'America/New_York',
+                'profitability.include_reserve_holds' => true,
+                'profitability.include_reserve_releases' => true,
+                'profitability.include_adjustments' => true,
+                'import.max_upload_size' => 20480,
+                'import.confirmation_required' => true,
+                'import.low_confidence_threshold' => 0.7,
+                'import.duplicate_handling' => 'skip',
+                'chargeback.due_soon_days' => 7,
+                'chargeback.overdue_days' => 0,
+            ]);
 
-        $this->default_date_range = $settings['general.default_date_range'];
-        $this->currency_format = $settings['general.currency_format'];
-        $this->timezone = $settings['general.timezone'];
-        $this->include_reserve_holds = (bool) $settings['profitability.include_reserve_holds'];
-        $this->include_reserve_releases = (bool) $settings['profitability.include_reserve_releases'];
-        $this->include_adjustments = (bool) $settings['profitability.include_adjustments'];
-        $this->max_upload_size = (int) $settings['import.max_upload_size'];
-        $this->import_confirmation_required = (bool) $settings['import.confirmation_required'];
-        $this->low_confidence_threshold = (float) $settings['import.low_confidence_threshold'];
-        $this->duplicate_handling = $settings['import.duplicate_handling'];
-        $this->cb_due_soon_days = (int) $settings['chargeback.due_soon_days'];
-        $this->cb_overdue_days = (int) $settings['chargeback.overdue_days'];
+            $this->default_date_range = $settings['general.default_date_range'];
+            $this->currency_format = $settings['general.currency_format'];
+            $this->timezone = $settings['general.timezone'];
+            $this->include_reserve_holds = (bool) $settings['profitability.include_reserve_holds'];
+            $this->include_reserve_releases = (bool) $settings['profitability.include_reserve_releases'];
+            $this->include_adjustments = (bool) $settings['profitability.include_adjustments'];
+            $this->max_upload_size = (int) $settings['import.max_upload_size'];
+            $this->import_confirmation_required = (bool) $settings['import.confirmation_required'];
+            $this->low_confidence_threshold = (float) $settings['import.low_confidence_threshold'];
+            $this->duplicate_handling = $settings['import.duplicate_handling'];
+            $this->cb_due_soon_days = (int) $settings['chargeback.due_soon_days'];
+            $this->cb_overdue_days = (int) $settings['chargeback.overdue_days'];
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 
     public function save()

@@ -98,22 +98,28 @@ class MerchantAccounts extends Component
         $user = auth()->user();
         if (!$user->hasRole('master_admin') && !$user->hasPerm('view_finance')) abort(403);
 
-        $accounts = MerchantAccount::orderBy('account_name')->get()->map(function ($mid) {
-            return [
-                'id' => $mid->id,
-                'account_name' => $mid->account_name,
-                'mid_number' => $mid->mid_number,
-                'processor_name' => $mid->processor_name,
-                'account_status' => $mid->account_status,
-                'is_active' => $mid->is_active,
-                'txn_count' => MerchantTransaction::where('merchant_account_id', $mid->id)->count(),
-                'approved_volume' => (float) MerchantTransaction::where('merchant_account_id', $mid->id)->whereIn('transaction_status', ['approved', 'settled'])->sum('amount'),
-                'cb_count' => MerchantChargeback::where('merchant_account_id', $mid->id)->count(),
-                'cb_amount' => (float) MerchantChargeback::where('merchant_account_id', $mid->id)->sum('amount'),
-                'fee_total' => (float) MerchantFinancialEntry::where('merchant_account_id', $mid->id)->where('entry_type', 'fee')->sum('amount'),
-                'statement_count' => $mid->statementUploads()->count(),
-            ];
-        });
+        $accounts = collect();
+
+        try {
+            $accounts = MerchantAccount::orderBy('account_name')->get()->map(function ($mid) {
+                return [
+                    'id' => $mid->id,
+                    'account_name' => $mid->account_name,
+                    'mid_number' => $mid->mid_number,
+                    'processor_name' => $mid->processor_name,
+                    'account_status' => $mid->account_status,
+                    'is_active' => $mid->is_active,
+                    'txn_count' => MerchantTransaction::where('merchant_account_id', $mid->id)->count(),
+                    'approved_volume' => (float) MerchantTransaction::where('merchant_account_id', $mid->id)->whereIn('transaction_status', ['approved', 'settled'])->sum('amount'),
+                    'cb_count' => MerchantChargeback::where('merchant_account_id', $mid->id)->count(),
+                    'cb_amount' => (float) MerchantChargeback::where('merchant_account_id', $mid->id)->sum('amount'),
+                    'fee_total' => (float) MerchantFinancialEntry::where('merchant_account_id', $mid->id)->where('entry_type', 'fee')->sum('amount'),
+                    'statement_count' => $mid->statementUploads()->count(),
+                ];
+            });
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return view('livewire.finance.merchant-accounts', compact('accounts'));
     }

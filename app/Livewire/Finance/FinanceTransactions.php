@@ -28,14 +28,21 @@ class FinanceTransactions extends Component
         $user = auth()->user();
         if (!$user->hasRole('master_admin') && !$user->hasPerm('view_finance')) abort(403);
 
-        $query = MerchantTransaction::with('merchantAccount')->orderByDesc('transaction_date');
+        $transactions = new \Illuminate\Pagination\LengthAwarePaginator([], 0, $this->perPage);
+        $mids = collect();
 
-        if ($this->midFilter !== 'all') $query->where('merchant_account_id', (int) $this->midFilter);
-        if ($this->statusFilter !== 'all') $query->where('transaction_status', $this->statusFilter);
-        if ($this->cardFilter !== 'all') $query->where('card_brand', $this->cardFilter);
+        try {
+            $query = MerchantTransaction::with('merchantAccount')->orderByDesc('transaction_date');
 
-        $transactions = $query->paginate($this->perPage);
-        $mids = MerchantAccount::active()->orderBy('account_name')->get();
+            if ($this->midFilter !== 'all') $query->where('merchant_account_id', (int) $this->midFilter);
+            if ($this->statusFilter !== 'all') $query->where('transaction_status', $this->statusFilter);
+            if ($this->cardFilter !== 'all') $query->where('card_brand', $this->cardFilter);
+
+            $transactions = $query->paginate($this->perPage);
+            $mids = MerchantAccount::active()->orderBy('account_name')->get();
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return view('livewire.finance.transactions', compact('transactions', 'mids'));
     }

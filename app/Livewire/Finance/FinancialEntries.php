@@ -27,20 +27,28 @@ class FinancialEntries extends Component
         $user = auth()->user();
         if (!$user->hasRole('master_admin') && !$user->hasPerm('view_finance')) abort(403);
 
-        $query = MerchantFinancialEntry::with('merchantAccount')->orderByDesc('entry_date');
+        $entries = new \Illuminate\Pagination\LengthAwarePaginator([], 0, $this->perPage);
+        $mids = collect();
+        $totals = [];
 
-        if ($this->midFilter !== 'all') $query->where('merchant_account_id', (int) $this->midFilter);
-        if ($this->typeFilter !== 'all') $query->where('entry_type', $this->typeFilter);
+        try {
+            $query = MerchantFinancialEntry::with('merchantAccount')->orderByDesc('entry_date');
 
-        $entries = $query->paginate($this->perPage);
-        $mids = MerchantAccount::active()->orderBy('account_name')->get();
+            if ($this->midFilter !== 'all') $query->where('merchant_account_id', (int) $this->midFilter);
+            if ($this->typeFilter !== 'all') $query->where('entry_type', $this->typeFilter);
 
-        // Totals by type
-        $totals = MerchantFinancialEntry::selectRaw('entry_type, SUM(amount) as total, COUNT(*) as cnt')
-            ->when($this->midFilter !== 'all', fn($q) => $q->where('merchant_account_id', (int) $this->midFilter))
-            ->groupBy('entry_type')
-            ->pluck('total', 'entry_type')
-            ->toArray();
+            $entries = $query->paginate($this->perPage);
+            $mids = MerchantAccount::active()->orderBy('account_name')->get();
+
+            // Totals by type
+            $totals = MerchantFinancialEntry::selectRaw('entry_type, SUM(amount) as total, COUNT(*) as cnt')
+                ->when($this->midFilter !== 'all', fn($q) => $q->where('merchant_account_id', (int) $this->midFilter))
+                ->groupBy('entry_type')
+                ->pluck('total', 'entry_type')
+                ->toArray();
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return view('livewire.finance.financial-entries', compact('entries', 'mids', 'totals'));
     }
