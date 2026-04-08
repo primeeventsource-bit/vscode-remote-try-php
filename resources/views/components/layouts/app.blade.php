@@ -307,149 +307,97 @@
     }
     </script>
 
-    {{-- PWA Install Prompt (all platforms) --}}
+    {{-- PWA Install Prompt --}}
     @auth
-    <div x-data="pwaInstall()" x-show="show" x-cloak
-         x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0"
-         x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-4"
-         class="fixed bottom-20 left-4 right-4 z-[99990] sm:left-auto sm:right-5 sm:w-[360px]" style="display:none">
-        <div class="rounded-2xl overflow-hidden shadow-2xl border border-blue-200/50 bg-white">
-            {{-- Header --}}
-            <div class="bg-gradient-to-r from-[#0f172a] to-[#1e293b] px-5 pt-4 pb-3">
-                <div class="flex items-center gap-3">
-                    <img src="/icons/apple-touch-icon.png" class="w-12 h-12 rounded-xl shadow-lg" alt="CRM Prime">
+    <div id="pwa-install-banner" style="display:none; position:fixed; bottom:80px; left:16px; right:16px; z-index:99990; max-width:360px; margin-left:auto;">
+        <div style="border-radius:16px; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); border:1px solid rgba(191,219,254,0.5); background:#fff;">
+            <div style="background:linear-gradient(to right,#0f172a,#1e293b); padding:16px 20px 12px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <img src="/icons/apple-touch-icon.png" style="width:48px; height:48px; border-radius:12px; box-shadow:0 4px 6px rgba(0,0,0,0.3);" alt="CRM Prime">
                     <div>
-                        <div class="text-white font-bold text-base">Install CRM Prime</div>
-                        <div class="text-blue-300 text-xs mt-0.5">Use as a full-screen app</div>
+                        <div style="color:#fff; font-weight:700; font-size:16px;">Install CRM Prime</div>
+                        <div style="color:#93c5fd; font-size:12px; margin-top:2px;">Use as a full-screen app</div>
                     </div>
                 </div>
             </div>
-
-            {{-- Android: one-tap install --}}
-            <template x-if="platform === 'android'">
-                <div class="px-5 py-4">
-                    <p class="text-sm text-gray-600 mb-3">Add CRM Prime to your home screen for quick access.</p>
-                    <button @click="nativeInstall()" class="w-full py-2.5 text-sm font-bold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition">Install App</button>
-                </div>
-            </template>
-
-            {{-- iOS: manual steps --}}
-            <template x-if="platform === 'ios'">
-                <div class="px-5 py-4 space-y-3">
-                    <div class="flex items-start gap-3">
-                        <div class="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold flex-shrink-0">1</div>
-                        <div>
-                            <div class="text-sm font-semibold text-gray-800">Tap the <span class="inline-flex items-center"><svg class="w-4 h-4 text-blue-500 mx-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg></span> Share button</div>
-                            <div class="text-xs text-gray-500">Bottom of Safari (or top on iPad)</div>
-                        </div>
-                    </div>
-                    <div class="flex items-start gap-3">
-                        <div class="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold flex-shrink-0">2</div>
-                        <div>
-                            <div class="text-sm font-semibold text-gray-800">Tap <span class="font-bold">"Add to Home Screen"</span></div>
-                            <div class="text-xs text-gray-500">Scroll down in the share menu</div>
-                        </div>
-                    </div>
-                    <div class="flex items-start gap-3">
-                        <div class="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold flex-shrink-0">3</div>
-                        <div>
-                            <div class="text-sm font-semibold text-gray-800">Tap <span class="font-bold">"Add"</span> to confirm</div>
-                            <div class="text-xs text-gray-500">CRM Prime appears on your Home Screen</div>
-                        </div>
-                    </div>
-                </div>
-            </template>
-
-            {{-- Desktop: browser install or bookmark --}}
-            <template x-if="platform === 'desktop'">
-                <div class="px-5 py-4">
-                    <p class="text-sm text-gray-600 mb-3">Install CRM Prime as a desktop app for a cleaner experience.</p>
-                    <template x-if="hasNativePrompt">
-                        <button @click="nativeInstall()" class="w-full py-2.5 text-sm font-bold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition">Install App</button>
-                    </template>
-                    <template x-if="!hasNativePrompt">
-                        <div class="text-xs text-gray-500">Click the install icon <span class="font-mono bg-gray-100 px-1.5 py-0.5 rounded">+</span> in your browser's address bar, or use your browser menu to install.</div>
-                    </template>
-                </div>
-            </template>
-
-            {{-- Actions --}}
-            <div class="border-t border-gray-100 px-5 py-3 bg-gray-50 flex items-center justify-between">
-                <button @click="dismiss('later')" class="text-xs text-gray-400 hover:text-gray-600 font-medium transition">Remind me later</button>
-                <button @click="dismiss('never')" class="px-4 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition">Got it</button>
+            <div id="pwa-steps" style="padding:16px 20px; font-family:inherit;"></div>
+            <div style="border-top:1px solid #f3f4f6; padding:12px 20px; background:#f9fafb; display:flex; align-items:center; justify-content:space-between;">
+                <button onclick="pwaClose('later')" style="font-size:12px; color:#9ca3af; background:none; border:none; cursor:pointer; font-family:inherit;">Remind me later</button>
+                <button onclick="pwaClose('never')" style="font-size:12px; font-weight:700; color:#2563eb; background:#eff6ff; border:none; border-radius:8px; padding:6px 16px; cursor:pointer; font-family:inherit;">Got it</button>
             </div>
         </div>
     </div>
     <script>
-    // Capture Android/Chrome beforeinstallprompt globally before Alpine loads
-    window._pwaPrompt = null;
-    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); window._pwaPrompt = e; });
+    (function() {
+        var banner = document.getElementById('pwa-install-banner');
+        var steps = document.getElementById('pwa-steps');
+        if (!banner || !steps) return;
 
-    document.addEventListener('alpine:init', () => {
-        Alpine.data('pwaInstall', () => ({
-            show: false,
-            platform: 'desktop',
-            hasNativePrompt: false,
+        var isStandalone = (window.navigator.standalone === true) || window.matchMedia('(display-mode: standalone)').matches;
+        if (isStandalone) return;
 
-            init() {
-                const ua = navigator.userAgent || '';
-                const isStandalone = window.navigator.standalone === true
-                    || window.matchMedia('(display-mode: standalone)').matches;
-                const dismissed = localStorage.getItem('pwa_install_dismissed');
+        var dismissed = localStorage.getItem('pwa_install_dismissed');
+        if (dismissed === 'never') return;
+        if (dismissed && dismissed !== 'never') {
+            var ts = parseInt(dismissed, 10);
+            if (!isNaN(ts) && Date.now() - ts < 3 * 24 * 60 * 60 * 1000) return;
+        }
 
-                // Already installed as PWA — never show
-                if (isStandalone) return;
+        // Detect platform
+        var ua = navigator.userAgent || '';
+        var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-                // Permanently dismissed
-                if (dismissed === 'never') return;
+        if (isIOS) {
+            steps.innerHTML =
+                '<div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;">' +
+                    '<div style="width:28px;height:28px;border-radius:50%;background:#dbeafe;color:#2563eb;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">1</div>' +
+                    '<div><div style="font-size:14px;font-weight:600;color:#1f2937;">Tap the <svg style="display:inline;width:16px;height:16px;vertical-align:middle;color:#3b82f6;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg> Share button</div>' +
+                    '<div style="font-size:11px;color:#6b7280;margin-top:2px;">Bottom of Safari</div></div>' +
+                '</div>' +
+                '<div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;">' +
+                    '<div style="width:28px;height:28px;border-radius:50%;background:#dbeafe;color:#2563eb;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">2</div>' +
+                    '<div><div style="font-size:14px;font-weight:600;color:#1f2937;">Tap <b>"Add to Home Screen"</b></div>' +
+                    '<div style="font-size:11px;color:#6b7280;margin-top:2px;">Scroll down in the share menu</div></div>' +
+                '</div>' +
+                '<div style="display:flex;align-items:flex-start;gap:12px;">' +
+                    '<div style="width:28px;height:28px;border-radius:50%;background:#dbeafe;color:#2563eb;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">3</div>' +
+                    '<div><div style="font-size:14px;font-weight:600;color:#1f2937;">Tap <b>"Add"</b> to confirm</div>' +
+                    '<div style="font-size:11px;color:#6b7280;margin-top:2px;">CRM Prime appears on your Home Screen</div></div>' +
+                '</div>';
+        } else {
+            steps.innerHTML =
+                '<p style="font-size:14px;color:#4b5563;margin:0 0 12px;">Add CRM Prime to your home screen for quick access like a native app.</p>' +
+                '<p style="font-size:12px;color:#6b7280;margin:0;">Use your browser menu or address bar install button.</p>';
+        }
 
-                // "Remind later" — wait 3 days
-                if (dismissed && dismissed !== 'never') {
-                    const ts = parseInt(dismissed, 10);
-                    if (!isNaN(ts) && Date.now() - ts < 3 * 24 * 60 * 60 * 1000) return;
-                }
+        // Show after delay
+        setTimeout(function() {
+            banner.style.display = 'block';
+            banner.style.opacity = '0';
+            banner.style.transform = 'translateY(20px)';
+            banner.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+            requestAnimationFrame(function() {
+                requestAnimationFrame(function() {
+                    banner.style.opacity = '1';
+                    banner.style.transform = 'translateY(0)';
+                });
+            });
+        }, 1500);
+    })();
 
-                // Detect platform
-                const isIOS = /iPad|iPhone|iPod/.test(ua) ||
-                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-                const isAndroid = /Android/.test(ua);
-
-                if (isIOS) {
-                    this.platform = 'ios';
-                } else if (isAndroid) {
-                    this.platform = 'android';
-                } else {
-                    this.platform = 'desktop';
-                }
-
-                // Check for native install prompt (Chrome/Edge on Android or desktop)
-                this.hasNativePrompt = !!window._pwaPrompt;
-
-                // Show after short delay
-                setTimeout(() => { this.show = true; }, 1500);
-            },
-
-            async nativeInstall() {
-                if (window._pwaPrompt) {
-                    window._pwaPrompt.prompt();
-                    const result = await window._pwaPrompt.userChoice;
-                    if (result.outcome === 'accepted') {
-                        this.dismiss('never');
-                    }
-                    window._pwaPrompt = null;
-                }
-            },
-
-            dismiss(type) {
-                this.show = false;
-                if (type === 'never') {
-                    localStorage.setItem('pwa_install_dismissed', 'never');
-                } else {
-                    localStorage.setItem('pwa_install_dismissed', String(Date.now()));
-                }
-            }
-        }));
-    });
+    function pwaClose(type) {
+        var banner = document.getElementById('pwa-install-banner');
+        if (banner) {
+            banner.style.opacity = '0';
+            banner.style.transform = 'translateY(20px)';
+            setTimeout(function() { banner.style.display = 'none'; }, 300);
+        }
+        if (type === 'never') {
+            localStorage.setItem('pwa_install_dismissed', 'never');
+        } else {
+            localStorage.setItem('pwa_install_dismissed', String(Date.now()));
+        }
+    }
     </script>
     @endauth
 </body>
