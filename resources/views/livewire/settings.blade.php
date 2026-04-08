@@ -38,6 +38,7 @@
                 'chargebacks_settings' => 'Chargebacks',
                 'ai_settings' => 'AI Engine',
                 'stats_settings' => 'Statistics & Dashboard',
+                'finance_center' => 'Finance Command Center',
             ] as $key => $label)
                 <button wire:click="$set('section', '{{ $key }}')"
                     class="w-full text-left px-3 py-2 text-xs font-semibold rounded-md transition {{ $section === $key ? 'bg-blue-50 text-blue-600' : 'text-crm-t2 hover:bg-crm-hover' }}">
@@ -1001,6 +1002,55 @@
                     <label class="flex items-center gap-2 text-sm"><input id="fld-st-master" type="checkbox" wire:model="statsSettings.master_admin_sees_all"> Master Admin Sees All-Company Stats</label>
                 </div>
                 <div class="mt-4 text-right"><button wire:click="saveStatsSettings" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">Save Statistics Settings</button></div>
+            @endif
+
+            {{-- ═══ FINANCE COMMAND CENTER ═══ --}}
+            @if($section === 'finance_center' && $isMaster)
+                <h3 class="text-sm font-semibold mb-3">Finance Command Center</h3>
+                <p class="text-xs text-crm-t3 mb-4">Access the full finance system — merchant accounts, statement uploads, transactions, chargebacks, and profitability tracking.</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+                    <a href="/finance" class="bg-crm-surface border border-crm-border rounded-lg p-4 hover:bg-crm-hover transition block">
+                        <div class="text-lg mb-1">💳</div>
+                        <div class="text-sm font-bold">Finance Dashboard</div>
+                        <div class="text-[10px] text-crm-t3 mt-1">Executive overview — gross volume, net result, profitability by MID</div>
+                    </a>
+                    <a href="/finance/accounts" class="bg-crm-surface border border-crm-border rounded-lg p-4 hover:bg-crm-hover transition block">
+                        <div class="text-lg mb-1">🏦</div>
+                        <div class="text-sm font-bold">Merchant Accounts</div>
+                        <div class="text-[10px] text-crm-t3 mt-1">Add, edit, and manage all 7 MID accounts</div>
+                    </a>
+                    <a href="/finance/statements" class="bg-crm-surface border border-crm-border rounded-lg p-4 hover:bg-crm-hover transition block">
+                        <div class="text-lg mb-1">📑</div>
+                        <div class="text-sm font-bold">Statement Upload</div>
+                        <div class="text-[10px] text-crm-t3 mt-1">Upload processor statements — AI auto-reads MID, transactions, chargebacks, fees</div>
+                    </a>
+                    <a href="/finance/transactions" class="bg-crm-surface border border-crm-border rounded-lg p-4 hover:bg-crm-hover transition block">
+                        <div class="text-lg mb-1">💰</div>
+                        <div class="text-sm font-bold">Transactions</div>
+                        <div class="text-[10px] text-crm-t3 mt-1">All imported transactions across all MIDs</div>
+                    </a>
+                    <a href="/finance/chargebacks" class="bg-crm-surface border border-crm-border rounded-lg p-4 hover:bg-crm-hover transition block">
+                        <div class="text-lg mb-1">🔴</div>
+                        <div class="text-sm font-bold">Chargebacks</div>
+                        <div class="text-[10px] text-crm-t3 mt-1">Track open, due soon, won, and lost chargebacks with reason codes</div>
+                    </a>
+                    <a href="/finance/entries" class="bg-crm-surface border border-crm-border rounded-lg p-4 hover:bg-crm-hover transition block">
+                        <div class="text-lg mb-1">📒</div>
+                        <div class="text-sm font-bold">Financial Entries</div>
+                        <div class="text-[10px] text-crm-t3 mt-1">Fees, reserves, payouts, deposits, adjustments</div>
+                    </a>
+                    <a href="/finance/settings" class="bg-crm-surface border border-crm-border rounded-lg p-4 hover:bg-crm-hover transition block">
+                        <div class="text-lg mb-1">⚙️</div>
+                        <div class="text-sm font-bold">Finance Settings</div>
+                        <div class="text-[10px] text-crm-t3 mt-1">Profitability formula, import settings, chargeback thresholds</div>
+                    </a>
+                    <a href="/payroll-v2" class="bg-crm-surface border border-crm-border rounded-lg p-4 hover:bg-crm-hover transition block">
+                        <div class="text-lg mb-1">💎</div>
+                        <div class="text-sm font-bold">Payroll Engine</div>
+                        <div class="text-[10px] text-crm-t3 mt-1">Deal-by-deal commission calculator, weekly batches, company net profit</div>
+                    </a>
+                </div>
             @endif
         </div>
     </div>

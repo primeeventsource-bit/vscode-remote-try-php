@@ -147,6 +147,36 @@
     @endif
 
     {{-- ══════════════════════════════════════════════
+         AGENT STATS + ROLE BREAKDOWN (admin/master_admin)
+    ══════════════════════════════════════════════ --}}
+    @if(($isMaster || $isAdmin) && !empty($agentSummary ?? []))
+        <x-dashboard.agent-stats-widget
+            :agentSummary="$agentSummary"
+            :roleBreakdown="$roleBreakdown ?? []"
+            :topAgents="$topAgents ?? []"
+        />
+    @endif
+
+    {{-- ══════════════════════════════════════════════
+         PERFORMANCE LEADERBOARD (all authenticated users)
+    ══════════════════════════════════════════════ --}}
+    @if(!empty($topAgents ?? []))
+        <x-dashboard.leaderboard-widget
+            :topAgents="$topAgents ?? []"
+            :canSeeStats="$canSeeStats ?? false"
+        />
+    @endif
+
+    {{-- ══════════════════════════════════════════════
+         AI PERFORMANCE INSIGHTS (admin/master_admin only)
+    ══════════════════════════════════════════════ --}}
+    @if(($canSeeStats ?? false) && !empty($aiInsights ?? []))
+        <x-dashboard.ai-performance-insights-widget
+            :aiInsights="$aiInsights ?? []"
+        />
+    @endif
+
+    {{-- ══════════════════════════════════════════════
          TASK SCREEN WIDGET (admin/master_admin — ALL tasks)
     ══════════════════════════════════════════════ --}}
     @if($showTaskScreen ?? false)

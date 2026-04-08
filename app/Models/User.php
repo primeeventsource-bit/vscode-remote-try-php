@@ -109,7 +109,57 @@ class User extends Authenticatable
         return "{$h}h " . str_pad($m, 2, '0', STR_PAD_LEFT) . 'm';
     }
 
+    // ── Location helpers ────────────────────────────────────
+
+    public function getLocationAttribute($value): string
+    {
+        if ($value) return $value;
+        return str_contains($this->role ?? '', 'panama') ? 'Panama' : 'US';
+    }
+
+    public function baseRole(): string
+    {
+        return str_replace('_panama', '', $this->role ?? '');
+    }
+
+    public function isFronter(): bool
+    {
+        return in_array($this->role, ['fronter', 'fronter_panama']);
+    }
+
+    public function isCloser(): bool
+    {
+        return in_array($this->role, ['closer', 'closer_panama']);
+    }
+
+    public function isAgent(): bool
+    {
+        return $this->isFronter() || $this->isCloser();
+    }
+
+    public function isPanama(): bool
+    {
+        return $this->location === 'Panama';
+    }
+
+    public function isUS(): bool
+    {
+        return $this->location === 'US';
+    }
+
+    public function roleLocationLabel(): string
+    {
+        $base = ucfirst($this->baseRole());
+        $loc = $this->location;
+        return "{$base} ({$loc})";
+    }
+
     // ── Relationships ───────────────────────────────────────
+
+    public function agentStats()
+    {
+        return $this->hasMany(AgentStatDaily::class);
+    }
 
     public function leads()
     {

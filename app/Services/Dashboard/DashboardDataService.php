@@ -31,25 +31,32 @@ class DashboardDataService
         $isFronter = in_array($user->role, ['fronter', 'fronter_panama']);
         $isCloser = in_array($user->role, ['closer', 'closer_panama']);
 
+        // Each widget call is wrapped individually so one failure doesn't crash the page
+        $safe = function (callable $fn) {
+            try { return $fn(); } catch (\Throwable $e) { report($e); return null; }
+        };
+
         $payload = [
-            'header' => self::getHeader($user, $filters),
-            'summary_cards' => self::getSummaryCards($user, $filters),
-            'priority_alerts' => self::getPriorityAlerts($user, $filters),
+            'header' => $safe(fn() => self::getHeader($user, $filters)),
+            'summary_cards' => $safe(fn() => self::getSummaryCards($user, $filters)) ?? [],
+            'priority_alerts' => $safe(fn() => self::getPriorityAlerts($user, $filters)) ?? ['title' => 'AI Priority Alerts', 'subtitle' => '', 'items' => [], 'meta' => ['empty' => true]],
             'charts' => [
-                'deal_probability' => !$isFronter ? self::getDealProbabilityChart($user, $filters) : null,
-                'pipeline_risk' => !$isFronter ? self::getPipelineRiskChart($user, $filters) : null,
+                'deal_probability' => !$isFronter ? $safe(fn() => self::getDealProbabilityChart($user, $filters)) : null,
+                'pipeline_risk' => !$isFronter ? $safe(fn() => self::getPipelineRiskChart($user, $filters)) : null,
             ],
             'tables' => [
-                'at_risk_deals' => !$isFronter ? self::getAtRiskDeals($user, $filters) : null,
-                'hottest_leads' => self::getHottestLeads($user, $filters),
-                'followup_queue' => self::getFollowupQueue($user, $filters),
+                'at_risk_deals' => !$isFronter ? $safe(fn() => self::getAtRiskDeals($user, $filters)) : null,
+                'hottest_leads' => $safe(fn() => self::getHottestLeads($user, $filters)),
+                'followup_queue' => $safe(fn() => self::getFollowupQueue($user, $filters)),
             ],
             'widgets' => [
-                'rep_coaching_watchlist' => $isAdmin ? self::getRepCoachingWatchlist($user, $filters) : null,
-                'top_mistakes' => $isAdmin ? self::getTopMistakes($user, $filters) : null,
-                'recent_score_changes' => self::getRecentScoreChanges($user, $filters),
-                'ai_recommendations' => self::getAiRecommendations($user, $filters),
-                'upcoming_revenue' => ($isAdmin || $isCloser) ? self::getUpcomingRevenue($user, $filters) : null,
+                'rep_coaching_watchlist' => $isAdmin ? $safe(fn() => self::getRepCoachingWatchlist($user, $filters)) : null,
+                'top_mistakes' => $isAdmin ? $safe(fn() => self::getTopMistakes($user, $filters)) : null,
+                'recent_score_changes' => $safe(fn() => self::getRecentScoreChanges($user, $filters)),
+                'ai_recommendations' => $safe(fn() => self::getAiRecommendations($user, $filters)),
+                'upcoming_revenue' => ($isAdmin || $isCloser) ? $safe(fn() => self::getUpcomingRevenue($user, $filters)) : null,
+                'agent_leaderboard' => $safe(fn() => self::getAgentLeaderboard($user, $filters)),
+                'agent_performance_alerts' => $isAdmin ? $safe(fn() => self::getAgentPerformanceAlerts($filters)) : null,
             ],
         ];
 
@@ -253,6 +260,34 @@ class DashboardDataService
                 ],
                 'created_at' => now()->toIso8601String(),
             ];
+        }
+
+        // Agent performance alerts (admin/master_admin)
+        $isAdmin = $user->hasRole('master_admin', 'admin', 'admin_limited');
+        if ($isAdmin) {
+            try {
+                $perfAlerts = \App\Services\AI\AgentPerformanceIntegrationService::getDashboardAlerts();
+                foreach ($perfAlerts as $pa) {
+                    $alerts[] = [
+                        'id' => 'alert_perf_' . ($pa['user_id'] ?? '') . '_' . ($pa['type'] ?? ''),
+                        'severity' => $pa['severity'] === 'positive' ? 'low' : 'medium',
+                        'title' => ucfirst(str_replace('_', ' ', $pa['type'] ?? 'Performance')),
+                        'message' => $pa['message'] ?? '',
+                        'entity_type' => 'performance',
+                        'entity_id' => $pa['user_id'] ?? null,
+                        'entity_name' => null,
+                        'owner' => null,
+                        'action' => [
+                            'label' => 'View Stats',
+                            'type' => 'open_stats',
+                            'target_url' => '/stats',
+                        ],
+                        'created_at' => now()->toIso8601String(),
+                    ];
+                }
+            } catch (\Throwable $e) {
+                report($e);
+            }
         }
 
         return [
@@ -529,11 +564,23 @@ class DashboardDataService
                     ->whereNull('resolved_at')
                     ->orderByDesc('detected_at')->first();
 
+                // Enrich with agent performance data
+                $perfScore = null;
+                $closeRate = null;
+                $location = str_contains($u->role ?? '', 'panama') ? 'Panama' : 'US';
+                try {
+                    $perfScore = AiSalesScore::where('entity_type', 'user')
+                        ->where('entity_id', $u->id)
+                        ->where('score_type', 'agent_performance')
+                        ->first();
+                } catch (\Throwable) {}
+
                 $rows[] = [
                     'user_id' => $u->id,
                     'name' => $u->name,
                     'profile_url' => '/users',
                     'role' => ucfirst(str_replace('_', ' ', $u->role)),
+                    'location' => $location,
                     'avatar' => $u->avatar ?? substr($u->name, 0, 2),
                     'color' => $u->color ?? '#6b7280',
                     'weakness' => $topMistake ? ucfirst(str_replace('_', ' ', $topMistake->mistake_type)) : '--',
@@ -543,6 +590,8 @@ class DashboardDataService
                     },
                     'suggested_topic' => $topMistake ? 'Address: ' . str_replace('_', ' ', $topMistake->mistake_type) : null,
                     'mistake_count' => $um->cnt,
+                    'performance_score' => $perfScore?->numeric_score,
+                    'performance_label' => $perfScore?->label,
                 ];
             }
         }
@@ -794,5 +843,48 @@ class DashboardDataService
     {
         if (!Schema::hasTable('ai_sales_scores')) return 0;
         return AiSalesScore::where('entity_type', $type)->where('score_type', $scoreType)->whereIn('label', $labels)->count();
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // AGENT LEADERBOARD (Sales Intelligence widget)
+    // ═══════════════════════════════════════════════════════
+
+    public static function getAgentLeaderboard(User $user, DashboardFilterData $filters): array
+    {
+        $rows = [];
+        try {
+            $rows = \App\Services\AgentStatisticsService::leaderboard(null, null, $filters->from, $filters->to, 10);
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        return [
+            'title' => 'Agent Leaderboard',
+            'subtitle' => 'Top agents by revenue — includes badges and close rates',
+            'tooltip' => 'Rankings are based on charged revenue. Badges are auto-assigned by performance thresholds.',
+            'rows' => $rows,
+            'meta' => ['empty' => empty($rows), 'generated_at' => now()->toIso8601String()],
+        ];
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // AGENT PERFORMANCE ALERTS (admin only)
+    // ═══════════════════════════════════════════════════════
+
+    public static function getAgentPerformanceAlerts(DashboardFilterData $filters): array
+    {
+        $items = [];
+        try {
+            $items = \App\Services\AI\AgentPerformanceIntegrationService::getDashboardAlerts($filters->from, $filters->to);
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        return [
+            'title' => 'Agent Performance Alerts',
+            'subtitle' => 'Leaderboard changes, coaching triggers, and team performance insights',
+            'items' => $items,
+            'meta' => ['empty' => empty($items), 'generated_at' => now()->toIso8601String()],
+        ];
     }
 }

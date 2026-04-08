@@ -121,23 +121,34 @@ class Verification extends Component
     {
         $user = auth()->user();
         $isAdmin = $user->hasPerm('toggle_charged');
-        $base = Deal::query()->orderBy('id', 'desc');
-        if (!$user->hasRole('master_admin') && $isAdmin) $base->where('assigned_admin', $user->id);
-        if ($user->role === 'closer') $base->where('closer', $user->id);
 
-        $tabs = ['pending' => 'pending_admin', 'verifying' => 'in_verification', 'charged' => 'charged', 'chargeback' => 'chargeback', 'cb' => 'chargeback', 'cancelled' => 'cancelled'];
-        $query = clone $base;
-        if ($this->tab !== 'all' && isset($tabs[$this->tab])) $query->where('status', $tabs[$this->tab]);
-        $deals = $query->paginate($this->perPage);
+        $deals = collect();
+        $counts = ['pending' => 0, 'verifying' => 0, 'charged' => 0, 'chargeback' => 0, 'cb' => 0, 'cancelled' => 0, 'all' => 0];
+        $users = collect();
+        $activeDeal = null;
 
-        // Single aggregation query for all tab counts instead of N+1 count queries
-        $countRows = (clone $base)->selectRaw('status, COUNT(*) as cnt')->groupBy('status')->pluck('cnt', 'status');
-        $counts = [];
-        foreach ($tabs as $k => $v) { $counts[$k] = $countRows->get($v, 0); }
-        $counts['all'] = $countRows->sum();
+        try {
+            $base = Deal::query()->orderBy('id', 'desc');
+            if (!$user->hasRole('master_admin') && $isAdmin) $base->where('assigned_admin', $user->id);
+            if (in_array($user->role, ['closer', 'closer_panama'])) $base->where('closer', $user->id);
 
-        $users = User::all()->keyBy('id');
-        $activeDeal = $this->selectedDeal ? Deal::find($this->selectedDeal) : null;
+            $tabs = ['pending' => 'pending_admin', 'verifying' => 'in_verification', 'charged' => 'charged', 'chargeback' => 'chargeback', 'cb' => 'chargeback', 'cancelled' => 'cancelled'];
+            $query = clone $base;
+            if ($this->tab !== 'all' && isset($tabs[$this->tab])) $query->where('status', $tabs[$this->tab]);
+            $deals = $query->paginate($this->perPage);
+
+            // Single aggregation query for all tab counts instead of N+1 count queries
+            $countRows = (clone $base)->selectRaw('status, COUNT(*) as cnt')->groupBy('status')->pluck('cnt', 'status');
+            $counts = [];
+            foreach ($tabs as $k => $v) { $counts[$k] = $countRows->get($v, 0); }
+            $counts['all'] = $countRows->sum();
+
+            $users = User::all()->keyBy('id');
+            $activeDeal = $this->selectedDeal ? Deal::find($this->selectedDeal) : null;
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
         return view('livewire.verification', compact('deals', 'users', 'counts', 'activeDeal', 'isAdmin'));
     }
 }

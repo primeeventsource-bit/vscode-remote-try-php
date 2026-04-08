@@ -10,6 +10,7 @@ use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ChargebackController;
 use App\Http\Controllers\GifController;
+use App\Http\Controllers\AgentStatsController;
 
 // ─── Public routes ───────────────────────────────────────────
 Route::post('/login', [AuthController::class, 'login'])
@@ -108,5 +109,13 @@ Route::middleware(['auth.token'])->group(function () {
     // Dialer
     Route::post('/dialer/prepare', [\App\Http\Controllers\DialerController::class, 'prepare']);
     Route::post('/dialer/outcome', [\App\Http\Controllers\DialerController::class, 'saveOutcome']);
+
+    // Agent Statistics — role + location performance tracking
+    Route::prefix('agent-stats')->group(function () {
+        Route::get('/summary', [AgentStatsController::class, 'summary']);
+        Route::get('/role-breakdown', [AgentStatsController::class, 'roleBreakdown']);
+        Route::get('/leaderboard', [AgentStatsController::class, 'leaderboard']);
+        Route::get('/insights', [AgentStatsController::class, 'performanceInsights']);
+    });
 
 });

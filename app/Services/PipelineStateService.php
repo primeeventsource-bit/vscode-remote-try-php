@@ -73,6 +73,13 @@ class PipelineStateService
             $lead->update($data);
             PipelineEventService::logTransferredToCloser($lead, $fronter, $closer);
             AutomaticTaskService::onLeadTransferred($lead->id, $lead->owner_name ?? 'Lead', $closer->id, $fronter->id);
+
+            // Evaluate fronter performance after transfer
+            try {
+                \App\Services\AI\AgentPerformanceIntegrationService::evaluateAgent($fronter);
+            } catch (\Throwable $e) {
+                report($e);
+            }
         });
     }
 
@@ -129,6 +136,13 @@ class PipelineStateService
 
             $lead->update($leadData);
             PipelineEventService::logCloserClosedDeal($lead, $deal, $closer);
+
+            // Evaluate closer performance after deal creation
+            try {
+                \App\Services\AI\AgentPerformanceIntegrationService::evaluateAgent($closer);
+            } catch (\Throwable $e) {
+                report($e);
+            }
 
             return $deal;
         });
@@ -256,6 +270,37 @@ class PipelineStateService
 
             try {
                 \App\Services\CommissionCalculator::calculate($deal);
+            } catch (\Throwable $e) {
+                report($e);
+            }
+
+            // Auto-calculate payroll snapshot (profit-first commission engine)
+            try {
+                if (\App\Models\PayrollSettingModel::get('auto_calculate_on_verified_charged', true)) {
+                    // Ensure payroll user IDs are set
+                    $deal->update([
+                        'fronter_user_id' => $deal->fronter_user_id ?? $deal->fronter,
+                        'closer_user_id_payroll' => $deal->closer_user_id_payroll ?? $deal->closer,
+                        'admin_user_id_payroll' => $deal->admin_user_id_payroll ?? $admin->id,
+                        'collected_amount' => $deal->collected_amount > 0 ? $deal->collected_amount : ($deal->fee ?? 0),
+                        'payment_date' => $deal->payment_date ?? now(),
+                    ]);
+                    \App\Services\Payroll\DealPayrollSyncService::syncForDeal($deal->fresh());
+                }
+            } catch (\Throwable $e) {
+                report($e);
+            }
+
+            // Evaluate fronter + closer performance after deal is charged
+            try {
+                if ($deal->fronter) {
+                    $fronterUser = User::find($deal->fronter);
+                    if ($fronterUser) \App\Services\AI\AgentPerformanceIntegrationService::evaluateAgent($fronterUser);
+                }
+                if ($deal->closer) {
+                    $closerUser = User::find($deal->closer);
+                    if ($closerUser) \App\Services\AI\AgentPerformanceIntegrationService::evaluateAgent($closerUser);
+                }
             } catch (\Throwable $e) {
                 report($e);
             }

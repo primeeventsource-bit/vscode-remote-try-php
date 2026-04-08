@@ -335,7 +335,7 @@ class Deals extends Component
             return;
         }
 
-        $targetCloser = User::where('id', $targetCloserId)->where('role', 'closer')->first();
+        $targetCloser = User::where('id', $targetCloserId)->whereIn('role', ['closer', 'closer_panama'])->first();
         if (!$targetCloser) {
             session()->flash('deal_error', 'Selected user is not a valid closer.');
             return;
@@ -518,8 +518,8 @@ class Deals extends Component
         $isAdmin = $user->hasPerm('view_all_leads');
         $query = Deal::query()->orderBy('id', 'desc');
         if (!$isAdmin) $query->whereNotIn('status', ['charged', 'chargeback']);
-        if ($user->role === 'closer') $query->where('closer', $user->id);
-        if ($user->role === 'fronter') $query->where('fronter', $user->id);
+        if (in_array($user->role, ['closer', 'closer_panama'])) $query->where('closer', $user->id);
+        if (in_array($user->role, ['fronter', 'fronter_panama'])) $query->where('fronter', $user->id);
         if ($this->statusFilter !== 'all') {
             $statusMap = [
                 'pending' => 'pending_admin',

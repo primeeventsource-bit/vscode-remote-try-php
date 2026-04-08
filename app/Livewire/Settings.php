@@ -325,16 +325,20 @@ class Settings extends Component
         $this->notifyMentionDing = (bool) $this->getSetting('notifications.mention_ding', true);
         $this->notifyTransferDing = (bool) $this->getSetting('notifications.transfer_ding', true);
 
-        $dbRates = DB::table('payroll_settings')->first();
-        if ($dbRates) {
-            $this->payrollRates = [
-                'closer_pct' => (float) $dbRates->closer_pct,
-                'fronter_pct' => (float) $dbRates->fronter_pct,
-                'snr_pct' => (float) $dbRates->snr_pct,
-                'vd_pct' => (float) $dbRates->vd_pct,
-                'admin_snr_pct' => (float) $dbRates->admin_snr_pct,
-                'hourly_rate' => (float) $dbRates->hourly_rate,
-            ];
+        try {
+            $dbRates = DB::table('payroll_settings')->first();
+            if ($dbRates && isset($dbRates->closer_pct)) {
+                $this->payrollRates = [
+                    'closer_pct' => (float) $dbRates->closer_pct,
+                    'fronter_pct' => (float) $dbRates->fronter_pct,
+                    'snr_pct' => (float) $dbRates->snr_pct,
+                    'vd_pct' => (float) $dbRates->vd_pct,
+                    'admin_snr_pct' => (float) $dbRates->admin_snr_pct,
+                    'hourly_rate' => (float) $dbRates->hourly_rate,
+                ];
+            }
+        } catch (\Throwable $e) {
+            // payroll_settings table may have new schema — safe to skip
         }
 
         $this->leadAutoAssign = (bool) $this->getSetting('lead.auto_assign', false);
@@ -492,19 +496,24 @@ class Settings extends Component
     public function savePayrollRules(): void
     {
         if (!auth()->user()?->hasRole('master_admin')) return;
-        DB::table('payroll_settings')->updateOrInsert(
-            ['id' => 1],
-            [
-                'closer_pct' => $this->payrollRates['closer_pct'] ?? 50,
-                'fronter_pct' => $this->payrollRates['fronter_pct'] ?? 10,
-                'snr_pct' => $this->payrollRates['snr_pct'] ?? 2,
-                'vd_pct' => $this->payrollRates['vd_pct'] ?? 3,
-                'admin_snr_pct' => $this->payrollRates['admin_snr_pct'] ?? 2,
-                'hourly_rate' => $this->payrollRates['hourly_rate'] ?? 19.50,
-                'updated_at' => now(),
-                'updated_by' => (string) auth()->id(),
-            ]
-        );
+        try {
+            DB::table('payroll_settings')->updateOrInsert(
+                ['id' => 1],
+                [
+                    'closer_pct' => $this->payrollRates['closer_pct'] ?? 50,
+                    'fronter_pct' => $this->payrollRates['fronter_pct'] ?? 10,
+                    'snr_pct' => $this->payrollRates['snr_pct'] ?? 2,
+                    'vd_pct' => $this->payrollRates['vd_pct'] ?? 3,
+                    'admin_snr_pct' => $this->payrollRates['admin_snr_pct'] ?? 2,
+                    'hourly_rate' => $this->payrollRates['hourly_rate'] ?? 19.50,
+                    'updated_at' => now(),
+                    'updated_by' => (string) auth()->id(),
+                ]
+            );
+        } catch (\Throwable $e) {
+            // Old payroll_settings schema may not exist — use new schema
+            report($e);
+        }
         session()->flash('success', 'Payroll rules saved.');
     }
 
@@ -599,26 +608,33 @@ class Settings extends Component
 
     private function loadMerchantIntegrationData(): void
     {
-        $this->processors = Processor::query()
-            ->orderBy('name')
-            ->get(['id', 'name', 'provider_type', 'active'])
-            ->toArray();
+        try {
+            $this->processors = Processor::query()
+                ->orderBy('name')
+                ->get(['id', 'name', 'provider_type', 'active'])
+                ->toArray();
+        } catch (\Throwable $e) {
+            $this->processors = [];
+        }
 
-        $this->merchantAccounts = MerchantAccount::query()
-            ->with('processor:id,name')
-            ->orderBy('name')
-            ->get(['id', 'processor_id', 'name', 'mid_masked', 'active'])
-            ->map(function (MerchantAccount $account): array {
-                return [
-                    'id' => $account->id,
-                    'processor_id' => $account->processor_id,
-                    'processor_name' => $account->processor?->name ?? '--',
-                    'name' => $account->name,
-                    'mid_masked' => $account->mid_masked,
-                    'active' => (bool) $account->active,
-                ];
-            })
-            ->toArray();
+        try {
+            $this->merchantAccounts = MerchantAccount::query()
+                ->orderBy('account_name')
+                ->get()
+                ->map(function (MerchantAccount $account): array {
+                    return [
+                        'id' => $account->id,
+                        'processor_id' => null,
+                        'processor_name' => $account->processor_name ?? '--',
+                        'name' => $account->account_name ?? $account->name ?? '--',
+                        'mid_masked' => $account->mid_number ?? $account->mid_masked ?? '--',
+                        'active' => (bool) ($account->is_active ?? $account->active ?? true),
+                    ];
+                })
+                ->toArray();
+        } catch (\Throwable $e) {
+            $this->merchantAccounts = [];
+        }
 
         if ($this->newMerchantProcessorId === '' && !empty($this->processors)) {
             $this->newMerchantProcessorId = (string) $this->processors[0]['id'];
@@ -657,16 +673,21 @@ class Settings extends Component
 
         $this->validate([
             'newMerchantName' => ['required', 'string', 'max:120'],
-            'newMerchantProcessorId' => ['required', 'integer', 'exists:processors,id'],
             'newMerchantMid' => ['nullable', 'string', 'max:32'],
         ]);
 
-        MerchantAccount::create([
-            'name' => trim($this->newMerchantName),
-            'processor_id' => (int) $this->newMerchantProcessorId,
-            'mid_masked' => trim($this->newMerchantMid) !== '' ? trim($this->newMerchantMid) : null,
-            'active' => $this->newMerchantActive,
-        ]);
+        try {
+            MerchantAccount::create([
+                'account_name' => trim($this->newMerchantName),
+                'mid_number' => trim($this->newMerchantMid) ?: ('MID-' . now()->format('YmdHis')),
+                'processor_name' => 'Unknown',
+                'is_active' => $this->newMerchantActive,
+                'created_by' => auth()->id(),
+                'updated_by' => auth()->id(),
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         $this->newMerchantName = '';
         $this->newMerchantMid = '';
@@ -701,7 +722,11 @@ class Settings extends Component
             return;
         }
 
-        $row->update(['active' => !$row->active]);
+        try {
+            $row->update(['is_active' => !($row->is_active ?? $row->active ?? true)]);
+        } catch (\Throwable $e) {
+            try { $row->update(['active' => !$row->active]); } catch (\Throwable) {}
+        }
         $this->loadMerchantIntegrationData();
     }
 

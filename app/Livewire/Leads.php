@@ -113,7 +113,7 @@ class Leads extends Component
 
             if ($fromUser && $toUser) {
                 PipelineStateService::transferLeadToCloser($lead, $fromUser, $toUser);
-                $this->sendTransferDm($closerId, 'Lead', $lead->id, $lead->owner_name ?? 'Unknown', $toUser->role === 'closer' ? 'Closer' : ucfirst(str_replace('_', ' ', $toUser->role)));
+                $this->sendTransferDm($closerId, 'Lead', $lead->id, $lead->owner_name ?? 'Unknown', in_array($toUser->role, ['closer', 'closer_panama']) ? 'Closer' : ucfirst(str_replace('_', ' ', $toUser->role)));
 
                 // Log transfer history
                 LeadTransfer::create([

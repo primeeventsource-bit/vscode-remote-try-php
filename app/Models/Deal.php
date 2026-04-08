@@ -247,6 +247,32 @@ class Deal extends Model
         return $this->hasMany(PipelineEvent::class);
     }
 
+    // ── Payroll relationships ───────────────────────────
+    public function dealFinancial()
+    {
+        return $this->hasOne(DealFinancial::class);
+    }
+
+    public function fronterPayrollUser()
+    {
+        return $this->belongsTo(User::class, 'fronter_user_id');
+    }
+
+    public function closerPayrollUser()
+    {
+        return $this->belongsTo(User::class, 'closer_user_id_payroll');
+    }
+
+    public function adminPayrollUser()
+    {
+        return $this->belongsTo(User::class, 'admin_user_id_payroll');
+    }
+
+    public function payrollBatchDeals()
+    {
+        return $this->hasMany(PayrollBatchDeal::class);
+    }
+
     public function crmNotes()
     {
         return $this->morphMany(CrmNote::class, 'noteable');

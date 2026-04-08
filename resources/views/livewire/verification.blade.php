@@ -128,7 +128,7 @@
                     </select>
                     <span class="text-xs text-crm-t3">per page</span>
                 </div>
-                <div>{{ $deals->links() }}</div>
+                <div>{{ method_exists($deals, 'links') ? $deals->links() : '' }}</div>
             </div>
         </div>
 

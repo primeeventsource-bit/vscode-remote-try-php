@@ -86,6 +86,8 @@ class StatisticsRepository
                 'name' => $f->name,
                 'avatar' => $f->avatar ?? strtoupper(substr($f->name, 0, 2)),
                 'color' => $f->color ?? '#6b7280',
+                'role' => $f->role,
+                'location' => str_contains($f->role, 'panama') ? 'Panama' : 'US',
                 'transfers_sent' => $transfersSent,
                 'deals_closed' => $dealsClosed,
                 'no_deals' => $noDeals,
@@ -145,6 +147,8 @@ class StatisticsRepository
                 'name' => $f->name,
                 'avatar' => $f->avatar ?? strtoupper(substr($f->name, 0, 2)),
                 'color' => $f->color ?? '#6b7280',
+                'role' => $f->role,
+                'location' => str_contains($f->role, 'panama') ? 'Panama' : 'US',
                 'transfers_sent' => $transfersSent,
                 'deals_closed' => $dealsClosed,
                 'no_deals' => $noDeals,
@@ -172,7 +176,7 @@ class StatisticsRepository
     {
         if (!self::tableReady()) return self::closerStatsFallback($from, $to, $userId);
 
-        $query = User::where('role', 'closer')->orderBy('name');
+        $query = User::whereIn('role', ['closer', 'closer_panama'])->orderBy('name');
         if ($userId) $query->where('id', $userId);
         $closers = $query->get();
         $result = [];
@@ -245,6 +249,8 @@ class StatisticsRepository
                 'name' => $c->name,
                 'avatar' => $c->avatar ?? strtoupper(substr($c->name, 0, 2)),
                 'color' => $c->color ?? '#6b7280',
+                'role' => $c->role,
+                'location' => str_contains($c->role, 'panama') ? 'Panama' : 'US',
                 'transfers_received' => $transfersReceived,
                 'deals_closed' => $dealsClosed,
                 'sent_to_verification' => $sentToVerification,
@@ -265,6 +271,8 @@ class StatisticsRepository
             'name' => $c->name,
             'avatar' => $c->avatar ?? strtoupper(substr($c->name, 0, 2)),
             'color' => $c->color ?? '#6b7280',
+            'role' => $c->role,
+            'location' => str_contains($c->role, 'panama') ? 'Panama' : 'US',
             'transfers_received' => 0,
             'deals_closed' => 0,
             'sent_to_verification' => 0,
@@ -277,7 +285,7 @@ class StatisticsRepository
 
     private static function closerStatsFallback($from, $to, ?int $userId = null): array
     {
-        $query = User::where('role', 'closer')->orderBy('name');
+        $query = User::whereIn('role', ['closer', 'closer_panama'])->orderBy('name');
         if ($userId) $query->where('id', $userId);
         $closers = $query->get();
         $result = [];
@@ -335,6 +343,8 @@ class StatisticsRepository
                 'name' => $c->name,
                 'avatar' => $c->avatar ?? strtoupper(substr($c->name, 0, 2)),
                 'color' => $c->color ?? '#6b7280',
+                'role' => $c->role,
+                'location' => str_contains($c->role, 'panama') ? 'Panama' : 'US',
                 'transfers_received' => $transfersReceived,
                 'deals_closed' => $dealsClosed,
                 'sent_to_verification' => $sentToVerification,

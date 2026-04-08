@@ -112,7 +112,8 @@
                         ['route' => 'stats',              'icon' => '📊', 'label' => 'Statistics',           'perm' => 'view_stats', 'training' => 'nav-stats'],
                         ['route' => 'sales-intelligence', 'icon' => '🧠', 'label' => 'Sales Intelligence',  'perm' => null, 'training' => 'nav-sales-intelligence'],
                         ['route' => 'tasks',              'icon' => '☑',  'label' => 'Task List',            'perm' => null, 'training' => 'nav-tasks'],
-                        ['route' => 'payroll',            'icon' => '💵', 'label' => 'Payroll',              'perm' => 'view_payroll', 'training' => 'nav-payroll'],
+                        ['route' => 'payroll',            'icon' => '💵', 'label' => 'Payroll (Legacy)',     'perm' => 'view_payroll', 'training' => 'nav-payroll'],
+                        ['route' => 'payroll-v2',         'icon' => '💎', 'label' => 'Payroll Engine',       'perm' => 'view_payroll', 'training' => 'nav-payroll-v2'],
                         ['route' => 'chargebacks',        'icon' => '⚠️',  'label' => 'Chargebacks',          'perm' => null, 'training' => 'nav-chargebacks'],
                     ]],
                     ['title' => 'TRAINING', 'items' => [
@@ -131,6 +132,14 @@
                         ['route' => 'tracker',      'icon' => '📅', 'label' => 'Tracker',         'perm' => null, 'training' => 'nav-tracker'],
                         ['route' => 'transfers',    'icon' => '♻️',  'label' => 'Transfers',       'perm' => null, 'training' => 'nav-transfers'],
                     ]],
+                    ['title' => 'FINANCE', 'items' => [
+                        ['route' => 'finance',             'icon' => '💳', 'label' => 'Finance Center',    'perm' => null, 'role' => 'master_admin', 'training' => 'nav-finance',             'href' => '/finance'],
+                        ['route' => 'finance.accounts',    'icon' => '🏦', 'label' => 'Merchant Accounts', 'perm' => null, 'role' => 'master_admin', 'training' => 'nav-finance-accounts',    'href' => '/finance/accounts'],
+                        ['route' => 'finance.statements',  'icon' => '📑', 'label' => 'Statements',        'perm' => null, 'role' => 'master_admin', 'training' => 'nav-finance-statements',  'href' => '/finance/statements'],
+                        ['route' => 'finance.transactions','icon' => '💰', 'label' => 'Transactions',      'perm' => null, 'role' => 'master_admin', 'training' => 'nav-finance-transactions','href' => '/finance/transactions'],
+                        ['route' => 'finance.chargebacks', 'icon' => '🔴', 'label' => 'Chargebacks',       'perm' => null, 'role' => 'master_admin', 'training' => 'nav-finance-chargebacks', 'href' => '/finance/chargebacks'],
+                        ['route' => 'finance.entries',     'icon' => '📒', 'label' => 'Financial Entries',  'perm' => null, 'role' => 'master_admin', 'training' => 'nav-finance-entries',     'href' => '/finance/entries'],
+                    ]],
                     ['title' => 'SYSTEM', 'items' => [
                         ['route' => 'users',          'icon' => '👥', 'label' => 'Users',           'perm' => 'view_users', 'training' => 'nav-users'],
                         ['route' => 'settings',       'icon' => '⚙️',  'label' => 'Settings',        'perm' => null, 'training' => 'nav-settings'],
@@ -143,7 +152,15 @@
                 @php
                     $visibleItems = collect($section['items'])->filter(function ($item) use ($user) {
                         $enabled = $item['enabled'] ?? true;
-                        return $enabled && (!$item['perm'] || $user->hasPerm($item['perm']));
+                        if (!$enabled) return false;
+
+                        // Role-gated items (e.g. Finance = master_admin only)
+                        if (!empty($item['role'])) {
+                            return $user->role === $item['role'];
+                        }
+
+                        // Permission-gated items
+                        return !$item['perm'] || $user->hasPerm($item['perm']);
                     });
                 @endphp
                 @if($visibleItems->isNotEmpty())
@@ -151,11 +168,18 @@
                         <span class="text-[9px] text-crm-t3 uppercase tracking-widest font-bold">{{ $section['title'] }}</span>
                     </div>
                     @foreach($visibleItems as $item)
-                        @php try { $navHref = route($item['route']); } catch (\Throwable $e) { $navHref = '/' . $item['route']; } @endphp
+                        @php
+                            if (!empty($item['href'])) {
+                                $navHref = $item['href'];
+                            } else {
+                                try { $navHref = route($item['route']); } catch (\Throwable $e) { $navHref = '/' . $item['route']; }
+                            }
+                        @endphp
                         <a href="{{ $navHref }}" @click="drawerOpen = false"
                            data-training="{{ $item['training'] ?? $item['route'] }}"
+                           @php $navActive = request()->routeIs($item['route']) || (!empty($item['href']) && request()->is(ltrim($item['href'], '/'))); @endphp
                            class="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition
-                                  {{ request()->routeIs($item['route']) ? 'bg-blue-50 text-blue-600' : 'text-crm-t2 hover:bg-crm-hover' }}">
+                                  {{ $navActive ? 'bg-blue-50 text-blue-600' : 'text-crm-t2 hover:bg-crm-hover' }}">
                             <span class="w-5 text-center text-sm">{{ $item['icon'] }}</span>
                             {{ $item['label'] }}
                         </a>

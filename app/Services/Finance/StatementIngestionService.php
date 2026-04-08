@@ -1,0 +1,317 @@
+<?php
+
+namespace App\Services\Finance;
+
+use App\Models\MerchantAccount;
+use App\Models\MerchantStatementLineItem;
+use App\Models\MerchantStatementSummary;
+use App\Models\MerchantStatementUpload;
+use Illuminate\Support\Facades\Storage;
+
+/**
+ * Orchestrates the full statement ingestion pipeline:
+ * 1. Upload → 2. Detect format → 3. Parse/Extract → 4. Normalize → 5. Preview → 6. Import
+ */
+class StatementIngestionService
+{
+    /**
+     * Step 1: Process an uploaded file — detect, parse, and create preview.
+     */
+    public static function processUpload(MerchantStatementUpload $upload): array
+    {
+        $upload->update(['processing_status' => 'processing']);
+
+        try {
+            // Read file content
+            $content = self::readFileContent($upload);
+            if (!$content) {
+                $upload->update(['processing_status' => 'failed']);
+                return ['success' => false, 'error' => 'Unable to read file content'];
+            }
+
+            // Step 2: Detect processor/format (deterministic first)
+            $detection = StatementFormatDetector::detect($content, $upload->original_filename, $upload->mime_type);
+
+            // Step 2b: If low confidence or missing critical fields, try AI extraction
+            if (($detection['confidence'] < 0.6 || !$detection['mid_number']) && strlen($content) > 50) {
+                try {
+                    $aiData = self::aiAssistedDetection($content, $upload->original_filename);
+                    if (!empty($aiData)) {
+                        // Merge AI results into detection (AI fills gaps, doesn't overwrite confident fields)
+                        $detection['mid_number'] = $detection['mid_number'] ?? ($aiData['mid_number'] ?? null);
+                        $detection['processor'] = $detection['processor'] ?? ($aiData['processor_name'] ?? null);
+                        $detection['business_name'] = $detection['business_name'] ?? ($aiData['business_name'] ?? null);
+                        $detection['descriptor'] = $detection['descriptor'] ?? ($aiData['descriptor'] ?? null);
+                        $detection['gateway_name'] = $detection['gateway_name'] ?? ($aiData['gateway_name'] ?? null);
+                        $detection['currency'] = $detection['currency'] ?? ($aiData['currency'] ?? 'USD');
+                        $detection['account_name'] = $detection['account_name'] ?? ($aiData['business_name'] ?? null);
+
+                        // If AI found data, boost confidence
+                        if ($aiData['mid_number'] ?? null) {
+                            $detection['confidence'] = max($detection['confidence'], 0.75);
+                        }
+
+                        // Store AI-extracted summary data for later use
+                        $detection['ai_summary'] = $aiData;
+                    }
+                } catch (\Throwable $e) {
+                    report($e);
+                }
+            }
+
+            $upload->update([
+                'detected_processor' => $detection['processor'],
+                'detected_statement_type' => $detection['statement_type'],
+                'confidence_score' => $detection['confidence'],
+            ]);
+
+            // Auto-match or auto-create MID from statement data
+            if (!$upload->merchant_account_id) {
+                $mid = self::resolveOrCreateMerchantAccount($detection, $upload->uploaded_by);
+                if ($mid) {
+                    $upload->update(['merchant_account_id' => $mid->id]);
+                }
+            }
+
+            // Step 3: Parse content into structured data
+            $parsed = self::parseContent($upload, $content, $detection);
+
+            // Step 4: Create summary
+            if (!empty($parsed['summary'])) {
+                self::createSummary($upload, $parsed['summary']);
+            }
+
+            // Step 5: Create line items for preview
+            // Store ALL extracted fields in raw_line_json so the importer can use them
+            $warnings = [];
+            $lineItems = [];
+            foreach ($parsed['lines'] ?? [] as $line) {
+                // Build enriched raw data — includes AI-extracted fields like
+                // reason_code, due_date, card_brand, last4, category, etc.
+                $rawData = $line['raw'] ?? [];
+                foreach (['card_brand', 'last4', 'reason_code', 'reason_description', 'due_date', 'original_transaction_ref', 'category', 'status', 'type', 'customer_name', 'reference'] as $extraField) {
+                    if (isset($line[$extraField]) && !isset($rawData[$extraField])) {
+                        $rawData[$extraField] = $line[$extraField];
+                    }
+                }
+
+                $item = MerchantStatementLineItem::create([
+                    'merchant_statement_upload_id' => $upload->id,
+                    'merchant_account_id' => $upload->merchant_account_id,
+                    'line_type' => $line['type'] ?? 'transaction',
+                    'external_reference' => $line['reference'] ?? null,
+                    'transaction_date' => $line['date'] ?? null,
+                    'description' => $line['description'] ?? null,
+                    'amount' => $line['amount'] ?? 0,
+                    'currency' => $line['currency'] ?? 'USD',
+                    'mapped_status' => $line['status'] ?? null,
+                    'raw_line_json' => $rawData,
+                    'confidence_score' => $line['confidence'] ?? $detection['confidence'],
+                    'needs_review' => ($line['confidence'] ?? 1) < 0.7,
+                ]);
+                $lineItems[] = $item;
+
+                if ($item->needs_review) {
+                    $warnings[] = "Line #{$item->id}: Low confidence ({$item->confidence_score}) — review needed";
+                }
+            }
+
+            $upload->update([
+                'processing_status' => 'parsed',
+                'processed_at' => now(),
+            ]);
+
+            // Check if a MID was auto-created
+            $autoCreatedMid = null;
+            if ($upload->merchant_account_id) {
+                $midModel = MerchantAccount::find($upload->merchant_account_id);
+                if ($midModel && $midModel->notes === 'Auto-created from statement upload') {
+                    $autoCreatedMid = [
+                        'id' => $midModel->id,
+                        'account_name' => $midModel->account_name,
+                        'mid_number' => $midModel->mid_number,
+                        'processor' => $midModel->processor_name,
+                    ];
+                }
+            }
+
+            return [
+                'success' => true,
+                'upload_id' => $upload->id,
+                'detection' => $detection,
+                'summary' => $parsed['summary'] ?? null,
+                'line_count' => count($lineItems),
+                'review_count' => collect($lineItems)->where('needs_review', true)->count(),
+                'warnings' => $warnings,
+                'auto_created_mid' => $autoCreatedMid,
+            ];
+        } catch (\Throwable $e) {
+            $upload->update(['processing_status' => 'failed']);
+            report($e);
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Parse file content based on mime type.
+     */
+    private static function parseContent(MerchantStatementUpload $upload, string $content, array $detection): array
+    {
+        $mime = $upload->mime_type;
+
+        if (str_contains($mime, 'csv') || str_ends_with($upload->original_filename, '.csv')) {
+            return StatementCsvParser::parse($content, $detection);
+        }
+
+        if (str_contains($mime, 'pdf')) {
+            return StatementPdfParser::parse($upload->file_path, $content, $detection);
+        }
+
+        // Fallback: try CSV-style parsing on plain text
+        if (str_contains($mime, 'text') || str_contains($mime, 'plain')) {
+            return StatementCsvParser::parse($content, $detection);
+        }
+
+        return ['summary' => null, 'lines' => []];
+    }
+
+    private static function createSummary(MerchantStatementUpload $upload, array $summary): void
+    {
+        if (!$upload->merchant_account_id) return;
+
+        MerchantStatementSummary::create([
+            'merchant_statement_upload_id' => $upload->id,
+            'merchant_account_id' => $upload->merchant_account_id,
+            'statement_start_date' => $summary['start_date'] ?? null,
+            'statement_end_date' => $summary['end_date'] ?? null,
+            'gross_volume' => $summary['gross_volume'] ?? null,
+            'net_volume' => $summary['net_volume'] ?? null,
+            'refunds_total' => $summary['refunds'] ?? null,
+            'chargebacks_total' => $summary['chargebacks'] ?? null,
+            'fees_total' => $summary['fees'] ?? null,
+            'reserves_total' => $summary['reserves'] ?? null,
+            'payouts_total' => $summary['payouts'] ?? null,
+            'ending_balance' => $summary['ending_balance'] ?? null,
+            'raw_summary_json' => $summary,
+        ]);
+    }
+
+    /**
+     * Find existing MerchantAccount by MID number, or create a new one
+     * from the detected statement data.
+     */
+    private static function resolveOrCreateMerchantAccount(array $detection, int $userId): ?MerchantAccount
+    {
+        // 1. Try to match by MID number
+        if (!empty($detection['mid_number'])) {
+            $existing = MerchantAccount::where('mid_number', $detection['mid_number'])->first();
+            if ($existing) return $existing;
+        }
+
+        // 2. Try to match by business name + processor combo
+        if (!empty($detection['business_name']) && !empty($detection['processor'])) {
+            $existing = MerchantAccount::where('business_name', $detection['business_name'])
+                ->where('processor_name', $detection['processor'])
+                ->first();
+            if ($existing) return $existing;
+        }
+
+        // 3. Not enough info to create — need at least MID number or business name
+        if (empty($detection['mid_number']) && empty($detection['business_name'])) {
+            return null;
+        }
+
+        // 4. Auto-create new MerchantAccount from statement data
+        $midNumber = $detection['mid_number'] ?? ('AUTO-' . now()->format('YmdHis'));
+        $accountName = $detection['account_name']
+            ?? $detection['business_name']
+            ?? $detection['descriptor']
+            ?? ('MID ' . $midNumber);
+
+        return MerchantAccount::create([
+            'account_name' => $accountName,
+            'mid_number' => $midNumber,
+            'processor_name' => $detection['processor'] ?? 'Unknown',
+            'gateway_name' => $detection['gateway_name'] ?? null,
+            'descriptor' => $detection['descriptor'] ?? null,
+            'business_name' => $detection['business_name'] ?? null,
+            'account_status' => 'active',
+            'currency' => $detection['currency'] ?? 'USD',
+            'is_active' => true,
+            'notes' => 'Auto-created from statement upload',
+            'created_by' => $userId,
+            'updated_by' => $userId,
+        ]);
+    }
+
+    /**
+     * Try AI-assisted extraction when deterministic parsing gets low confidence.
+     * Sends text content to OpenAI/Claude to extract structured merchant data.
+     */
+    public static function aiAssistedDetection(string $content, string $filename): array
+    {
+        // Only use first 4000 chars to keep API costs low
+        $excerpt = substr($content, 0, 4000);
+
+        // Redact card numbers before sending to AI
+        $excerpt = preg_replace('/\b\d{13,19}\b/', '[REDACTED]', $excerpt);
+
+        try {
+            $apiKey = config('services.openai.api_key') ?: env('OPENAI_API_KEY');
+            if (!$apiKey) return [];
+
+            $prompt = "You are a merchant statement parser. Extract the following fields from this merchant processing statement text. Return ONLY valid JSON with these keys: mid_number, processor_name, business_name, descriptor, gateway_name, currency, statement_start_date, statement_end_date, gross_volume, refunds_total, chargebacks_total, fees_total, reserves_total, payouts_total. Use null for any field you cannot find.\n\nFilename: {$filename}\n\nStatement text:\n{$excerpt}";
+
+            $ch = curl_init('https://api.openai.com/v1/chat/completions');
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_POST => true,
+                CURLOPT_TIMEOUT => 30,
+                CURLOPT_HTTPHEADER => [
+                    'Content-Type: application/json',
+                    'Authorization: Bearer ' . $apiKey,
+                ],
+                CURLOPT_POSTFIELDS => json_encode([
+                    'model' => 'gpt-4o-mini',
+                    'messages' => [['role' => 'user', 'content' => $prompt]],
+                    'temperature' => 0.1,
+                    'max_tokens' => 500,
+                ]),
+            ]);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode !== 200 || !$response) return [];
+
+            $data = json_decode($response, true);
+            $text = $data['choices'][0]['message']['content'] ?? '';
+
+            // Extract JSON from the response (it might be wrapped in markdown code blocks)
+            if (preg_match('/\{[^{}]*\}/s', $text, $jsonMatch)) {
+                $parsed = json_decode($jsonMatch[0], true);
+                if (is_array($parsed)) return $parsed;
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        return [];
+    }
+
+    private static function readFileContent(MerchantStatementUpload $upload): ?string
+    {
+        try {
+            if (Storage::exists($upload->file_path)) {
+                return Storage::get($upload->file_path);
+            }
+            $fullPath = storage_path('app/' . $upload->file_path);
+            if (file_exists($fullPath)) return file_get_contents($fullPath);
+            if (file_exists($upload->file_path)) return file_get_contents($upload->file_path);
+            return null;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+}

@@ -160,15 +160,15 @@ class Payroll extends Component
                 'fee' => (float) $d->fee,
                 'is_vd' => $d->is_vd_deal || $d->was_vd === 'Yes',
                 'fronter_role' => $d->fronter_role,
-                'closer_comm' => (float) ($agent->role === 'closer' ? $d->closer_net_pay : 0),
+                'closer_comm' => (float) (in_array($agent->role, ['closer', 'closer_panama']) ? $d->closer_net_pay : 0),
                 'fronter_comm' => (float) (in_array($agent->role, ['fronter']) ? $d->fronter_comm_amount : 0),
-                'snr' => (float) ($agent->role === 'closer' ? $d->snr_deduction : 0),
-                'vd' => (float) ($agent->role === 'closer' ? $d->vd_deduction : 0),
+                'snr' => (float) (in_array($agent->role, ['closer', 'closer_panama']) ? $d->snr_deduction : 0),
+                'vd' => (float) (in_array($agent->role, ['closer', 'closer_panama']) ? $d->vd_deduction : 0),
             ])->values()->toArray();
 
-            $totalComm = $agent->role === 'closer'
+            $totalComm = in_array($agent->role, ['closer', 'closer_panama'])
                 ? $agentDeals->sum('closer_net_pay')
-                : ($agent->role === 'fronter' ? $agentDeals->sum('fronter_comm_amount') : 0);
+                : (in_array($agent->role, ['fronter', 'fronter_panama']) ? $agentDeals->sum('fronter_comm_amount') : 0);
 
             PayrollReport::updateOrCreate(
                 ['user_id' => $agent->id, 'week_start' => $monday->toDateString()],
@@ -178,8 +178,8 @@ class Payroll extends Component
                     'user_role' => $agent->role,
                     'total_deals_amount' => $agentDeals->sum('fee'),
                     'total_commission' => $totalComm,
-                    'total_snr' => $agent->role === 'closer' ? $agentDeals->sum('snr_deduction') : 0,
-                    'total_vd' => $agent->role === 'closer' ? $agentDeals->sum('vd_deduction') : 0,
+                    'total_snr' => in_array($agent->role, ['closer', 'closer_panama']) ? $agentDeals->sum('snr_deduction') : 0,
+                    'total_vd' => in_array($agent->role, ['closer', 'closer_panama']) ? $agentDeals->sum('vd_deduction') : 0,
                     'net_pay' => $totalComm,
                     'deal_count' => $agentDeals->count(),
                     'deal_details' => $details,
@@ -189,7 +189,24 @@ class Payroll extends Component
             );
         }
 
-        $this->payrollMessage = 'Weekly payroll reports generated for ' . $agents->count() . ' agents.';
+        // Check for payroll anomalies and trigger admin alerts
+        $anomalyAlerts = [];
+        foreach ($agents as $agent) {
+            try {
+                $report = PayrollReport::where('user_id', $agent->id)
+                    ->where('week_start', $monday->toDateString())->first();
+                if ($report && $report->net_pay > 0) {
+                    $alerts = \App\Services\AI\AgentPerformanceIntegrationService::checkPayrollAnomalies($agent, (float) $report->net_pay);
+                    $anomalyAlerts = array_merge($anomalyAlerts, $alerts);
+                }
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+
+        $anomalyCount = count($anomalyAlerts);
+        $this->payrollMessage = 'Weekly payroll reports generated for ' . $agents->count() . ' agents.'
+            . ($anomalyCount > 0 ? " ({$anomalyCount} payroll anomaly alert(s) triggered)" : '');
     }
 
     public function finalizeWeeklyReport(): void
@@ -288,10 +305,10 @@ class Payroll extends Component
                         'vd' => (float) $d->vd_deduction,
                         'charged_back' => $d->charged_back,
                     ])->values()->toArray(),
-                    'commission' => $ru->role === 'closer' ? $myDeals->sum('closer_net_pay') : (in_array($ru->role, ['fronter', 'fronter_panama']) ? $myDeals->sum('fronter_comm_amount') : 0),
-                    'total_snr' => $ru->role === 'closer' ? $myDeals->sum('snr_deduction') : 0,
-                    'total_vd' => $ru->role === 'closer' ? $myDeals->sum('vd_deduction') : 0,
-                    'final_pay' => $ru->role === 'closer' ? $myDeals->sum('closer_net_pay') : (in_array($ru->role, ['fronter', 'fronter_panama']) ? $myDeals->sum('fronter_comm_amount') : 0),
+                    'commission' => in_array($ru->role, ['closer', 'closer_panama']) ? $myDeals->sum('closer_net_pay') : (in_array($ru->role, ['fronter', 'fronter_panama']) ? $myDeals->sum('fronter_comm_amount') : 0),
+                    'total_snr' => in_array($ru->role, ['closer', 'closer_panama']) ? $myDeals->sum('snr_deduction') : 0,
+                    'total_vd' => in_array($ru->role, ['closer', 'closer_panama']) ? $myDeals->sum('vd_deduction') : 0,
+                    'final_pay' => in_array($ru->role, ['closer', 'closer_panama']) ? $myDeals->sum('closer_net_pay') : (in_array($ru->role, ['fronter', 'fronter_panama']) ? $myDeals->sum('fronter_comm_amount') : 0),
                     'deal_count' => $myDeals->count(),
                 ]);
             }
@@ -303,8 +320,8 @@ class Payroll extends Component
                 'user_id' => $user->id,
                 'gross_revenue' => $myDeals->sum('fee'),
                 'deals' => $myDeals->map(fn($d) => ['owner_name' => $d->owner_name, 'fee' => (float) $d->fee, 'charged_back' => $d->charged_back])->values()->toArray(),
-                'commission' => $user->role === 'closer' ? $myDeals->sum('closer_net_pay') : $myDeals->sum('fronter_comm_amount'),
-                'final_pay' => $user->role === 'closer' ? $myDeals->sum('closer_net_pay') : $myDeals->sum('fronter_comm_amount'),
+                'commission' => in_array($user->role, ['closer', 'closer_panama']) ? $myDeals->sum('closer_net_pay') : $myDeals->sum('fronter_comm_amount'),
+                'final_pay' => in_array($user->role, ['closer', 'closer_panama']) ? $myDeals->sum('closer_net_pay') : $myDeals->sum('fronter_comm_amount'),
                 'deal_count' => $myDeals->count(),
             ]);
         }

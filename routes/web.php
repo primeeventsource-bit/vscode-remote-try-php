@@ -40,6 +40,22 @@ Route::middleware('auth')->group(function () {
     Route::get('/system-monitor', \App\Livewire\SystemMonitor::class)->name('system-monitor');
     Route::get('/sales-intelligence', \App\Livewire\SalesIntelligence::class)->name('sales-intelligence');
 
+    // Payroll Commission Engine (v2)
+    Route::get('/payroll-v2', \App\Livewire\Payroll\PayrollDashboard::class)->name('payroll-v2');
+    Route::get('/payroll-v2/deals', \App\Livewire\Payroll\PayrollDeals::class)->name('payroll-v2.deals');
+    Route::get('/payroll-v2/deals/{dealId}', \App\Livewire\Payroll\DealFinancialDetail::class)->name('payroll-v2.deal');
+    Route::get('/payroll-v2/batches', \App\Livewire\Payroll\PayrollBatchPage::class)->name('payroll-v2.batches');
+    Route::get('/payroll-v2/settings', \App\Livewire\Payroll\PayrollSettings::class)->name('payroll-v2.settings');
+
+    // Finance Command Center
+    Route::get('/finance', \App\Livewire\Finance\FinanceDashboard::class)->name('finance');
+    Route::get('/finance/accounts', \App\Livewire\Finance\MerchantAccounts::class)->name('finance.accounts');
+    Route::get('/finance/statements', \App\Livewire\Finance\StatementUpload::class)->name('finance.statements');
+    Route::get('/finance/transactions', \App\Livewire\Finance\FinanceTransactions::class)->name('finance.transactions');
+    Route::get('/finance/chargebacks', \App\Livewire\Finance\FinanceChargebacks::class)->name('finance.chargebacks');
+    Route::get('/finance/entries', \App\Livewire\Finance\FinancialEntries::class)->name('finance.entries');
+    Route::get('/finance/settings', \App\Livewire\Finance\FinanceSettings::class)->name('finance.settings');
+
     // Enterprise Lead Management
     Route::get('/leads/duplicates', \App\Livewire\DuplicateReview::class)->name('duplicate-review');
     Route::get('/leads/imports', \App\Livewire\LeadImports::class)->name('lead-imports');

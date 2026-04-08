@@ -2,7 +2,7 @@
     {{-- Page Title --}}
     <div class="mb-5">
         <h2 class="text-xl font-bold">Statistics</h2>
-        <p class="text-xs text-crm-t3 mt-1">Pipeline performance — fronters, closers, and verification</p>
+        <p class="text-xs text-crm-t3 mt-1">Pipeline performance — fronters, closers, and verification across US & Panama</p>
     </div>
 
     {{-- ════════════════════════════════════════════════════════════
@@ -21,31 +21,42 @@
                 </select>
             </div>
 
+            {{-- Location --}}
+            <div class="flex items-center gap-2">
+                <span class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold">Location</span>
+                <select id="fld-stats-location" wire:model.live="selectedLocation" class="px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                    <option value="all">All Locations</option>
+                    <option value="US">US</option>
+                    <option value="Panama">Panama</option>
+                </select>
+            </div>
+
             {{-- Fronter Agent --}}
             <div class="flex items-center gap-2">
-                <span class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold">Fronter Agent</span>
+                <span class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold">Fronter</span>
                 <select id="fld-stats-fronter" wire:model.live="selectedFronterId" class="px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                     <option value="all">All Fronters</option>
                     @foreach($fronterUsers as $fu)
-                        <option value="{{ $fu->id }}">{{ $fu->name }}</option>
+                        <option value="{{ $fu->id }}">{{ $fu->name }} ({{ str_contains($fu->role, 'panama') ? 'Panama' : 'US' }})</option>
                     @endforeach
                 </select>
             </div>
 
             {{-- Closer Agent --}}
             <div class="flex items-center gap-2">
-                <span class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold">Closer Agent</span>
+                <span class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold">Closer</span>
                 <select id="fld-stats-closer" wire:model.live="selectedCloserId" class="px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                     <option value="all">All Closers</option>
                     @foreach($closerUsers as $cu)
-                        <option value="{{ $cu->id }}">{{ $cu->name }}</option>
+                        <option value="{{ $cu->id }}">{{ $cu->name }} ({{ str_contains($cu->role, 'panama') ? 'Panama' : 'US' }})</option>
                     @endforeach
                 </select>
             </div>
 
             {{-- Admin Agent --}}
+            @if($canSeeAll)
             <div class="flex items-center gap-2">
-                <span class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold">Admin Agent</span>
+                <span class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold">Admin</span>
                 <select id="fld-stats-admin" wire:model.live="selectedAdminId" class="px-3 py-1.5 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
                     <option value="all">All Admins</option>
                     @foreach($adminUsers as $au)
@@ -53,11 +64,62 @@
                     @endforeach
                 </select>
             </div>
+            @endif
         </div>
     </div>
 
     {{-- ════════════════════════════════════════════════════════════
-         SUMMARY CARDS
+         SUMMARY STAT CARDS — Fronter + Closer
+         ════════════════════════════════════════════════════════════ --}}
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        {{-- Fronter Cards --}}
+        <div class="bg-crm-card border border-crm-border rounded-lg p-4 border-t-[3px] border-t-blue-500">
+            <div class="text-[10px] text-crm-t3 uppercase tracking-wider">Total Leads</div>
+            <div class="text-2xl font-extrabold text-blue-500 mt-1">{{ number_format($agentSummary['fronter']['total_leads'] ?? 0) }}</div>
+            <div class="text-[10px] text-crm-t3 mt-1">Assigned to fronters</div>
+        </div>
+        <div class="bg-crm-card border border-crm-border rounded-lg p-4 border-t-[3px] border-t-cyan-500">
+            <div class="text-[10px] text-crm-t3 uppercase tracking-wider">Qualified Leads</div>
+            <div class="text-2xl font-extrabold text-cyan-500 mt-1">{{ number_format($agentSummary['fronter']['qualified_leads'] ?? 0) }}</div>
+        </div>
+        <div class="bg-crm-card border border-crm-border rounded-lg p-4 border-t-[3px] border-t-indigo-500">
+            <div class="text-[10px] text-crm-t3 uppercase tracking-wider">Transfer Rate</div>
+            <div class="text-2xl font-extrabold text-indigo-500 mt-1">{{ number_format($agentSummary['fronter']['transfer_rate'] ?? 0, 1) }}%</div>
+            <div class="text-[10px] text-crm-t3 mt-1">{{ number_format($agentSummary['fronter']['transferred'] ?? 0) }} transferred</div>
+        </div>
+        <div class="bg-crm-card border border-crm-border rounded-lg p-4 border-t-[3px] border-t-violet-500">
+            <div class="text-[10px] text-crm-t3 uppercase tracking-wider">Avg Contact Time</div>
+            @php
+                $avgSec = $agentSummary['fronter']['avg_contact_time'] ?? 0;
+                $avgFormatted = $avgSec < 60 ? $avgSec . 's' : ($avgSec < 3600 ? round($avgSec / 60) . 'm' : floor($avgSec / 3600) . 'h ' . floor(($avgSec % 3600) / 60) . 'm');
+            @endphp
+            <div class="text-2xl font-extrabold text-violet-500 mt-1">{{ $avgFormatted }}</div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        {{-- Closer Cards --}}
+        <div class="bg-crm-card border border-crm-border rounded-lg p-4 border-t-[3px] border-t-emerald-500">
+            <div class="text-[10px] text-crm-t3 uppercase tracking-wider">Deals Closed</div>
+            <div class="text-2xl font-extrabold text-emerald-500 mt-1">{{ number_format($agentSummary['closer']['deals_closed'] ?? 0) }}</div>
+        </div>
+        <div class="bg-crm-card border border-crm-border rounded-lg p-4 border-t-[3px] border-t-green-500">
+            <div class="text-[10px] text-crm-t3 uppercase tracking-wider">Revenue</div>
+            <div class="text-2xl font-extrabold text-green-500 mt-1">${{ number_format($agentSummary['closer']['revenue'] ?? 0, 0) }}</div>
+        </div>
+        <div class="bg-crm-card border border-crm-border rounded-lg p-4 border-t-[3px] border-t-amber-500">
+            <div class="text-[10px] text-crm-t3 uppercase tracking-wider">Close Rate</div>
+            <div class="text-2xl font-extrabold text-amber-500 mt-1">{{ number_format($agentSummary['closer']['close_rate'] ?? 0, 1) }}%</div>
+            <div class="text-[10px] text-crm-t3 mt-1">{{ number_format($agentSummary['closer']['deals_received'] ?? 0) }} received</div>
+        </div>
+        <div class="bg-crm-card border border-crm-border rounded-lg p-4 border-t-[3px] border-t-orange-500">
+            <div class="text-[10px] text-crm-t3 uppercase tracking-wider">Avg Deal Value</div>
+            <div class="text-2xl font-extrabold text-orange-500 mt-1">${{ number_format($agentSummary['closer']['avg_deal_value'] ?? 0, 0) }}</div>
+        </div>
+    </div>
+
+    {{-- ════════════════════════════════════════════════════════════
+         PIPELINE SUMMARY (original)
          ════════════════════════════════════════════════════════════ --}}
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div class="bg-crm-card border border-crm-border rounded-lg p-4 border-t-[3px] border-t-blue-500">
@@ -82,6 +144,203 @@
     </div>
 
     {{-- ════════════════════════════════════════════════════════════
+         ROLE BREAKDOWN TABLE
+         ════════════════════════════════════════════════════════════ --}}
+    @if($canSeeAll && !empty($roleBreakdown))
+    <div class="mb-6">
+        <div class="text-sm font-bold mb-3">Role & Location Breakdown</div>
+        <div class="bg-crm-card border border-crm-border rounded-lg overflow-hidden">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-crm-border bg-crm-surface">
+                        <th class="text-left px-4 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Role</th>
+                        <th class="text-center px-3 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Location</th>
+                        <th class="text-center px-3 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Agents</th>
+                        <th class="text-center px-3 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Leads</th>
+                        <th class="text-center px-3 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Qualified</th>
+                        <th class="text-center px-3 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Transfers</th>
+                        <th class="text-center px-3 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Deals Closed</th>
+                        <th class="text-center px-3 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Revenue</th>
+                        <th class="text-center px-3 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Close Rate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($roleBreakdown as $row)
+                        <tr class="border-b border-crm-border hover:bg-crm-hover transition">
+                            <td class="px-4 py-2.5 font-semibold">
+                                <span class="inline-flex items-center gap-1.5">
+                                    <span class="w-2 h-2 rounded-full {{ $row['role'] === 'fronter' ? 'bg-blue-500' : 'bg-emerald-500' }}"></span>
+                                    {{ ucfirst($row['role']) }}
+                                </span>
+                            </td>
+                            <td class="text-center px-3 py-2.5">
+                                <span class="px-2 py-0.5 text-[10px] font-bold rounded-full {{ $row['location'] === 'Panama' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700' }}">
+                                    {{ $row['location'] }}
+                                </span>
+                            </td>
+                            <td class="text-center px-3 py-2.5 font-mono">{{ $row['agent_count'] }}</td>
+                            <td class="text-center px-3 py-2.5 font-mono font-bold">{{ number_format($row['leads']) }}</td>
+                            <td class="text-center px-3 py-2.5 font-mono">{{ number_format($row['qualified']) }}</td>
+                            <td class="text-center px-3 py-2.5 font-mono text-blue-600">{{ number_format($row['transfers']) }}</td>
+                            <td class="text-center px-3 py-2.5 font-mono font-bold text-emerald-600">{{ number_format($row['deals_closed']) }}</td>
+                            <td class="text-center px-3 py-2.5 font-mono font-bold text-green-600">${{ number_format($row['revenue'], 0) }}</td>
+                            <td class="text-center px-3 py-2.5">
+                                @php $cr = $row['close_rate'] ?? 0; @endphp
+                                <span class="font-bold {{ $cr >= 50 ? 'text-emerald-600' : ($cr >= 25 ? 'text-amber-600' : 'text-red-500') }}">{{ number_format($cr, 1) }}%</span>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @endif
+
+    {{-- ════════════════════════════════════════════════════════════
+         PERFORMANCE LEADERBOARD
+         ════════════════════════════════════════════════════════════ --}}
+    @if(!empty($leaderboard))
+    <div class="mb-6">
+        <div class="text-sm font-bold mb-3">Performance Leaderboard</div>
+        <div class="bg-crm-card border border-crm-border rounded-lg overflow-hidden">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-crm-border bg-crm-surface">
+                        <th class="text-left px-4 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold w-8">#</th>
+                        <th class="text-left px-3 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Agent</th>
+                        <th class="text-center px-3 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Role</th>
+                        <th class="text-center px-3 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Location</th>
+                        <th class="text-center px-3 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Deals Closed</th>
+                        <th class="text-center px-3 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Revenue</th>
+                        <th class="text-center px-3 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Close Rate</th>
+                        <th class="text-center px-3 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Badge</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($leaderboard as $idx => $agent)
+                        <tr class="border-b border-crm-border hover:bg-crm-hover transition {{ $idx < 3 ? 'bg-amber-50/30' : '' }}">
+                            <td class="px-4 py-2.5 font-bold text-crm-t3">
+                                @if($idx === 0)
+                                    <span class="text-amber-500 text-base">1</span>
+                                @elseif($idx === 1)
+                                    <span class="text-gray-400 text-base">2</span>
+                                @elseif($idx === 2)
+                                    <span class="text-orange-400 text-base">3</span>
+                                @else
+                                    {{ $idx + 1 }}
+                                @endif
+                            </td>
+                            <td class="px-3 py-2.5">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold text-white" style="background: {{ $agent['color'] ?? '#6b7280' }}">{{ $agent['avatar'] ?? '--' }}</div>
+                                    <span class="font-semibold">{{ $agent['name'] }}</span>
+                                </div>
+                            </td>
+                            <td class="text-center px-3 py-2.5">
+                                <span class="px-2 py-0.5 text-[10px] font-bold rounded-full {{ $agent['role'] === 'fronter' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700' }}">
+                                    {{ ucfirst($agent['role']) }}
+                                </span>
+                            </td>
+                            <td class="text-center px-3 py-2.5">
+                                <span class="px-2 py-0.5 text-[10px] font-bold rounded-full {{ ($agent['location'] ?? 'US') === 'Panama' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700' }}">
+                                    {{ $agent['location'] ?? 'US' }}
+                                </span>
+                            </td>
+                            <td class="text-center px-3 py-2.5 font-mono font-bold text-emerald-600">{{ $agent['deals_closed'] ?? 0 }}</td>
+                            <td class="text-center px-3 py-2.5 font-mono font-bold text-green-600">${{ number_format($agent['revenue'] ?? 0, 0) }}</td>
+                            <td class="text-center px-3 py-2.5">
+                                @php $agentCr = $agent['close_rate'] ?? 0; @endphp
+                                <span class="font-bold {{ $agentCr >= 50 ? 'text-emerald-600' : ($agentCr >= 25 ? 'text-amber-600' : 'text-red-500') }}">{{ number_format($agentCr, 1) }}%</span>
+                            </td>
+                            <td class="text-center px-3 py-2.5">
+                                @if($agent['badge'] ?? null)
+                                    @php
+                                        $badgeColors = [
+                                            'High Performer' => 'bg-emerald-100 text-emerald-700',
+                                            'Top Revenue' => 'bg-green-100 text-green-700',
+                                            'Fast Responder' => 'bg-blue-100 text-blue-700',
+                                            'Needs Improvement' => 'bg-red-100 text-red-700',
+                                        ];
+                                    @endphp
+                                    <span class="px-2 py-0.5 text-[10px] font-bold rounded-full {{ $badgeColors[$agent['badge']] ?? 'bg-gray-100 text-gray-700' }}">
+                                        {{ $agent['badge'] }}
+                                    </span>
+                                @endif
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @endif
+
+    {{-- ════════════════════════════════════════════════════════════
+         AI PERFORMANCE INSIGHTS
+         ════════════════════════════════════════════════════════════ --}}
+    @if($canSeeAll && !empty($aiInsights))
+    <div class="mb-6">
+        <div class="text-sm font-bold mb-3">AI Performance Insights</div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {{-- Weakest Fronter Group --}}
+            @if($aiInsights['weakest_fronter_group'] ?? null)
+            <div class="bg-crm-card border border-crm-border rounded-lg p-4 border-l-[3px] border-l-red-400">
+                <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mb-1">Weakest Fronter Group</div>
+                <div class="text-sm font-bold text-red-600">{{ $aiInsights['weakest_fronter_group']['label'] }}</div>
+                <div class="text-xs text-crm-t3 mt-1">{{ $aiInsights['weakest_fronter_group']['insight'] }}</div>
+            </div>
+            @endif
+
+            {{-- Strongest Closer Group --}}
+            @if($aiInsights['strongest_closer_group'] ?? null)
+            <div class="bg-crm-card border border-crm-border rounded-lg p-4 border-l-[3px] border-l-emerald-400">
+                <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mb-1">Strongest Closer Group</div>
+                <div class="text-sm font-bold text-emerald-600">{{ $aiInsights['strongest_closer_group']['label'] }}</div>
+                <div class="text-xs text-crm-t3 mt-1">{{ $aiInsights['strongest_closer_group']['insight'] }}</div>
+            </div>
+            @endif
+
+            {{-- Slowest Follow-Up Team --}}
+            @if($aiInsights['slowest_follow_up_team'] ?? null)
+            <div class="bg-crm-card border border-crm-border rounded-lg p-4 border-l-[3px] border-l-amber-400">
+                <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mb-1">Slowest Follow-Up Team</div>
+                <div class="text-sm font-bold text-amber-600">{{ $aiInsights['slowest_follow_up_team']['label'] }}</div>
+                <div class="text-xs text-crm-t3 mt-1">{{ $aiInsights['slowest_follow_up_team']['insight'] }}</div>
+            </div>
+            @endif
+
+            {{-- Highest Converting Team --}}
+            @if($aiInsights['highest_converting_team'] ?? null)
+            <div class="bg-crm-card border border-crm-border rounded-lg p-4 border-l-[3px] border-l-blue-400">
+                <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mb-1">Highest Converting Team</div>
+                <div class="text-sm font-bold text-blue-600">{{ $aiInsights['highest_converting_team']['label'] }}</div>
+                <div class="text-xs text-crm-t3 mt-1">{{ $aiInsights['highest_converting_team']['insight'] }}</div>
+            </div>
+            @endif
+        </div>
+
+        {{-- Top & Bottom Performers --}}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            @if($aiInsights['top_performer'] ?? null)
+            <div class="bg-crm-card border border-crm-border rounded-lg p-4 border-l-[3px] border-l-emerald-500">
+                <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mb-1">Top Performer</div>
+                <div class="text-sm font-bold text-emerald-600">{{ $aiInsights['top_performer']['name'] }}</div>
+                <div class="text-xs text-crm-t3">{{ $aiInsights['top_performer']['label'] }} &mdash; {{ $aiInsights['top_performer']['deals_closed'] }} deals &mdash; ${{ number_format($aiInsights['top_performer']['revenue'], 0) }} revenue</div>
+            </div>
+            @endif
+
+            @if($aiInsights['bottom_performer'] ?? null)
+            <div class="bg-crm-card border border-crm-border rounded-lg p-4 border-l-[3px] border-l-red-500">
+                <div class="text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mb-1">Needs Coaching</div>
+                <div class="text-sm font-bold text-red-600">{{ $aiInsights['bottom_performer']['name'] }}</div>
+                <div class="text-xs text-crm-t3">{{ $aiInsights['bottom_performer']['label'] }} &mdash; ${{ number_format($aiInsights['bottom_performer']['revenue'], 0) }} revenue</div>
+            </div>
+            @endif
+        </div>
+    </div>
+    @endif
+
+    {{-- ════════════════════════════════════════════════════════════
          FRONTER PERFORMANCE
          ════════════════════════════════════════════════════════════ --}}
     <div class="mb-6">
@@ -92,6 +351,7 @@
                     <thead>
                         <tr class="border-b border-crm-border bg-crm-surface">
                             <th class="text-left px-4 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Name</th>
+                            <th class="text-center px-3 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Location</th>
                             <th class="text-center px-3 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Transfers Sent</th>
                             <th class="text-center px-3 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Deals Closed</th>
                             <th class="text-center px-3 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">No Deals</th>
@@ -107,6 +367,11 @@
                                         <div class="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold text-white" style="background: {{ $fs['color'] ?? '#6b7280' }}">{{ $fs['avatar'] ?? '--' }}</div>
                                         <span class="font-semibold">{{ $fs['name'] ?? 'Unknown' }}</span>
                                     </div>
+                                </td>
+                                <td class="text-center px-3 py-2.5">
+                                    <span class="px-2 py-0.5 text-[10px] font-bold rounded-full {{ ($fs['location'] ?? 'US') === 'Panama' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700' }}">
+                                        {{ $fs['location'] ?? 'US' }}
+                                    </span>
                                 </td>
                                 <td class="text-center px-3 py-2.5 font-mono font-bold">{{ $fs['transfers_sent'] ?? 0 }}</td>
                                 <td class="text-center px-3 py-2.5 font-mono font-bold text-emerald-600">{{ $fs['deals_closed'] ?? 0 }}</td>
@@ -141,6 +406,7 @@
                     <thead>
                         <tr class="border-b border-crm-border bg-crm-surface">
                             <th class="text-left px-4 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Name</th>
+                            <th class="text-center px-3 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Location</th>
                             <th class="text-center px-3 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Transfers Received</th>
                             <th class="text-center px-3 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Deals Closed</th>
                             <th class="text-center px-3 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Sent to Verification</th>
@@ -158,6 +424,11 @@
                                         <div class="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold text-white" style="background: {{ $cs['color'] ?? '#6b7280' }}">{{ $cs['avatar'] ?? '--' }}</div>
                                         <span class="font-semibold">{{ $cs['name'] ?? 'Unknown' }}</span>
                                     </div>
+                                </td>
+                                <td class="text-center px-3 py-2.5">
+                                    <span class="px-2 py-0.5 text-[10px] font-bold rounded-full {{ ($cs['location'] ?? 'US') === 'Panama' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700' }}">
+                                        {{ $cs['location'] ?? 'US' }}
+                                    </span>
                                 </td>
                                 <td class="text-center px-3 py-2.5 font-mono font-bold">{{ $cs['transfers_received'] ?? 0 }}</td>
                                 <td class="text-center px-3 py-2.5 font-mono font-bold text-emerald-600">{{ $cs['deals_closed'] ?? 0 }}</td>
@@ -188,6 +459,7 @@
     {{-- ════════════════════════════════════════════════════════════
          VERIFICATION / ADMIN PERFORMANCE
          ════════════════════════════════════════════════════════════ --}}
+    @if($canSeeAll)
     <div class="mb-6">
         <div class="text-sm font-bold mb-3">Verification / Admin Performance</div>
         @if(!empty($adminStats))
@@ -233,4 +505,5 @@
             </div>
         @endif
     </div>
+    @endif
 </div>

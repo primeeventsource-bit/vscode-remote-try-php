@@ -6,6 +6,7 @@ use App\Models\Deal;
 use App\Models\Lead;
 use App\Models\User;
 use App\Repositories\StatisticsRepository;
+use App\Services\AgentStatisticsService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
@@ -22,7 +23,7 @@ class Dashboard extends Component
     {
         $user     = auth()->user();
         $isFronter = in_array($user->role, ['fronter', 'fronter_panama']);
-        $isCloser = $user->role === 'closer';
+        $isCloser = in_array($user->role, ['closer', 'closer_panama']);
         $isAdmin  = in_array($user->role, ['admin', 'admin_limited']);
         $isMaster = $user->role === 'master_admin';
 
@@ -151,6 +152,31 @@ class Dashboard extends Component
 
         $recentDeals = (clone $dealScope)->orderByDesc('id')->limit(5)->get();
 
+        // ── Agent Stats for Dashboard ────────────────────────────
+        $agentSummary = [];
+        $roleBreakdown = [];
+        $topAgents = [];
+        $aiInsights = [];
+        $canSeeStats = $isMaster || $isAdmin;
+
+        if ($canSeeStats) {
+            try {
+                $agentSummary = AgentStatisticsService::summary(null, null, $from, $to);
+                $roleBreakdown = AgentStatisticsService::roleBreakdown($from, $to);
+                $topAgents = AgentStatisticsService::leaderboard(null, null, $from, $to, 10);
+                $aiInsights = AgentStatisticsService::performanceInsights($from, $to);
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        } elseif ($isFronter || $isCloser) {
+            // Agents see their own position on the leaderboard
+            try {
+                $topAgents = AgentStatisticsService::leaderboard(null, null, $from, $to, 10);
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+
         // Task widget — full task list for admin/master_admin
         $taskWidget = ['overdue' => 0, 'due_today' => 0, 'open' => 0, 'urgent' => 0];
         $dashboardTasks = collect();
@@ -179,7 +205,8 @@ class Dashboard extends Component
             'weekDeals', 'weekCharged', 'weekRev', 'closers', 'recentDeals',
             'isFronter', 'isCloser', 'isAdmin', 'isMaster', 'userRole',
             'monthlyData', 'monthlyChargebackData', 'pipelineStats',
-            'taskWidget', 'dashboardTasks', 'showTaskScreen'
+            'taskWidget', 'dashboardTasks', 'showTaskScreen',
+            'agentSummary', 'roleBreakdown', 'topAgents', 'aiInsights', 'canSeeStats'
         ));
     }
 
