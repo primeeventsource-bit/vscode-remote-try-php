@@ -26,7 +26,7 @@ class StatementUpload extends Component
     public string $successMessage = '';
     public string $errorMessage = '';
 
-    public function upload()
+    public function processStatement()
     {
         $this->successMessage = '';
         $this->errorMessage = '';

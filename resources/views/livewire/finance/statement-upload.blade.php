@@ -57,36 +57,34 @@
         <div class="text-sm font-bold mb-1">Upload Statement File</div>
         <p class="text-xs text-crm-t3 mb-4">Upload a processor statement (CSV, PDF, or Excel). The system will auto-detect the MID, processor, and extract all transactions, chargebacks, fees, and reserves.</p>
 
-        <form wire:submit="upload">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="md:col-span-2">
-                    <label for="fld-stmt-file" class="block text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mb-1">Statement File</label>
-                    <input id="fld-stmt-file" type="file" wire:model="file" accept=".pdf,.csv,.txt,.xlsx,.xls"
-                        class="w-full px-3 py-2 text-sm bg-white border-2 border-dashed border-crm-border rounded-lg focus:outline-none focus:border-blue-400 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-600 file:text-white hover:file:bg-blue-700 file:cursor-pointer cursor-pointer">
-                    <div wire:loading wire:target="file" class="text-xs text-blue-500 mt-2 font-semibold">Uploading file to server...</div>
-                    @error('file') <div class="text-xs text-red-500 mt-1">{{ $message }}</div> @enderror
-                </div>
-                <div>
-                    <label for="fld-stmt-mid" class="block text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mb-1">Assign to MID (optional)</label>
-                    <select id="fld-stmt-mid" wire:model="midFilter" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
-                        <option value="">Auto-detect from statement</option>
-                        @foreach($mids as $mid)
-                            <option value="{{ $mid->id }}">{{ $mid->account_name }} ({{ $mid->mid_number }})</option>
-                        @endforeach
-                    </select>
-                    <div class="text-[10px] text-crm-t3 mt-1">Leave empty to auto-detect MID from the file</div>
-                </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="md:col-span-2">
+                <label for="fld-stmt-file" class="block text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mb-1">Statement File</label>
+                <input id="fld-stmt-file" type="file" wire:model="file" accept=".pdf,.csv,.txt,.xlsx,.xls"
+                    class="w-full px-3 py-2 text-sm bg-white border-2 border-dashed border-crm-border rounded-lg focus:outline-none focus:border-blue-400 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-600 file:text-white hover:file:bg-blue-700 file:cursor-pointer cursor-pointer">
+                <div wire:loading wire:target="file" class="text-xs text-blue-500 mt-2 font-semibold">Uploading file to server...</div>
+                @error('file') <div class="text-xs text-red-500 mt-1 font-semibold">{{ $message }}</div> @enderror
             </div>
-            <div class="mt-4 flex items-center gap-3">
-                <button type="submit"
-                    class="px-6 py-2.5 text-sm font-bold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                    wire:loading.attr="disabled" wire:target="file,upload">
-                    <span wire:loading.remove wire:target="upload">Upload & Analyze</span>
-                    <span wire:loading wire:target="upload">Analyzing Statement...</span>
-                </button>
-                <span wire:loading wire:target="upload" class="text-xs text-blue-500 font-semibold">This may take a few seconds for AI extraction...</span>
+            <div>
+                <label for="fld-stmt-mid" class="block text-[10px] text-crm-t3 uppercase tracking-wider font-semibold mb-1">Assign to MID (optional)</label>
+                <select id="fld-stmt-mid" wire:model="midFilter" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                    <option value="">Auto-detect from statement</option>
+                    @foreach($mids as $mid)
+                        <option value="{{ $mid->id }}">{{ $mid->account_name }} ({{ $mid->mid_number }})</option>
+                    @endforeach
+                </select>
+                <div class="text-[10px] text-crm-t3 mt-1">Leave empty to auto-detect MID from the file</div>
             </div>
-        </form>
+        </div>
+        <div class="mt-4 flex items-center gap-3">
+            <button wire:click="processStatement" type="button"
+                class="px-6 py-2.5 text-sm font-bold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                wire:loading.attr="disabled" wire:target="file,processStatement">
+                <span wire:loading.remove wire:target="processStatement">Upload & Analyze</span>
+                <span wire:loading wire:target="processStatement">Analyzing Statement...</span>
+            </button>
+            <span wire:loading wire:target="processStatement" class="text-xs text-blue-500 font-semibold">This may take a few seconds...</span>
+        </div>
     </div>
     @endif
 
