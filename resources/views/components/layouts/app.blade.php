@@ -231,6 +231,11 @@
         @livewire('incoming-call-alert')
     @endauth
 
+    {{-- Global message notification toasts --}}
+    @auth
+        @livewire('message-notification-toast')
+    @endauth
+
     {{-- Global interactive training walkthrough overlay --}}
     @auth
         @livewire('training-overlay')
@@ -300,11 +305,98 @@
     </script>
     @endauth
 
-    {{-- Service Worker Registration --}}
+    {{-- Service Worker + Push Notifications --}}
     <script>
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js').catch(() => {});
-    }
+    (function() {
+        if (!('serviceWorker' in navigator)) return;
+
+        navigator.serviceWorker.register('/sw.js').then(function(reg) {
+            // Only attempt push subscription if user is authenticated and browser supports it
+            if (!('PushManager' in window)) return;
+            if (Notification.permission === 'denied') return;
+
+            // Get VAPID key and subscribe
+            fetch('/push/vapid-key', { credentials: 'same-origin' })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (!data.key) return;
+
+                    var vapidKey = urlBase64ToUint8Array(data.key);
+
+                    reg.pushManager.getSubscription().then(function(sub) {
+                        if (sub) {
+                            // Already subscribed — send to server to ensure it's registered
+                            sendSubToServer(sub);
+                            return;
+                        }
+
+                        // Not subscribed yet — request permission and subscribe
+                        if (Notification.permission === 'granted') {
+                            subscribePush(reg, vapidKey);
+                        }
+                        // If permission is 'default', we'll request it from the settings page
+                    });
+                }).catch(function() {});
+        }).catch(function() {});
+
+        function subscribePush(reg, vapidKey) {
+            reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: vapidKey
+            }).then(function(sub) {
+                sendSubToServer(sub);
+            }).catch(function() {});
+        }
+
+        function sendSubToServer(sub) {
+            var key = sub.getKey('p256dh');
+            var auth = sub.getKey('auth');
+            fetch('/push/subscribe', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                    'Accept': 'application/json',
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    endpoint: sub.endpoint,
+                    p256dh_key: btoa(String.fromCharCode.apply(null, new Uint8Array(key))),
+                    auth_token: btoa(String.fromCharCode.apply(null, new Uint8Array(auth))),
+                    content_encoding: (PushManager.supportedContentEncodings || ['aesgcm'])[0],
+                })
+            }).catch(function() {});
+        }
+
+        function urlBase64ToUint8Array(base64String) {
+            var padding = '='.repeat((4 - base64String.length % 4) % 4);
+            var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+            var raw = atob(base64);
+            var arr = new Uint8Array(raw.length);
+            for (var i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+            return arr;
+        }
+
+        // Expose for settings page
+        window.CRMPush = {
+            requestPermission: function() {
+                return Notification.requestPermission().then(function(perm) {
+                    if (perm === 'granted') {
+                        return navigator.serviceWorker.ready.then(function(reg) {
+                            return fetch('/push/vapid-key', { credentials: 'same-origin' })
+                                .then(function(r) { return r.json(); })
+                                .then(function(data) {
+                                    if (!data.key) return false;
+                                    return subscribePush(reg, urlBase64ToUint8Array(data.key));
+                                });
+                        });
+                    }
+                    return false;
+                });
+            },
+            getPermission: function() { return Notification.permission; }
+        };
+    })();
     </script>
 
     {{-- PWA Install Prompt --}}

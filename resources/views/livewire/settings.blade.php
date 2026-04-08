@@ -226,6 +226,57 @@
                     <label class="flex items-center gap-2"><input id="fld-notifyTransferDing" type="checkbox" wire:model="notifyTransferDing"> Transfer ding</label>
                 </div>
                 <div class="mt-3 text-right"><button wire:click="saveNotifications" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg">Save Notifications</button></div>
+
+                {{-- Push Notifications --}}
+                <div class="mt-6 pt-4 border-t border-crm-border">
+                    <h3 class="text-sm font-semibold mb-3">Push Notifications</h3>
+                    <p class="text-xs text-crm-t3 mb-3">Receive push notifications for incoming calls and new messages when the app is backgrounded or closed.</p>
+                    <div id="push-settings">
+                        <div id="push-status" class="text-xs text-crm-t3 mb-2"></div>
+                        <button id="push-enable-btn" onclick="enablePushNotifications()" style="display:none" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">Enable Push Notifications</button>
+                        <div id="push-enabled-msg" style="display:none" class="flex items-center gap-2 text-xs text-emerald-600 font-semibold">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Push notifications enabled on this device
+                        </div>
+                        <div id="push-denied-msg" style="display:none" class="text-xs text-red-500">
+                            Push notifications are blocked. Go to your browser settings to allow notifications for this site.
+                        </div>
+                    </div>
+                </div>
+                <script>
+                (function() {
+                    var statusEl = document.getElementById('push-status');
+                    var enableBtn = document.getElementById('push-enable-btn');
+                    var enabledMsg = document.getElementById('push-enabled-msg');
+                    var deniedMsg = document.getElementById('push-denied-msg');
+                    if (!statusEl) return;
+
+                    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+                        statusEl.textContent = 'Push notifications are not supported on this browser.';
+                        return;
+                    }
+
+                    var perm = Notification.permission;
+                    if (perm === 'granted') {
+                        enabledMsg.style.display = 'flex';
+                    } else if (perm === 'denied') {
+                        deniedMsg.style.display = 'block';
+                    } else {
+                        enableBtn.style.display = 'inline-block';
+                    }
+                })();
+
+                function enablePushNotifications() {
+                    if (window.CRMPush) {
+                        window.CRMPush.requestPermission().then(function() {
+                            location.reload();
+                        });
+                    } else {
+                        Notification.requestPermission().then(function() {
+                            location.reload();
+                        });
+                    }
+                }
+                </script>
             @endif
 
             @if($section === 'payroll')

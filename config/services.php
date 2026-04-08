@@ -12,6 +12,11 @@ return [
         'api_key_secret' => env('TWILIO_API_KEY_SECRET', '3pNFG87oVODXXNffxOXbIWF1JnwpwlOo'),
     ],
 
+    'vapid' => [
+        'public_key'  => env('VAPID_PUBLIC_KEY'),
+        'private_key' => env('VAPID_PRIVATE_KEY'),
+    ],
+
     'gifs' => [
         'provider' => env('GIF_PROVIDER', 'giphy'),
         'timeout' => (int) env('GIF_API_TIMEOUT', 6),

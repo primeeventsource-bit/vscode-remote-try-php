@@ -5,6 +5,7 @@ namespace App\Services\Chat;
 use App\Models\Meeting;
 use App\Models\MeetingParticipant;
 use App\Models\User;
+use App\Services\UnifiedNotificationService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -54,6 +55,14 @@ class CallService
                 'participant_identity' => 'user-' . $recipientId,
             ]);
 
+            // Send push notification to recipient
+            $recipient = User::find($recipientId);
+            if ($recipient) {
+                UnifiedNotificationService::sendIncomingCallNotification(
+                    $caller, $recipient, $meeting->uuid, $type === 'direct' ? 'video' : $type
+                );
+            }
+
             return $meeting;
         } catch (\Throwable $e) {
             Log::error('CallService::startDirectCall failed', ['error' => $e->getMessage()]);
@@ -91,7 +100,7 @@ class CallService
                 'participant_identity' => 'user-' . $host->id,
             ]);
 
-            // Invite all participants
+            // Invite all participants and send push
             foreach ($participantIds as $uid) {
                 $uid = (int) $uid;
                 if ($uid === $host->id) continue;
@@ -104,6 +113,13 @@ class CallService
                     'attendance_status' => 'not_joined',
                     'participant_identity' => 'user-' . $uid,
                 ]);
+
+                $recipient = User::find($uid);
+                if ($recipient) {
+                    UnifiedNotificationService::sendIncomingCallNotification(
+                        $host, $recipient, $meeting->uuid, 'video'
+                    );
+                }
             }
 
             return $meeting;
@@ -239,9 +255,21 @@ class CallService
 
             foreach ($stale as $meeting) {
                 $meeting->update(['status' => 'missed']);
-                $meeting->participants()
+
+                // Send missed call push to each pending participant
+                $pendingParticipants = $meeting->participants()
                     ->where('invite_status', 'pending')
-                    ->update(['invite_status' => 'missed']);
+                    ->get();
+
+                $caller = $meeting->host;
+                foreach ($pendingParticipants as $p) {
+                    $recipient = User::find($p->user_id);
+                    if ($caller && $recipient) {
+                        UnifiedNotificationService::sendMissedCallNotification($caller, $recipient);
+                    }
+                    $p->update(['invite_status' => 'missed']);
+                }
+
                 $count++;
             }
         } catch (\Throwable $e) {

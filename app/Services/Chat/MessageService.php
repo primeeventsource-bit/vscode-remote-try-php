@@ -4,8 +4,10 @@ namespace App\Services\Chat;
 
 use App\Models\Chat;
 use App\Models\ChatAttachment;
+use App\Models\ChatParticipant;
 use App\Models\Message;
 use App\Models\User;
+use App\Services\UnifiedNotificationService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -37,6 +39,7 @@ class MessageService
             ]);
 
             Chat::where('id', $chatId)->update(['updated_at' => now()]);
+            $this->notifyRecipients($chatId, $senderId, $text);
 
             return $msg;
         } catch (\Throwable $e) {
@@ -68,6 +71,7 @@ class MessageService
             ]);
 
             Chat::where('id', $chatId)->update(['updated_at' => now()]);
+            $this->notifyRecipients($chatId, $senderId, 'Sent a GIF');
 
             return $msg;
         } catch (\Throwable $e) {
@@ -112,6 +116,7 @@ class MessageService
             ]);
 
             Chat::where('id', $chatId)->update(['updated_at' => now()]);
+            $this->notifyRecipients($chatId, $senderId, 'Sent a file: ' . $file->getClientOriginalName());
 
             return $msg;
         } catch (\Throwable $e) {
@@ -136,6 +141,50 @@ class MessageService
             ]);
         } catch (\Throwable $e) {
             return null;
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // PUSH NOTIFICATION TRIGGER
+    // ═══════════════════════════════════════════════════════
+
+    private function notifyRecipients(int $chatId, int $senderId, string $preview): void
+    {
+        try {
+            $chat = Chat::find($chatId);
+            if (!$chat) return;
+
+            $sender = User::find($senderId);
+            if (!$sender) return;
+
+            // Get recipients who have not muted this chat
+            $recipientIds = ChatParticipant::where('chat_id', $chatId)
+                ->where('user_id', '!=', $senderId)
+                ->whereNull('left_at')
+                ->where('notifications_muted', false)
+                ->pluck('user_id')
+                ->toArray();
+
+            if (empty($recipientIds)) return;
+
+            if ($chat->type === 'dm') {
+                foreach ($recipientIds as $rid) {
+                    $recipient = User::find($rid);
+                    if ($recipient) {
+                        UnifiedNotificationService::sendDirectMessageNotification($sender, $recipient, $chatId, $preview);
+                    }
+                }
+            } else {
+                UnifiedNotificationService::sendGroupMessageNotification(
+                    $sender,
+                    $recipientIds,
+                    $chatId,
+                    $chat->name ?? 'Group Chat',
+                    $preview
+                );
+            }
+        } catch (\Throwable $e) {
+            Log::debug('Message push notification failed', ['error' => $e->getMessage()]);
         }
     }
 

@@ -187,6 +187,32 @@ Route::middleware('auth')->group(function () {
     // Meeting room page
     Route::get('/meeting/{uuid}', \App\Livewire\MeetingRoom::class)->name('meeting-room');
 
+    // ─── Push Notification Subscription ────────────────────
+    Route::post('/push/subscribe', function () {
+        $user = auth()->user();
+        $data = request()->validate([
+            'endpoint'         => 'required|url',
+            'p256dh_key'       => 'required|string',
+            'auth_token'       => 'required|string',
+            'content_encoding' => 'sometimes|string',
+        ]);
+        $data['user_agent'] = request()->userAgent();
+        \App\Services\UnifiedNotificationService::subscribe($user, $data);
+        return response()->json(['ok' => true]);
+    })->name('push.subscribe');
+
+    Route::post('/push/unsubscribe', function () {
+        $endpoint = request()->input('endpoint');
+        if ($endpoint) {
+            \App\Services\UnifiedNotificationService::unsubscribe(auth()->user(), $endpoint);
+        }
+        return response()->json(['ok' => true]);
+    })->name('push.unsubscribe');
+
+    Route::get('/push/vapid-key', function () {
+        return response()->json(['key' => config('services.vapid.public_key')]);
+    })->name('push.vapid-key');
+
     // Presence heartbeat
     Route::post('/presence/heartbeat', function () {
         $user = auth()->user();
