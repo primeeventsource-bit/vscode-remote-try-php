@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -10,6 +11,27 @@ return new class extends Migration
     {
         if (!Schema::hasTable('payroll_settings')) return;
 
+        // Check if this is the OLD schema (has closer_pct) or NEW schema (has setting_key)
+        $hasOldSchema = Schema::hasColumn('payroll_settings', 'closer_pct');
+        $hasNewSchema = Schema::hasColumn('payroll_settings', 'setting_key');
+
+        if ($hasOldSchema && !$hasNewSchema) {
+            // OLD table exists — rename it and create new one
+            Schema::rename('payroll_settings', 'payroll_settings_legacy');
+
+            Schema::create('payroll_settings', function (Blueprint $table) {
+                $table->id();
+                $table->string('setting_key', 100)->unique();
+                $table->text('setting_value');
+                $table->string('setting_type', 50)->default('string');
+                $table->text('description')->nullable();
+                $table->timestamps();
+            });
+        }
+
+        if (!Schema::hasColumn('payroll_settings', 'setting_key')) return;
+
+        // Seed defaults
         $settings = [
             ['setting_key' => 'fronter_default_percent', 'setting_value' => '6.00', 'setting_type' => 'decimal', 'description' => 'Default fronter commission percentage'],
             ['setting_key' => 'closer_default_percent', 'setting_value' => '12.00', 'setting_type' => 'decimal', 'description' => 'Default closer commission percentage'],
@@ -32,8 +54,5 @@ return new class extends Migration
         }
     }
 
-    public function down(): void
-    {
-        // Settings are forward-only
-    }
+    public function down(): void {}
 };
