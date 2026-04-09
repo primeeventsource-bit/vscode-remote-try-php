@@ -107,26 +107,26 @@
             <tbody class="divide-y divide-crm-border">
                 @forelse($accounts as $account)
                 <tr class="hover:bg-crm-hover transition">
-                    <td class="px-3 py-2 font-semibold">{{ $account->account_name }}</td>
-                    <td class="px-3 py-2 text-xs font-mono text-crm-t3">{{ $account->mid_number }}</td>
-                    <td class="px-3 py-2 text-xs">{{ $account->processor_name }}</td>
+                    <td class="px-3 py-2 font-semibold">{{ $account['account_name'] }}</td>
+                    <td class="px-3 py-2 text-xs font-mono text-crm-t3">{{ $account['mid_number'] }}</td>
+                    <td class="px-3 py-2 text-xs">{{ $account['processor_name'] }}</td>
                     <td class="px-3 py-2 text-center">
-                        @if($account->account_status === 'active')
+                        @if($account['account_status'] === 'active')
                             <span class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-emerald-100 text-emerald-700">Active</span>
-                        @elseif($account->account_status === 'suspended')
+                        @elseif($account['account_status'] === 'suspended')
                             <span class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-amber-100 text-amber-700">Suspended</span>
                         @else
                             <span class="px-2 py-0.5 text-[9px] font-bold rounded-full bg-red-100 text-red-700">Closed</span>
                         @endif
                     </td>
-                    <td class="px-3 py-2 text-right text-xs">{{ number_format($account->txn_count ?? 0) }}</td>
-                    <td class="px-3 py-2 text-right text-xs font-semibold">${{ number_format($account->approved_volume ?? 0, 2) }}</td>
-                    <td class="px-3 py-2 text-right text-xs">{{ number_format($account->cb_count ?? 0) }}</td>
-                    <td class="px-3 py-2 text-right text-xs text-red-600">${{ number_format($account->cb_amount ?? 0, 2) }}</td>
-                    <td class="px-3 py-2 text-right text-xs text-orange-600">${{ number_format($account->fee_total ?? 0, 2) }}</td>
-                    <td class="px-3 py-2 text-right text-xs">{{ number_format($account->statement_count ?? 0) }}</td>
+                    <td class="px-3 py-2 text-right text-xs">{{ number_format($account['txn_count'] ?? 0) }}</td>
+                    <td class="px-3 py-2 text-right text-xs font-semibold">${{ number_format($account['approved_volume'] ?? 0, 2) }}</td>
+                    <td class="px-3 py-2 text-right text-xs">{{ number_format($account['cb_count'] ?? 0) }}</td>
+                    <td class="px-3 py-2 text-right text-xs text-red-600">${{ number_format($account['cb_amount'] ?? 0, 2) }}</td>
+                    <td class="px-3 py-2 text-right text-xs text-orange-600">${{ number_format($account['fee_total'] ?? 0, 2) }}</td>
+                    <td class="px-3 py-2 text-right text-xs">{{ number_format($account['statement_count'] ?? 0) }}</td>
                     <td class="px-3 py-2 text-center">
-                        <button wire:click="edit({{ $account->id }})" class="px-2 py-0.5 text-[9px] font-semibold bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition">Edit</button>
+                        <button wire:click="edit({{ $account['id'] }})" class="px-2 py-0.5 text-[9px] font-semibold bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition">Edit</button>
                     </td>
                 </tr>
                 @empty
