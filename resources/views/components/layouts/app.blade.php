@@ -140,6 +140,9 @@
                         ['route' => 'finance.chargebacks', 'icon' => '🔴', 'label' => 'Chargebacks',       'perm' => null, 'role' => 'master_admin', 'training' => 'nav-finance-chargebacks', 'href' => '/finance/chargebacks'],
                         ['route' => 'finance.entries',     'icon' => '📒', 'label' => 'Financial Entries',  'perm' => null, 'role' => 'master_admin', 'training' => 'nav-finance-entries',     'href' => '/finance/entries'],
                     ]],
+                    ['title' => 'INTELLIGENCE', 'items' => [
+                        ['route' => 'atlas.dashboard', 'icon' => '🌐', 'label' => 'Atlas Global', 'perm' => null, 'role' => 'master_admin', 'training' => 'nav-atlas', 'href' => '/atlas'],
+                    ]],
                     ['title' => 'SYSTEM', 'items' => [
                         ['route' => 'users',          'icon' => '👥', 'label' => 'Users',           'perm' => 'view_users', 'training' => 'nav-users'],
                         ['route' => 'settings',       'icon' => '⚙️',  'label' => 'Settings',        'perm' => null, 'training' => 'nav-settings'],

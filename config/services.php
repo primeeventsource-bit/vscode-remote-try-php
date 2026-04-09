@@ -17,6 +17,11 @@ return [
         'private_key' => env('VAPID_PRIVATE_KEY'),
     ],
 
+    'anthropic' => [
+        'key' => env('ANTHROPIC_API_KEY'),
+        'model' => env('ANTHROPIC_MODEL', 'claude-sonnet-4-20250514'),
+    ],
+
     'gifs' => [
         'provider' => env('GIF_PROVIDER', 'giphy'),
         'timeout' => (int) env('GIF_API_TIMEOUT', 6),
