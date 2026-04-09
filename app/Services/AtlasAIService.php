@@ -17,6 +17,10 @@ class AtlasAIService
 
     public function parseText(string $text, string $county, string $state): array
     {
+        if (empty($this->apiKey)) {
+            throw new \RuntimeException('ANTHROPIC_API_KEY not configured. Set it in Laravel Cloud environment variables.');
+        }
+
         $response = Http::timeout(45)
             ->withHeaders([
                 'x-api-key' => $this->apiKey,
@@ -26,7 +30,7 @@ class AtlasAIService
             ->post('https://api.anthropic.com/v1/messages', [
                 'model' => $this->model,
                 'max_tokens' => 4000,
-                'system' => 'You extract timeshare deed records from raw text. GRANTEE=buyer(lead). GRANTOR=seller(resort). Skip mortgages/liens/satisfactions. Return ONLY a JSON array, no markdown: [{"grantee":"","grantor":"","date":"","address":"","instrument":"","type":""}]',
+                'system' => "You extract timeshare deed records from raw text. GRANTEE=buyer(lead). GRANTOR=seller(resort). Skip mortgages/liens/satisfactions.\n\nIMPORTANT: Return ONLY a raw JSON array with NO extra text, NO markdown fences. Example:\n[{\"grantee\":\"JOHN DOE\",\"grantor\":\"WESTGATE RESORTS\",\"date\":\"2025-04-01\",\"address\":\"123 Main St\",\"instrument\":\"2025-001234\",\"type\":\"Warranty Deed\"}]",
                 'messages' => [
                     ['role' => 'user', 'content' => "Extract all deed transfer records from {$county} County, {$state}:\n\n{$text}"],
                 ],
@@ -37,6 +41,10 @@ class AtlasAIService
 
     public function parsePDF(string $base64Data, string $county, string $state): array
     {
+        if (empty($this->apiKey)) {
+            throw new \RuntimeException('ANTHROPIC_API_KEY not configured. Set it in Laravel Cloud environment variables.');
+        }
+
         $response = Http::timeout(60)
             ->withHeaders([
                 'x-api-key' => $this->apiKey,
@@ -46,11 +54,11 @@ class AtlasAIService
             ->post('https://api.anthropic.com/v1/messages', [
                 'model' => $this->model,
                 'max_tokens' => 4000,
-                'system' => 'You extract timeshare deed records from PDF documents. Extract: GRANTEE=buyer, GRANTOR=seller/resort, recording date, property/unit, instrument number, deed type. Return ONLY JSON array: [{"grantee":"","grantor":"","date":"","address":"","instrument":"","type":""}]',
+                'system' => "You extract timeshare deed records from PDF documents. Extract: GRANTEE=buyer, GRANTOR=seller/resort, recording date, property/unit, instrument number, deed type.\n\nIMPORTANT: Return ONLY a raw JSON array with NO extra text, NO markdown fences. Example:\n[{\"grantee\":\"JOHN DOE\",\"grantor\":\"WESTGATE RESORTS\",\"date\":\"2025-04-01\",\"address\":\"Unit 123\",\"instrument\":\"2025-001234\",\"type\":\"Warranty Deed\"}]",
                 'messages' => [
                     ['role' => 'user', 'content' => [
                         ['type' => 'document', 'source' => ['type' => 'base64', 'media_type' => 'application/pdf', 'data' => $base64Data]],
-                        ['type' => 'text', 'text' => "This is a deed PDF from {$county} County, {$state}. Extract all grantee/grantor/date/property info."],
+                        ['type' => 'text', 'text' => "This is a deed PDF from {$county} County, {$state}. Extract all grantee/grantor/date/property info. Return only the JSON array."],
                     ]],
                 ],
             ]);
@@ -102,13 +110,46 @@ class AtlasAIService
 
     protected function parseJsonResponse($response): array
     {
+        if ($response->failed()) {
+            $err = $response->json('error.message') ?? $response->body();
+            throw new \RuntimeException('Anthropic API error: ' . substr($err, 0, 300));
+        }
+
         $data = $response->json();
-        $raw = collect($data['content'] ?? [])->pluck('text')->join('');
-        $clean = trim(str_replace(['```json', '```'], '', $raw));
+        $raw = collect($data['content'] ?? [])
+            ->where('type', 'text')
+            ->pluck('text')
+            ->join('');
+
+        // Strip markdown code fences
+        $clean = trim($raw);
+        if (preg_match('/```(?:json)?\s*([\s\S]*?)```/', $clean, $m)) {
+            $clean = trim($m[1]);
+        }
+
+        // Try to find the JSON array in the response
+        if (($start = strpos($clean, '[')) !== false) {
+            $clean = substr($clean, $start);
+            // Find matching closing bracket
+            $depth = 0;
+            for ($i = 0; $i < strlen($clean); $i++) {
+                if ($clean[$i] === '[') $depth++;
+                elseif ($clean[$i] === ']') $depth--;
+                if ($depth === 0) {
+                    $clean = substr($clean, 0, $i + 1);
+                    break;
+                }
+            }
+        }
+
         $results = json_decode($clean, true);
 
         if (!is_array($results)) {
-            throw new \RuntimeException('AI returned invalid JSON: ' . substr($clean, 0, 200));
+            \Illuminate\Support\Facades\Log::warning('Atlas AI parse failed', [
+                'raw' => substr($raw, 0, 500),
+                'json_error' => json_last_error_msg(),
+            ]);
+            throw new \RuntimeException('AI returned invalid JSON. Check logs for details.');
         }
 
         return $results;
