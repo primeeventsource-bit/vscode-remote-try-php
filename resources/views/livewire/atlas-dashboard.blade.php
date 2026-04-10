@@ -36,7 +36,7 @@
                 <span style="color:#c8a44e;">
                     @switch($activeTab)
                         @case('dashboard') Dashboard @break
-                        @case('sheets') Google Sheets @break
+                        @case('sheets') CSV Upload @break
                         @case('trace') Skip Trace @break
                         @case('parser') AI Parser @break
                         @case('pdf') PDF Upload @break
@@ -50,7 +50,7 @@
             <div x-show="mobileTab" @click.away="mobileTab=false" x-cloak
                  class="absolute top-full left-0 right-0 z-40 mt-1 rounded-xl shadow-2xl overflow-hidden"
                  style="background:#0d0d12;border:1px solid #c8a44e33;">
-                @foreach(['dashboard'=>'Dashboard','sheets'=>'Google Sheets','trace'=>'Skip Trace','parser'=>'AI Parser','pdf'=>'PDF Upload','counties'=>'Counties','leads'=>'Leads','settings'=>'Settings'] as $tab => $label)
+                @foreach(['dashboard'=>'Dashboard','sheets'=>'CSV Upload','trace'=>'Skip Trace','parser'=>'AI Parser','pdf'=>'PDF Upload','counties'=>'Counties','leads'=>'Leads','settings'=>'Settings'] as $tab => $label)
                 <button wire:click="$set('activeTab','{{ $tab }}')" @click="mobileTab=false"
                         class="block w-full text-left px-4 py-3 text-sm transition-colors {{ $activeTab === $tab ? 'font-bold' : 'opacity-60 hover:opacity-100' }}"
                         style="{{ $activeTab === $tab ? 'background:#c8a44e22;color:#c8a44e;' : '' }}">
@@ -98,7 +98,7 @@
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <button wire:click="$set('activeTab','sheets')" class="rounded-xl p-4 text-center transition-all hover:scale-[1.02]" style="background:#0d0d12;border:1px solid #0fff5033;">
                 <p class="text-2xl">📊</p>
-                <p class="text-xs font-bold mt-1" style="color:#0fff50;">Import Sheets</p>
+                <p class="text-xs font-bold mt-1" style="color:#0fff50;">Import CSV</p>
             </button>
             <button wire:click="$set('activeTab','trace')" class="rounded-xl p-4 text-center transition-all hover:scale-[1.02]" style="background:#0d0d12;border:1px solid #00d4ff33;">
                 <p class="text-2xl">📞</p>
@@ -134,13 +134,13 @@
     </div>
 
     {{-- ═══════════════════════════════════════════════════════════════
-         TAB 2: GOOGLE SHEETS / CSV UPLOAD
+         TAB 2: CSV UPLOAD
     ═══════════════════════════════════════════════════════════════ --}}
     @elseif($activeTab === 'sheets')
     <div class="space-y-6">
         <div class="rounded-xl p-5" style="background:#0d0d12;border:1px solid #0fff5033;">
-            <h3 class="text-sm font-bold mb-1" style="color:#0fff50;">Google Sheets / CSV Upload</h3>
-            <p class="text-xs opacity-40 mb-4">Export your Google Sheet as CSV, or paste data directly. Columns are auto-mapped.</p>
+            <h3 class="text-sm font-bold mb-1" style="color:#0fff50;">CSV Upload</h3>
+            <p class="text-xs opacity-40 mb-4">Upload a CSV file or paste data directly. Columns are auto-mapped.</p>
 
             @if(!$csvParsed)
             {{-- Upload Area --}}
@@ -225,7 +225,7 @@
         <div class="rounded-xl p-5" style="background:#0d0d12;border:1px solid #c8a44e22;">
             <h4 class="text-xs font-bold mb-2" style="color:#c8a44e;">How It Works</h4>
             <ol class="text-xs opacity-60 space-y-1 list-decimal list-inside">
-                <li>Export your Google Sheet (File &rarr; Download &rarr; CSV)</li>
+                <li>Save your spreadsheet as CSV (.csv format)</li>
                 <li>Upload the CSV or paste columns directly</li>
                 <li>Map Owner Name + any existing phone numbers</li>
                 <li>Click Import to load leads into Atlas</li>

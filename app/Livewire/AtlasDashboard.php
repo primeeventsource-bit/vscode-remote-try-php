@@ -573,9 +573,16 @@ class AtlasDashboard extends Component
             abort(403);
         }
 
-        // Auto-migrate if needed
+        // Auto-migrate if needed (new table OR missing v4 columns)
         try {
-            if (!\Illuminate\Support\Facades\Schema::hasTable('atlas_leads')) {
+            $needsMigrate = !\Illuminate\Support\Facades\Schema::hasTable('atlas_leads');
+            if (!$needsMigrate && \Illuminate\Support\Facades\Schema::hasTable('atlas_leads')) {
+                $cols = \Illuminate\Support\Facades\Schema::getColumnListing('atlas_leads');
+                if (!in_array('existing_phone', $cols) || !in_array('phone_1', $cols)) {
+                    $needsMigrate = true;
+                }
+            }
+            if ($needsMigrate) {
                 \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
             }
         } catch (\Throwable $e) {
