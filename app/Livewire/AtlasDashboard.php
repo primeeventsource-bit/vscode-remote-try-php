@@ -578,47 +578,44 @@ class AtlasDashboard extends Component
             if (!\Illuminate\Support\Facades\Schema::hasTable('atlas_leads')) {
                 \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
             } else {
-                // Add v4 columns directly — each wrapped so one failure doesn't block
                 $cols = \Illuminate\Support\Facades\Schema::getColumnListing('atlas_leads');
-                $add = [];
-                if (!in_array('existing_phone', $cols)) $add[] = "ADD COLUMN `existing_phone` VARCHAR(20) NULL";
+                // Each ALTER in its own try-catch so one failure doesn't block others
+                $statements = [];
+                if (!in_array('existing_phone', $cols)) $statements[] = "ALTER TABLE `atlas_leads` ADD COLUMN `existing_phone` VARCHAR(20) NULL";
                 if (!in_array('phone_1', $cols)) {
-                    $add[] = "ADD COLUMN `phone_1` VARCHAR(20) NULL";
-                    $add[] = "ADD COLUMN `phone_1_type` VARCHAR(20) NULL";
-                    $add[] = "ADD COLUMN `phone_2` VARCHAR(20) NULL";
-                    $add[] = "ADD COLUMN `phone_2_type` VARCHAR(20) NULL";
-                    $add[] = "ADD COLUMN `phone_3` VARCHAR(20) NULL";
-                    $add[] = "ADD COLUMN `phone_3_type` VARCHAR(20) NULL";
-                    $add[] = "ADD COLUMN `phone_4` VARCHAR(20) NULL";
-                    $add[] = "ADD COLUMN `phone_4_type` VARCHAR(20) NULL";
-                    $add[] = "ADD COLUMN `phone_5` VARCHAR(20) NULL";
-                    $add[] = "ADD COLUMN `phone_5_type` VARCHAR(20) NULL";
-                    $add[] = "ADD COLUMN `phone_confidence` VARCHAR(10) NULL";
+                    foreach (['phone_1','phone_1_type','phone_2','phone_2_type','phone_3','phone_3_type','phone_4','phone_4_type','phone_5','phone_5_type'] as $c) {
+                        $statements[] = "ALTER TABLE `atlas_leads` ADD COLUMN `{$c}` VARCHAR(20) NULL";
+                    }
+                    $statements[] = "ALTER TABLE `atlas_leads` ADD COLUMN `phone_confidence` VARCHAR(10) NULL";
                 }
                 if (!in_array('email_1', $cols)) {
-                    $add[] = "ADD COLUMN `email_1` VARCHAR(255) NULL";
-                    $add[] = "ADD COLUMN `email_2` VARCHAR(255) NULL";
-                    $add[] = "ADD COLUMN `email_3` VARCHAR(255) NULL";
+                    $statements[] = "ALTER TABLE `atlas_leads` ADD COLUMN `email_1` VARCHAR(255) NULL";
+                    $statements[] = "ALTER TABLE `atlas_leads` ADD COLUMN `email_2` VARCHAR(255) NULL";
+                    $statements[] = "ALTER TABLE `atlas_leads` ADD COLUMN `email_3` VARCHAR(255) NULL";
                 }
-                if (!in_array('city', $cols)) $add[] = "ADD COLUMN `city` VARCHAR(100) NULL";
-                if (!in_array('zip', $cols)) $add[] = "ADD COLUMN `zip` VARCHAR(10) NULL";
-                if (!in_array('traced_at', $cols)) $add[] = "ADD COLUMN `traced_at` TIMESTAMP NULL";
-                if (!in_array('source_filename', $cols)) $add[] = "ADD COLUMN `source_filename` VARCHAR(255) NULL";
-                if (!empty($add)) {
-                    \Illuminate\Support\Facades\DB::statement("ALTER TABLE `atlas_leads` " . implode(', ', $add));
+                if (!in_array('city', $cols)) $statements[] = "ALTER TABLE `atlas_leads` ADD COLUMN `city` VARCHAR(100) NULL";
+                if (!in_array('zip', $cols)) $statements[] = "ALTER TABLE `atlas_leads` ADD COLUMN `zip` VARCHAR(10) NULL";
+                if (!in_array('traced_at', $cols)) $statements[] = "ALTER TABLE `atlas_leads` ADD COLUMN `traced_at` TIMESTAMP NULL";
+                if (!in_array('source_filename', $cols)) $statements[] = "ALTER TABLE `atlas_leads` ADD COLUMN `source_filename` VARCHAR(255) NULL";
+                // Convert enums to varchar so 'sheets' and 'traced' values work
+                $statements[] = "ALTER TABLE `atlas_leads` MODIFY COLUMN `status` VARCHAR(20) DEFAULT 'new'";
+                $statements[] = "ALTER TABLE `atlas_leads` MODIFY COLUMN `source` VARCHAR(20) DEFAULT 'manual'";
+                foreach ($statements as $sql) {
+                    try { \Illuminate\Support\Facades\DB::statement($sql); } catch (\Throwable $e) {}
                 }
             }
-            // Ensure parse_logs table exists
+            // Ensure parse_logs table
             if (!\Illuminate\Support\Facades\Schema::hasTable('atlas_parse_logs')) {
                 \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
             } else {
                 $logCols = \Illuminate\Support\Facades\Schema::getColumnListing('atlas_parse_logs');
-                $logAdd = [];
-                if (!in_array('leads_traced', $logCols)) $logAdd[] = "ADD COLUMN `leads_traced` INT DEFAULT 0";
-                if (!in_array('cost_estimate', $logCols)) $logAdd[] = "ADD COLUMN `cost_estimate` DECIMAL(8,2) NULL";
-                if (!in_array('files_processed', $logCols)) $logAdd[] = "ADD COLUMN `files_processed` INT DEFAULT 0";
-                if (!empty($logAdd)) {
-                    \Illuminate\Support\Facades\DB::statement("ALTER TABLE `atlas_parse_logs` " . implode(', ', $logAdd));
+                $logStatements = [];
+                if (!in_array('leads_traced', $logCols)) $logStatements[] = "ALTER TABLE `atlas_parse_logs` ADD COLUMN `leads_traced` INT DEFAULT 0";
+                if (!in_array('cost_estimate', $logCols)) $logStatements[] = "ALTER TABLE `atlas_parse_logs` ADD COLUMN `cost_estimate` DECIMAL(8,2) NULL";
+                if (!in_array('files_processed', $logCols)) $logStatements[] = "ALTER TABLE `atlas_parse_logs` ADD COLUMN `files_processed` INT DEFAULT 0";
+                $logStatements[] = "ALTER TABLE `atlas_parse_logs` MODIFY COLUMN `parse_type` VARCHAR(20) NOT NULL";
+                foreach ($logStatements as $sql) {
+                    try { \Illuminate\Support\Facades\DB::statement($sql); } catch (\Throwable $e) {}
                 }
             }
         } catch (\Throwable $e) {
