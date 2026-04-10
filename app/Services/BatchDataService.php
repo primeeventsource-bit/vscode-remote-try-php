@@ -56,8 +56,8 @@ class BatchDataService
             ]);
 
         if (!$response->successful()) {
-            $error = $response->json('error.message') ?? $response->json('message') ?? 'Unknown error';
-            throw new \RuntimeException("BatchData API error: {$error}");
+            $error = $response->json('error.message') ?? $response->json('message') ?? $response->body();
+            throw new \RuntimeException("BatchData API error ({$response->status()}): " . substr($error, 0, 500));
         }
 
         return $response->json('results') ?? $response->json('data') ?? [];
