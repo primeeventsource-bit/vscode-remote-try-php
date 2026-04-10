@@ -345,19 +345,6 @@
             <h3 class="text-sm font-bold mb-1" style="color:#c8a44e;">AI Deed Parser</h3>
             <p class="text-xs opacity-40 mb-4">Paste county recorder search results. AI extracts grantee, grantor, dates, and addresses.</p>
 
-            <div class="grid sm:grid-cols-2 gap-3 mb-4">
-                <div>
-                    <label for="aiCountyInput" class="text-xs font-bold block mb-1 opacity-60">County</label>
-                    <input type="text" id="aiCountyInput" name="aiCounty" wire:model.defer="aiCounty"
-                           class="w-full rounded-lg p-2.5 text-xs" style="background:#050508;border:1px solid #c8a44e33;color:#e0e0e0;">
-                </div>
-                <div>
-                    <label for="aiStateInput" class="text-xs font-bold block mb-1 opacity-60">State</label>
-                    <input type="text" id="aiStateInput" name="aiState" wire:model.defer="aiState"
-                           class="w-full rounded-lg p-2.5 text-xs" style="background:#050508;border:1px solid #c8a44e33;color:#e0e0e0;">
-                </div>
-            </div>
-
             <label for="aiPasteArea" class="text-xs font-bold block mb-1 opacity-60">Paste Deed Search Results</label>
             <textarea id="aiPasteArea" name="pasteText" wire:model.defer="pasteText" rows="10"
                       class="w-full rounded-lg p-3 text-xs font-mono resize-none"
@@ -412,19 +399,6 @@
         <div class="rounded-xl p-5" style="background:#0d0d12;border:1px solid #f5a62333;">
             <h3 class="text-sm font-bold mb-1" style="color:#f5a623;">PDF Upload &amp; Parse</h3>
             <p class="text-xs opacity-40 mb-4">Upload deed PDFs from county recorder sites. AI extracts owner details from documents.</p>
-
-            <div class="grid sm:grid-cols-2 gap-3 mb-4">
-                <div>
-                    <label for="pdfCountyInput" class="text-xs font-bold block mb-1 opacity-60">County</label>
-                    <input type="text" id="pdfCountyInput" name="pdfCounty" wire:model.defer="pdfCounty"
-                           class="w-full rounded-lg p-2.5 text-xs" style="background:#050508;border:1px solid #c8a44e33;color:#e0e0e0;">
-                </div>
-                <div>
-                    <label for="pdfStateInput" class="text-xs font-bold block mb-1 opacity-60">State</label>
-                    <input type="text" id="pdfStateInput" name="pdfState" wire:model.defer="pdfState"
-                           class="w-full rounded-lg p-2.5 text-xs" style="background:#050508;border:1px solid #c8a44e33;color:#e0e0e0;">
-                </div>
-            </div>
 
             <label for="pdfFileInput" class="text-xs font-bold block mb-2 opacity-60">Upload PDFs (multiple allowed)</label>
             <input type="file" id="pdfFileInput" name="pdfFiles" wire:model="pdfFiles" accept=".pdf" multiple
