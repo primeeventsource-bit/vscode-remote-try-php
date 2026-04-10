@@ -127,31 +127,54 @@ class AtlasAIService
             $clean = trim($m[1]);
         }
 
-        // Try to find the JSON array in the response
+        // Try to find JSON array [...]
         if (($start = strpos($clean, '[')) !== false) {
-            $clean = substr($clean, $start);
-            // Find matching closing bracket
+            $sub = substr($clean, $start);
             $depth = 0;
-            for ($i = 0; $i < strlen($clean); $i++) {
-                if ($clean[$i] === '[') $depth++;
-                elseif ($clean[$i] === ']') $depth--;
+            for ($i = 0; $i < strlen($sub); $i++) {
+                if ($sub[$i] === '[') $depth++;
+                elseif ($sub[$i] === ']') $depth--;
                 if ($depth === 0) {
-                    $clean = substr($clean, 0, $i + 1);
+                    $sub = substr($sub, 0, $i + 1);
                     break;
                 }
             }
+            $results = json_decode($sub, true);
+            if (is_array($results)) {
+                return $results;
+            }
         }
 
+        // Try to find JSON object {...} and wrap in array
+        if (($start = strpos($clean, '{')) !== false) {
+            $sub = substr($clean, $start);
+            $depth = 0;
+            for ($i = 0; $i < strlen($sub); $i++) {
+                if ($sub[$i] === '{') $depth++;
+                elseif ($sub[$i] === '}') $depth--;
+                if ($depth === 0) {
+                    $sub = substr($sub, 0, $i + 1);
+                    break;
+                }
+            }
+            $results = json_decode($sub, true);
+            if (is_array($results)) {
+                return [$results]; // wrap single object in array
+            }
+        }
+
+        // Try decoding the whole cleaned string
         $results = json_decode($clean, true);
-
-        if (!is_array($results)) {
-            \Illuminate\Support\Facades\Log::warning('Atlas AI parse failed', [
-                'raw' => substr($raw, 0, 500),
-                'json_error' => json_last_error_msg(),
-            ]);
-            throw new \RuntimeException('AI returned invalid JSON. Check logs for details.');
+        if (is_array($results)) {
+            return array_is_list($results) ? $results : [$results];
         }
 
-        return $results;
+        // If Claude says no records found, return empty
+        $lower = strtolower($raw);
+        if (str_contains($lower, 'no deed') || str_contains($lower, 'no records') || str_contains($lower, 'could not find') || str_contains($lower, 'does not contain') || str_contains($lower, 'no timeshare')) {
+            return [];
+        }
+
+        throw new \RuntimeException('AI response could not be parsed: ' . substr($raw, 0, 300));
     }
 }
