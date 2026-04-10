@@ -12,8 +12,20 @@ class BatchDataService
 
     public function __construct()
     {
-        $this->apiKey = config('services.batchdata.key') ?? '';
+        $this->apiKey = $this->loadKeyFromDB() ?: (config('services.batchdata.key') ?? '');
         $this->baseUrl = config('services.batchdata.base_url') ?? 'https://api.batchdata.com/api/v1';
+    }
+
+    protected function loadKeyFromDB(): ?string
+    {
+        try {
+            $row = \Illuminate\Support\Facades\DB::table('crm_settings')
+                ->where('key', 'batchdata.api_key')->first();
+            if ($row && !empty($row->value)) {
+                return decrypt(json_decode($row->value, true));
+            }
+        } catch (\Throwable $e) {}
+        return null;
     }
 
     public function isConfigured(): bool
