@@ -73,12 +73,16 @@ class TracerfyService
         }
 
         // Build CSV content
-        $csv = "first_name,last_name,address,city,state,zip\n";
+        $csv = "first_name,last_name,address,city,state,zip,mail_address,mail_city,mail_state,mailing_zip\n";
         foreach ($leads as $lead) {
             $csv .= sprintf(
-                "%s,%s,%s,%s,%s,%s\n",
+                "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
                 $this->csvEscape($lead['firstName'] ?? ''),
                 $this->csvEscape($lead['lastName'] ?? ''),
+                $this->csvEscape($lead['address'] ?? ''),
+                $this->csvEscape($lead['city'] ?? ''),
+                $this->csvEscape($lead['state'] ?? ''),
+                $this->csvEscape($lead['zip'] ?? ''),
                 $this->csvEscape($lead['address'] ?? ''),
                 $this->csvEscape($lead['city'] ?? ''),
                 $this->csvEscape($lead['state'] ?? ''),
@@ -103,6 +107,10 @@ class TracerfyService
                     'zip_column' => 'zip',
                     'first_name_column' => 'first_name',
                     'last_name_column' => 'last_name',
+                    'mail_address_column' => 'mail_address',
+                    'mail_city_column' => 'mail_city',
+                    'mail_state_column' => 'mail_state',
+                    'mailing_zip_column' => 'mailing_zip',
                     'trace_type' => $traceType,
                 ]);
         } finally {
