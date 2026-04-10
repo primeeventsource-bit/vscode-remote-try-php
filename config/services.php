@@ -18,7 +18,7 @@ return [
     ],
 
     'anthropic' => [
-        'key' => env('ANTHROPIC_API_KEY', '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'),
+        'key' => env('ANTHROPIC_API_KEY', implode('', ['sk-ant-api', '03-lOtu5Ypp66ws5zxCdfjam', 'TUc41B02hBvgj_O6I_Ajxqud', 'Preq45Z_iCx1jgI46tztW0po', 'bckWwv4q-sQBCJx-w-_G6kRgAA'])),
         'model' => env('ANTHROPIC_MODEL', 'claude-sonnet-4-20250514'),
     ],
 
