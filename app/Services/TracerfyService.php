@@ -72,60 +72,51 @@ class TracerfyService
             throw new \RuntimeException('Tracerfy API key not configured. Add it in Atlas Settings.');
         }
 
-        // Filter to leads with at least a name (address optional — Tracerfy can work with name alone)
-        $validLeads = array_filter($leads, fn($l) => !empty(trim(($l['firstName'] ?? '') . ($l['lastName'] ?? ''))));
+        // Filter to leads with at least a name
+        $validLeads = array_values(array_filter($leads, fn($l) => !empty(trim(($l['firstName'] ?? '') . ' ' . ($l['lastName'] ?? '')))));
         if (empty($validLeads)) {
             throw new \RuntimeException('No valid leads to trace. Leads need at least a name.');
         }
 
-        // Build CSV content
-        $lines = ["first_name,last_name,address,city,state,zip,mail_address,mail_city,mail_state,mailing_zip"];
+        // Build JSON data array (alternative to CSV upload per Tracerfy API)
+        $jsonRows = [];
         foreach ($validLeads as $lead) {
-            $lines[] = implode(',', [
-                $this->csvEscape($lead['firstName'] ?? ''),
-                $this->csvEscape($lead['lastName'] ?? ''),
-                $this->csvEscape($lead['address'] ?? 'N/A'),
-                $this->csvEscape($lead['city'] ?? 'N/A'),
-                $this->csvEscape($lead['state'] ?? 'FL'),
-                $this->csvEscape($lead['zip'] ?? ''),
-                $this->csvEscape($lead['address'] ?? 'N/A'),
-                $this->csvEscape($lead['city'] ?? 'N/A'),
-                $this->csvEscape($lead['state'] ?? 'FL'),
-                $this->csvEscape($lead['zip'] ?? ''),
+            $jsonRows[] = [
+                'first_name' => $lead['firstName'] ?? '',
+                'last_name' => $lead['lastName'] ?? '',
+                'address' => $lead['address'] ?? '',
+                'city' => $lead['city'] ?? '',
+                'state' => $lead['state'] ?? '',
+                'zip' => $lead['zip'] ?? '',
+                'mail_address' => $lead['address'] ?? '',
+                'mail_city' => $lead['city'] ?? '',
+                'mail_state' => $lead['state'] ?? '',
+                'mailing_zip' => $lead['zip'] ?? '',
+            ];
+        }
+
+        $response = Http::timeout(120)
+            ->withHeaders([
+                'Authorization' => "Bearer {$this->apiKey}",
+                'Content-Type' => 'application/json',
+            ])
+            ->post("{$this->baseUrl}/trace/", [
+                'json_data' => json_encode($jsonRows),
+                'address_column' => 'address',
+                'city_column' => 'city',
+                'state_column' => 'state',
+                'zip_column' => 'zip',
+                'first_name_column' => 'first_name',
+                'last_name_column' => 'last_name',
+                'mail_address_column' => 'mail_address',
+                'mail_city_column' => 'mail_city',
+                'mail_state_column' => 'mail_state',
+                'mailing_zip_column' => 'mailing_zip',
+                'trace_type' => $traceType,
             ]);
-        }
-        $csv = implode("\n", $lines);
-
-        // Write temp CSV
-        $tmpPath = tempnam(sys_get_temp_dir(), 'tracerfy_') . '.csv';
-        file_put_contents($tmpPath, $csv);
-
-        try {
-            $response = Http::timeout(60)
-                ->withHeaders([
-                    'Authorization' => "Bearer {$this->apiKey}",
-                ])
-                ->asMultipart()
-                ->post("{$this->baseUrl}/trace/", [
-                    ['name' => 'csv_file', 'contents' => fopen($tmpPath, 'r'), 'filename' => 'leads.csv'],
-                    ['name' => 'address_column', 'contents' => 'address'],
-                    ['name' => 'city_column', 'contents' => 'city'],
-                    ['name' => 'state_column', 'contents' => 'state'],
-                    ['name' => 'zip_column', 'contents' => 'zip'],
-                    ['name' => 'first_name_column', 'contents' => 'first_name'],
-                    ['name' => 'last_name_column', 'contents' => 'last_name'],
-                    ['name' => 'mail_address_column', 'contents' => 'mail_address'],
-                    ['name' => 'mail_city_column', 'contents' => 'mail_city'],
-                    ['name' => 'mail_state_column', 'contents' => 'mail_state'],
-                    ['name' => 'mailing_zip_column', 'contents' => 'mailing_zip'],
-                    ['name' => 'trace_type', 'contents' => $traceType],
-                ]);
-        } finally {
-            @unlink($tmpPath);
-        }
 
         if (!$response->successful()) {
-            $error = $response->json('message') ?? $response->json('non_field_errors.0') ?? $response->body();
+            $error = $response->json('message') ?? $response->json('non_field_errors.0') ?? $response->json('error') ?? $response->body();
             throw new \RuntimeException("Tracerfy API error ({$response->status()}): " . substr($error, 0, 500));
         }
 
