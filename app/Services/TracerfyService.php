@@ -98,8 +98,8 @@ class TracerfyService
         $response = Http::timeout(120)
             ->withHeaders([
                 'Authorization' => "Bearer {$this->apiKey}",
-                'Content-Type' => 'application/json',
             ])
+            ->asForm()
             ->post("{$this->baseUrl}/trace/", [
                 'json_data' => json_encode($jsonRows),
                 'address_column' => 'address',
