@@ -13,7 +13,7 @@ class AtlasAIService
     {
         // Check database first, then fall back to config/env
         $this->apiKey = $this->loadKeyFromDB() ?: (config('services.anthropic.key') ?? '');
-        $this->model = config('services.anthropic.model') ?? 'claude-sonnet-4-20250514';
+        $this->model = config('services.anthropic.model') ?? 'claude-haiku-4-5-20251001';
     }
 
     protected function loadKeyFromDB(): ?string
