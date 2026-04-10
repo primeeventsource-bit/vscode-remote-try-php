@@ -34,6 +34,7 @@ class AtlasDashboard extends Component
 
     // PDF Upload
     public $pdfFiles = [];
+    public $pdfQueue = [];
     public string $pdfCounty = 'Orange';
     public string $pdfState = 'FL';
     public bool $pdfParsing = false;
@@ -130,17 +131,36 @@ class AtlasDashboard extends Component
     }
 
     // ─── PDF Upload ──────────────────────────────────
+    public function updatedPdfFiles()
+    {
+        $this->validate([
+            'pdfFiles.*' => 'file|mimes:pdf|max:10240',
+        ]);
+
+        foreach ($this->pdfFiles as $file) {
+            $this->pdfQueue[] = $file;
+        }
+        $this->pdfFiles = [];
+    }
+
+    public function removePdfFromQueue(int $index)
+    {
+        unset($this->pdfQueue[$index]);
+        $this->pdfQueue = array_values($this->pdfQueue);
+    }
+
+    public function clearPdfQueue()
+    {
+        $this->pdfQueue = [];
+    }
+
     public function parsePDFs()
     {
         $this->pdfError = '';
         $this->pdfResults = null;
         $this->pdfSelected = [];
 
-        $this->validate([
-            'pdfFiles.*' => 'file|mimes:pdf|max:10240',
-        ]);
-
-        if (empty($this->pdfFiles)) {
+        if (empty($this->pdfQueue)) {
             $this->pdfError = 'Please upload at least one PDF.';
             return;
         }
@@ -151,7 +171,7 @@ class AtlasDashboard extends Component
         try {
             $service = app(AtlasAIService::class);
 
-            foreach ($this->pdfFiles as $file) {
+            foreach ($this->pdfQueue as $file) {
                 $base64 = base64_encode(file_get_contents($file->getRealPath()));
                 $results = $service->parsePDF($base64, $this->pdfCounty, $this->pdfState);
 
@@ -170,8 +190,10 @@ class AtlasDashboard extends Component
                 'county' => $this->pdfCounty,
                 'state' => $this->pdfState,
                 'leads_found' => count($allResults),
-                'files_processed' => count($this->pdfFiles),
+                'files_processed' => count($this->pdfQueue),
             ]);
+
+            $this->pdfQueue = [];
         } catch (\Throwable $e) {
             report($e);
             $this->pdfError = 'PDF parsing failed: ' . $e->getMessage();
@@ -209,7 +231,7 @@ class AtlasDashboard extends Component
         $this->successMessage = "{$count} leads imported from PDF upload.";
         $this->pdfResults = null;
         $this->pdfSelected = [];
-        $this->pdfFiles = [];
+        $this->pdfQueue = [];
     }
 
     // ─── Phone Lookup ────────────────────────────────

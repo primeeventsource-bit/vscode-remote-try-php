@@ -255,25 +255,44 @@
                 </div>
 
                 <div class="mb-4">
-                    <label for="pdfUpload" class="block text-[11px] font-semibold mb-1" style="color: #888;">Upload PDFs (max 10MB each)</label>
+                    <label for="pdfUpload" class="block text-[11px] font-semibold mb-1" style="color: #888;">Upload PDFs (max 10MB each) — select multiple times to build queue</label>
                     <div class="rounded-lg p-6 text-center" style="background: #0f0f1a; border: 2px dashed #1a1a2e;" x-data x-on:dragover.prevent="$el.style.borderColor='#c8a44e'" x-on:dragleave="$el.style.borderColor='#1a1a2e'" x-on:drop.prevent="$el.style.borderColor='#1a1a2e'">
-                        <input type="file" wire:model="pdfFiles" multiple accept=".pdf" class="hidden" id="pdfUpload">
+                        <input type="file" wire:model="pdfFiles" multiple accept=".pdf" class="hidden" id="pdfUpload" name="pdfUpload">
                         <label for="pdfUpload" class="cursor-pointer">
                             <svg class="w-8 h-8 mx-auto mb-2" style="color: #c8a44e33;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
-                            <p class="text-xs" style="color: #888;">Click or drag PDFs here</p>
+                            <p class="text-xs" style="color: #888;">Click to add PDFs (you can click multiple times to add more)</p>
+                            <p class="text-[10px] mt-1" style="color: #555;">Hold Ctrl/Cmd to select multiple files at once</p>
                         </label>
                     </div>
-                    @if($pdfFiles && count($pdfFiles) > 0)
-                        <div class="mt-2 space-y-1">
-                            @foreach($pdfFiles as $idx => $file)
-                                <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs" style="background: #0f0f1a; color: #aaa;">
-                                    <svg class="w-3.5 h-3.5" style="color: #c8a44e;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-                                    {{ $file->getClientOriginalName() }}
-                                    <span style="color: #555;">({{ number_format($file->getSize() / 1024, 0) }}KB)</span>
-                                </div>
-                            @endforeach
+
+                    {{-- File Queue --}}
+                    @if($pdfQueue && count($pdfQueue) > 0)
+                        <div class="mt-3">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <span class="text-[11px] font-bold" style="color: #c8a44e;">{{ count($pdfQueue) }} file(s) queued</span>
+                                <button wire:click="clearPdfQueue" class="text-[10px] font-semibold px-2 py-0.5 rounded" style="color: #f87171; background: #ef444422;">Clear All</button>
+                            </div>
+                            <div class="space-y-1">
+                                @foreach($pdfQueue as $idx => $file)
+                                    <div class="flex items-center justify-between px-3 py-1.5 rounded-lg text-xs" style="background: #0f0f1a; border: 1px solid #1a1a2e;">
+                                        <div class="flex items-center gap-2" style="color: #aaa;">
+                                            <svg class="w-3.5 h-3.5" style="color: #c8a44e;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                                            {{ $file->getClientOriginalName() }}
+                                            <span style="color: #555;">({{ number_format($file->getSize() / 1024, 0) }}KB)</span>
+                                        </div>
+                                        <button wire:click="removePdfFromQueue({{ $idx }})" class="text-[10px] px-1.5 py-0.5 rounded" style="color: #f87171; background: #ef444411;">X</button>
+                                    </div>
+                                @endforeach
+                            </div>
                         </div>
                     @endif
+
+                    {{-- Upload spinner --}}
+                    <div wire:loading wire:target="pdfFiles" class="mt-2 text-[11px] flex items-center gap-2" style="color: #c8a44e;">
+                        <svg class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                        Uploading files...
+                    </div>
+                </div>
                 </div>
 
                 <button wire:click="parsePDFs" wire:loading.attr="disabled"
