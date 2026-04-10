@@ -383,32 +383,54 @@ class AtlasDashboard extends Component
             abort(403);
         }
 
-        $leads = AtlasLead::query()
-            ->when($this->filterStatus !== 'ALL', fn($q) => $q->where('status', $this->filterStatus))
-            ->when($this->searchQuery, fn($q) => $q->search($this->searchQuery))
-            ->orderByDesc('created_at')
-            ->paginate(25);
+        // Auto-create tables if migration hasn't run yet
+        $tablesExist = true;
+        try {
+            if (!\Illuminate\Support\Facades\Schema::hasTable('atlas_leads')) {
+                \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+            }
+        } catch (\Throwable $e) {
+            $tablesExist = false;
+            \Illuminate\Support\Facades\Log::warning('Atlas tables not ready: ' . $e->getMessage());
+        }
 
-        $stats = [
-            'total' => AtlasLead::count(),
-            'new' => AtlasLead::where('status', 'new')->count(),
-            'searched' => AtlasLead::where('status', 'searched')->count(),
-            'traced' => AtlasLead::where('status', 'traced')->count(),
-            'imported' => AtlasLead::where('status', 'imported')->count(),
-            'ai_parsed' => AtlasLead::whereIn('source', ['ai-text', 'ai-pdf'])->count(),
-            'with_phone' => AtlasLead::whereNotNull('phone_1')->count(),
-        ];
+        $leads = collect();
+        $stats = ['total' => 0, 'new' => 0, 'searched' => 0, 'traced' => 0, 'imported' => 0, 'ai_parsed' => 0, 'with_phone' => 0];
+        $recentLogs = collect();
+        $untracedLeads = collect();
 
-        $recentLogs = AtlasParseLog::with('user')
-            ->orderByDesc('created_at')
-            ->limit(10)
-            ->get();
+        if ($tablesExist) {
+            try {
+                $leads = AtlasLead::query()
+                    ->when($this->filterStatus !== 'ALL', fn($q) => $q->where('status', $this->filterStatus))
+                    ->when($this->searchQuery, fn($q) => $q->search($this->searchQuery))
+                    ->orderByDesc('created_at')
+                    ->paginate(25);
 
-        $untracedLeads = AtlasLead::whereNull('phone_1')
-            ->where('status', '!=', 'imported')
-            ->orderByDesc('created_at')
-            ->limit(50)
-            ->get();
+                $stats = [
+                    'total' => AtlasLead::count(),
+                    'new' => AtlasLead::where('status', 'new')->count(),
+                    'searched' => AtlasLead::where('status', 'searched')->count(),
+                    'traced' => AtlasLead::where('status', 'traced')->count(),
+                    'imported' => AtlasLead::where('status', 'imported')->count(),
+                    'ai_parsed' => AtlasLead::whereIn('source', ['ai-text', 'ai-pdf'])->count(),
+                    'with_phone' => AtlasLead::whereNotNull('phone_1')->count(),
+                ];
+
+                $recentLogs = AtlasParseLog::with('user')
+                    ->orderByDesc('created_at')
+                    ->limit(10)
+                    ->get();
+
+                $untracedLeads = AtlasLead::whereNull('phone_1')
+                    ->where('status', '!=', 'imported')
+                    ->orderByDesc('created_at')
+                    ->limit(50)
+                    ->get();
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Atlas query error: ' . $e->getMessage());
+            }
+        }
 
         $counties = $this->getCountiesProperty();
         $filteredCounties = collect($counties)->filter(function ($c) {
