@@ -11,8 +11,21 @@ class AtlasAIService
 
     public function __construct()
     {
-        $this->apiKey = config('services.anthropic.key') ?? '';
+        // Check database first, then fall back to config/env
+        $this->apiKey = $this->loadKeyFromDB() ?: (config('services.anthropic.key') ?? '');
         $this->model = config('services.anthropic.model') ?? 'claude-sonnet-4-20250514';
+    }
+
+    protected function loadKeyFromDB(): ?string
+    {
+        try {
+            $row = \Illuminate\Support\Facades\DB::table('crm_settings')
+                ->where('key', 'anthropic.api_key')->first();
+            if ($row && !empty($row->value)) {
+                return decrypt(json_decode($row->value, true));
+            }
+        } catch (\Throwable $e) {}
+        return null;
     }
 
     public function isConfigured(): bool

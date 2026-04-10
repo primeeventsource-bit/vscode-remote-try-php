@@ -70,7 +70,9 @@ class AtlasDashboard extends Component
 
     // Settings
     public string $batchDataKey = '';
+    public string $anthropicKey = '';
     public bool $keyIsSaved = false;
+    public bool $aiKeyIsSaved = false;
 
     // Counties
     public string $countySearch = '';
@@ -488,10 +490,30 @@ class AtlasDashboard extends Component
             $this->keyIsSaved = true;
             $this->successMessage = 'BatchData API key saved securely.';
         } catch (\Throwable $e) {
-            // Fallback: store in config cache
             config(['services.batchdata.key' => $this->batchDataKey]);
             $this->keyIsSaved = true;
             $this->successMessage = 'API key saved for this session.';
+        }
+    }
+
+    public function saveAnthropicKey()
+    {
+        if (empty(trim($this->anthropicKey))) {
+            $this->errorMessage = 'Please enter a valid API key.';
+            return;
+        }
+
+        try {
+            \Illuminate\Support\Facades\DB::table('crm_settings')->updateOrInsert(
+                ['key' => 'anthropic.api_key'],
+                ['value' => json_encode(encrypt($this->anthropicKey))]
+            );
+            $this->aiKeyIsSaved = true;
+            $this->successMessage = 'Anthropic API key saved securely.';
+        } catch (\Throwable $e) {
+            config(['services.anthropic.key' => $this->anthropicKey]);
+            $this->aiKeyIsSaved = true;
+            $this->successMessage = 'AI key saved for this session.';
         }
     }
 
@@ -595,9 +617,10 @@ class AtlasDashboard extends Component
         })->values();
 
         $batchConfigured = app(BatchDataService::class)->isConfigured();
+        $aiConfigured = app(AtlasAIService::class)->isConfigured();
 
         return view('livewire.atlas-dashboard', compact(
-            'leads', 'stats', 'recentLogs', 'counties', 'filteredCounties', 'batchConfigured'
+            'leads', 'stats', 'recentLogs', 'counties', 'filteredCounties', 'batchConfigured', 'aiConfigured'
         ));
     }
 }

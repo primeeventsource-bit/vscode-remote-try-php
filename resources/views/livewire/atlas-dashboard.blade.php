@@ -671,6 +671,29 @@
             @endif
         </div>
 
+        {{-- Anthropic API Key --}}
+        <div class="rounded-xl p-5" style="background:#0d0d12;border:1px solid #c8a44e33;">
+            <h3 class="text-sm font-bold mb-1" style="color:#c8a44e;">Anthropic API Key (AI Parsing)</h3>
+            <p class="text-xs opacity-40 mb-4">Required for AI text/PDF deed parsing. Get your key at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" class="underline" style="color:#c8a44e;">console.anthropic.com</a></p>
+
+            <div class="flex gap-3">
+                <div class="flex-1">
+                    <label for="anthropicKeyInput" class="sr-only">Anthropic API Key</label>
+                    <input type="password" id="anthropicKeyInput" name="anthropicKey" wire:model.defer="anthropicKey"
+                           class="w-full rounded-lg p-2.5 text-xs" style="background:#050508;border:1px solid #c8a44e33;color:#e0e0e0;"
+                           placeholder="sk-ant-api03-...">
+                </div>
+                <button wire:click="saveAnthropicKey" class="px-6 py-2.5 rounded-lg text-xs font-bold"
+                        style="background:#c8a44e;color:#050508;">
+                    Save Key
+                </button>
+            </div>
+
+            @if($aiKeyIsSaved || $aiConfigured)
+            <p class="text-xs mt-2" style="color:#0fff50;">AI key is configured and active.</p>
+            @endif
+        </div>
+
         {{-- Status Overview --}}
         <div class="rounded-xl p-5" style="background:#0d0d12;border:1px solid #c8a44e22;">
             <h3 class="text-sm font-bold mb-3" style="color:#c8a44e;">System Status</h3>
@@ -683,7 +706,6 @@
                 </div>
                 <div class="flex items-center justify-between py-2" style="border-bottom:1px solid #ffffff08;">
                     <span class="opacity-60">Claude AI (Deed Parsing)</span>
-                    @php $aiConfigured = app(\App\Services\AtlasAIService::class)->isConfigured(); @endphp
                     <span class="px-2 py-0.5 rounded font-bold" style="background:{{ $aiConfigured ? '#0fff5022' : '#e9456022' }};color:{{ $aiConfigured ? '#0fff50' : '#e94560' }};">
                         {{ $aiConfigured ? 'Connected' : 'Not Set' }}
                     </span>
