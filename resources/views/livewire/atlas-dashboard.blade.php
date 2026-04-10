@@ -144,16 +144,16 @@
 
                 <div class="grid sm:grid-cols-2 gap-3 mb-4">
                     <div>
-                        <label class="block text-[11px] font-semibold mb-1" style="color: #888;">County</label>
-                        <select wire:model="aiCounty" class="w-full rounded-lg px-3 py-2 text-sm" style="background: #0f0f1a; color: #e0e0e0; border: 1px solid #1a1a2e;">
+                        <label for="aiCounty" class="block text-[11px] font-semibold mb-1" style="color: #888;">County</label>
+                        <select wire:model="aiCounty" id="aiCounty" name="aiCounty" class="w-full rounded-lg px-3 py-2 text-sm" style="background: #0f0f1a; color: #e0e0e0; border: 1px solid #1a1a2e;">
                             @foreach($counties as $c)
                                 <option value="{{ $c['county'] }}">{{ $c['county'] }}, {{ $c['state'] }}</option>
                             @endforeach
                         </select>
                     </div>
                     <div>
-                        <label class="block text-[11px] font-semibold mb-1" style="color: #888;">State</label>
-                        <select wire:model="aiState" class="w-full rounded-lg px-3 py-2 text-sm" style="background: #0f0f1a; color: #e0e0e0; border: 1px solid #1a1a2e;">
+                        <label for="aiState" class="block text-[11px] font-semibold mb-1" style="color: #888;">State</label>
+                        <select wire:model="aiState" id="aiState" name="aiState" class="w-full rounded-lg px-3 py-2 text-sm" style="background: #0f0f1a; color: #e0e0e0; border: 1px solid #1a1a2e;">
                             @foreach(['FL','SC','HI','NV','MO','CO','UT','VA','AZ','CA'] as $st)
                                 <option value="{{ $st }}">{{ $st }}</option>
                             @endforeach
@@ -162,8 +162,8 @@
                 </div>
 
                 <div class="mb-4">
-                    <label class="block text-[11px] font-semibold mb-1" style="color: #888;">Paste Deed Records</label>
-                    <textarea wire:model="pasteText" rows="10" placeholder="Paste raw deed search results here...&#10;&#10;Example:&#10;DEED 20250401-001234 04/01/2025&#10;GRANTOR: WESTGATE RESORTS LTD&#10;GRANTEE: JOHN DOE&#10;123 VACATION BLVD, ORLANDO FL"
+                    <label for="pasteText" class="block text-[11px] font-semibold mb-1" style="color: #888;">Paste Deed Records</label>
+                    <textarea wire:model="pasteText" id="pasteText" name="pasteText" rows="10" placeholder="Paste raw deed search results here...&#10;&#10;Example:&#10;DEED 20250401-001234 04/01/2025&#10;GRANTOR: WESTGATE RESORTS LTD&#10;GRANTEE: JOHN DOE&#10;123 VACATION BLVD, ORLANDO FL"
                         class="w-full rounded-lg px-3 py-2.5 text-xs font-mono" style="background: #0f0f1a; color: #e0e0e0; border: 1px solid #1a1a2e; resize: vertical;"></textarea>
                 </div>
 
@@ -237,16 +237,16 @@
 
                 <div class="grid sm:grid-cols-2 gap-3 mb-4">
                     <div>
-                        <label class="block text-[11px] font-semibold mb-1" style="color: #888;">County</label>
-                        <select wire:model="pdfCounty" class="w-full rounded-lg px-3 py-2 text-sm" style="background: #0f0f1a; color: #e0e0e0; border: 1px solid #1a1a2e;">
+                        <label for="pdfCounty" class="block text-[11px] font-semibold mb-1" style="color: #888;">County</label>
+                        <select wire:model="pdfCounty" id="pdfCounty" name="pdfCounty" class="w-full rounded-lg px-3 py-2 text-sm" style="background: #0f0f1a; color: #e0e0e0; border: 1px solid #1a1a2e;">
                             @foreach($counties as $c)
                                 <option value="{{ $c['county'] }}">{{ $c['county'] }}, {{ $c['state'] }}</option>
                             @endforeach
                         </select>
                     </div>
                     <div>
-                        <label class="block text-[11px] font-semibold mb-1" style="color: #888;">State</label>
-                        <select wire:model="pdfState" class="w-full rounded-lg px-3 py-2 text-sm" style="background: #0f0f1a; color: #e0e0e0; border: 1px solid #1a1a2e;">
+                        <label for="pdfState" class="block text-[11px] font-semibold mb-1" style="color: #888;">State</label>
+                        <select wire:model="pdfState" id="pdfState" name="pdfState" class="w-full rounded-lg px-3 py-2 text-sm" style="background: #0f0f1a; color: #e0e0e0; border: 1px solid #1a1a2e;">
                             @foreach(['FL','SC','HI','NV','MO','CO','UT','VA','AZ','CA'] as $st)
                                 <option value="{{ $st }}">{{ $st }}</option>
                             @endforeach
@@ -255,7 +255,7 @@
                 </div>
 
                 <div class="mb-4">
-                    <label class="block text-[11px] font-semibold mb-1" style="color: #888;">Upload PDFs (max 10MB each)</label>
+                    <label for="pdfUpload" class="block text-[11px] font-semibold mb-1" style="color: #888;">Upload PDFs (max 10MB each)</label>
                     <div class="rounded-lg p-6 text-center" style="background: #0f0f1a; border: 2px dashed #1a1a2e;" x-data x-on:dragover.prevent="$el.style.borderColor='#c8a44e'" x-on:dragleave="$el.style.borderColor='#1a1a2e'" x-on:drop.prevent="$el.style.borderColor='#1a1a2e'">
                         <input type="file" wire:model="pdfFiles" multiple accept=".pdf" class="hidden" id="pdfUpload">
                         <label for="pdfUpload" class="cursor-pointer">
@@ -397,7 +397,7 @@
         ═══════════════════════════════════════════════════════════════ --}}
         @elseif($activeTab === 'counties')
             <div class="mb-4">
-                <input wire:model.live.debounce.300ms="countySearch" type="text" placeholder="Search counties, states, cities, or resorts..."
+                <input wire:model.live.debounce.300ms="countySearch" id="countySearch" name="countySearch" type="text" placeholder="Search counties, states, cities, or resorts..."
                     class="w-full rounded-lg px-4 py-2.5 text-sm" style="background: #0a0a14; color: #e0e0e0; border: 1px solid #1a1a2e;">
             </div>
 
@@ -441,9 +441,9 @@
         @elseif($activeTab === 'leads')
             {{-- Search & Filter Bar --}}
             <div class="flex flex-wrap gap-2 mb-4">
-                <input wire:model.live.debounce.300ms="searchQuery" type="text" placeholder="Search grantee, grantor, county..."
+                <input wire:model.live.debounce.300ms="searchQuery" id="searchQuery" name="searchQuery" type="text" placeholder="Search grantee, grantor, county..."
                     class="flex-1 min-w-[200px] rounded-lg px-3 py-2 text-sm" style="background: #0a0a14; color: #e0e0e0; border: 1px solid #1a1a2e;">
-                <select wire:model.live="filterStatus" class="rounded-lg px-3 py-2 text-sm" style="background: #0a0a14; color: #e0e0e0; border: 1px solid #1a1a2e;">
+                <select wire:model.live="filterStatus" id="filterStatus" name="filterStatus" class="rounded-lg px-3 py-2 text-sm" style="background: #0a0a14; color: #e0e0e0; border: 1px solid #1a1a2e;">
                     <option value="ALL">All Statuses</option>
                     <option value="new">New</option>
                     <option value="searched">Searched</option>
