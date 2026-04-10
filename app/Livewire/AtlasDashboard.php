@@ -204,14 +204,30 @@ class AtlasDashboard extends Component
             return;
         }
 
+        // Check how many leads have addresses
+        $withAddress = $leads->filter(fn($l) => !empty(trim($l->address ?? '')))->count();
+        $withoutAddress = $leads->count() - $withAddress;
+
+        if ($withAddress === 0) {
+            $this->traceError = "None of your {$leads->count()} leads have addresses. Tracerfy requires address + name to skip trace. Make sure your CSV has address/city/state columns and map them during import.";
+            return;
+        }
+
+        if ($withoutAddress > 0) {
+            $this->successMessage = "Tracing {$withAddress} leads with addresses. {$withoutAddress} leads skipped (no address).";
+        }
+
+        // Only send leads that have addresses
+        $traceable = $leads->filter(fn($l) => !empty(trim($l->address ?? '')));
+
         $this->tracing = true;
-        $this->traceTotal = $leads->count();
+        $this->traceTotal = $traceable->count();
         $this->traceProgress = 0;
         $this->traceResults = [];
         $this->traceError = '';
 
         // Build lead data for Tracerfy CSV upload
-        $requests = $leads->map(function ($l) {
+        $requests = $traceable->map(function ($l) {
             $nameParts = preg_split('/[\s,]+/', trim($l->grantee), 2);
             return [
                 'firstName' => $nameParts[0] ?? '',
