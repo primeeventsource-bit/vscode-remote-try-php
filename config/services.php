@@ -17,9 +17,9 @@ return [
         'private_key' => env('VAPID_PRIVATE_KEY'),
     ],
 
-    'batchdata' => [
-        'key' => env('BATCHDATA_API_KEY'),
-        'base_url' => 'https://api.batchdata.com/api/v1',
+    'tracerfy' => [
+        'key' => env('TRACERFY_API_KEY'),
+        'base_url' => 'https://tracerfy.com/v1/api',
     ],
 
     'anthropic' => [

@@ -235,23 +235,23 @@
     </div>
 
     {{-- ═══════════════════════════════════════════════════════════════
-         TAB 3: BATCHDATA SKIP TRACE
+         TAB 3: TRACERFY SKIP TRACE
     ═══════════════════════════════════════════════════════════════ --}}
     @elseif($activeTab === 'trace')
     <div class="space-y-6">
-        @if(!$batchConfigured)
+        @if(!$traceConfigured)
         <div class="rounded-xl p-5 text-center" style="background:#0d0d12;border:1px solid #e9456033;">
-            <p class="text-sm font-bold" style="color:#e94560;">BatchData API key not configured</p>
+            <p class="text-sm font-bold" style="color:#e94560;">Tracerfy API key not configured</p>
             <p class="text-xs opacity-40 mt-1">Go to the Settings tab to add your API key.</p>
             <button wire:click="$set('activeTab','settings')" class="mt-3 px-4 py-2 rounded-lg text-xs font-bold"
                     style="background:#c8a44e;color:#050508;">Go to Settings</button>
         </div>
         @else
         <div class="rounded-xl p-5" style="background:#0d0d12;border:1px solid #00d4ff33;">
-            <h3 class="text-sm font-bold mb-1" style="color:#00d4ff;">BatchData Skip Trace</h3>
-            <p class="text-xs opacity-40 mb-4">Find 2-5 verified phone numbers for each lead. DNC numbers are automatically filtered out.</p>
+            <h3 class="text-sm font-bold mb-1" style="color:#00d4ff;">Tracerfy Skip Trace</h3>
+            <p class="text-xs opacity-40 mb-4">Find up to 8 phone numbers per lead. $0.02/lead — DNC scrubbing available.</p>
 
-            <div class="grid sm:grid-cols-3 gap-4 mb-4">
+            <div class="grid sm:grid-cols-4 gap-4 mb-4">
                 <div class="rounded-lg p-3 text-center" style="background:#050508;border:1px solid #c8a44e22;">
                     <p class="text-xl font-black" style="color:#c8a44e;">{{ $stats['new'] + $stats['searched'] }}</p>
                     <p class="text-xs opacity-40">Ready to Trace</p>
@@ -261,9 +261,15 @@
                     <p class="text-xs opacity-40">Already Traced</p>
                 </div>
                 <div class="rounded-lg p-3 text-center" style="background:#050508;border:1px solid #f5a62322;">
-                    <p class="text-xl font-black" style="color:#f5a623;">${{ number_format(($stats['new'] + $stats['searched']) * 0.12, 2) }}</p>
-                    <p class="text-xs opacity-40">Est. Cost (~$0.12/lead)</p>
+                    <p class="text-xl font-black" style="color:#f5a623;">${{ number_format(($stats['new'] + $stats['searched']) * 0.02, 2) }}</p>
+                    <p class="text-xs opacity-40">Est. Cost (~$0.02/lead)</p>
                 </div>
+                @if($traceBalance !== null)
+                <div class="rounded-lg p-3 text-center" style="background:#050508;border:1px solid #0fff5022;">
+                    <p class="text-xl font-black" style="color:#0fff50;">{{ number_format($traceBalance) }}</p>
+                    <p class="text-xs opacity-40">Credits Balance</p>
+                </div>
+                @endif
             </div>
 
             @if($traceError)
@@ -273,19 +279,26 @@
             @if($tracing)
             <div class="space-y-2 mb-4">
                 <div class="flex justify-between text-xs">
-                    <span style="color:#00d4ff;">Tracing...</span>
-                    <span>{{ $traceProgress }}/{{ $traceTotal }}</span>
+                    <span style="color:#00d4ff;">Uploading to Tracerfy...</span>
                 </div>
-                <div class="h-2 rounded-full overflow-hidden" style="background:#050508;">
-                    <div class="h-full rounded-full transition-all" style="background:linear-gradient(90deg,#00d4ff,#0fff50);width:{{ $traceTotal > 0 ? ($traceProgress/$traceTotal)*100 : 0 }}%;"></div>
+                <div class="h-2 rounded-full overflow-hidden animate-pulse" style="background:#050508;">
+                    <div class="h-full rounded-full" style="background:linear-gradient(90deg,#00d4ff,#0fff50);width:100%;"></div>
                 </div>
             </div>
             @else
-            <button wire:click="runSkipTrace" class="px-6 py-3 rounded-xl text-sm font-black transition-all hover:scale-105"
-                    style="background:linear-gradient(135deg,#00d4ff,#c8a44e);color:#050508;"
-                    {{ ($stats['new'] + $stats['searched']) === 0 ? 'disabled' : '' }}>
-                Run Skip Trace ({{ $stats['new'] + $stats['searched'] }} leads)
-            </button>
+            <div class="flex gap-3">
+                <button wire:click="runSkipTrace" class="px-6 py-3 rounded-xl text-sm font-black transition-all hover:scale-105"
+                        style="background:linear-gradient(135deg,#00d4ff,#c8a44e);color:#050508;"
+                        {{ ($stats['new'] + $stats['searched']) === 0 ? 'disabled' : '' }}>
+                    Run Skip Trace ({{ $stats['new'] + $stats['searched'] }} leads)
+                </button>
+                @if($traceQueuePending && $traceQueueId)
+                <button wire:click="checkTraceResults" class="px-6 py-3 rounded-xl text-sm font-black transition-all hover:scale-105"
+                        style="background:#0fff50;color:#050508;">
+                    Check Results (Queue #{{ $traceQueueId }})
+                </button>
+                @endif
+            </div>
             @endif
 
             {{-- Results --}}
@@ -629,7 +642,7 @@
                     @empty
                     <tr>
                         <td colspan="6" class="px-3 py-8 text-center opacity-30">
-                            No leads found. Import from Google Sheets or use AI Parser to add leads.
+                            No leads found. Import a CSV or use AI Parser to add leads.
                         </td>
                     </tr>
                     @endforelse
@@ -648,25 +661,25 @@
     ═══════════════════════════════════════════════════════════════ --}}
     @elseif($activeTab === 'settings')
     <div class="space-y-6 max-w-2xl">
-        {{-- BatchData API Key --}}
+        {{-- Tracerfy API Key --}}
         <div class="rounded-xl p-5" style="background:#0d0d12;border:1px solid #00d4ff33;">
-            <h3 class="text-sm font-bold mb-1" style="color:#00d4ff;">BatchData API Key</h3>
-            <p class="text-xs opacity-40 mb-4">Required for skip tracing. Get your key at <a href="https://batchdata.com" target="_blank" rel="noopener" class="underline" style="color:#00d4ff;">batchdata.com</a></p>
+            <h3 class="text-sm font-bold mb-1" style="color:#00d4ff;">Tracerfy API Key</h3>
+            <p class="text-xs opacity-40 mb-4">Required for skip tracing ($0.02/lead). Get your key at <a href="https://tracerfy.com" target="_blank" rel="noopener" class="underline" style="color:#00d4ff;">tracerfy.com</a></p>
 
             <div class="flex gap-3">
                 <div class="flex-1">
-                    <label for="batchKeyInput" class="sr-only">BatchData API Key</label>
-                    <input type="password" id="batchKeyInput" name="batchDataKey" wire:model.defer="batchDataKey"
+                    <label for="tracerfyKeyInput" class="sr-only">Tracerfy API Key</label>
+                    <input type="password" id="tracerfyKeyInput" name="tracerfyKey" wire:model.defer="tracerfyKey"
                            class="w-full rounded-lg p-2.5 text-xs" style="background:#050508;border:1px solid #00d4ff33;color:#e0e0e0;"
-                           placeholder="Enter your BatchData API key...">
+                           placeholder="Enter your Tracerfy API key...">
                 </div>
-                <button wire:click="saveBatchDataKey" class="px-6 py-2.5 rounded-lg text-xs font-bold"
+                <button wire:click="saveTracerfyKey" class="px-6 py-2.5 rounded-lg text-xs font-bold"
                         style="background:#00d4ff;color:#050508;">
                     Save Key
                 </button>
             </div>
 
-            @if($keyIsSaved || $batchConfigured)
+            @if($keyIsSaved || $traceConfigured)
             <p class="text-xs mt-2" style="color:#0fff50;">API key is configured and active.</p>
             @endif
         </div>
@@ -699,9 +712,9 @@
             <h3 class="text-sm font-bold mb-3" style="color:#c8a44e;">System Status</h3>
             <div class="space-y-3 text-xs">
                 <div class="flex items-center justify-between py-2" style="border-bottom:1px solid #ffffff08;">
-                    <span class="opacity-60">BatchData API</span>
-                    <span class="px-2 py-0.5 rounded font-bold" style="background:{{ $batchConfigured ? '#0fff5022' : '#e9456022' }};color:{{ $batchConfigured ? '#0fff50' : '#e94560' }};">
-                        {{ $batchConfigured ? 'Connected' : 'Not Set' }}
+                    <span class="opacity-60">Tracerfy API</span>
+                    <span class="px-2 py-0.5 rounded font-bold" style="background:{{ $traceConfigured ? '#0fff5022' : '#e9456022' }};color:{{ $traceConfigured ? '#0fff50' : '#e94560' }};">
+                        {{ $traceConfigured ? 'Connected' : 'Not Set' }}
                     </span>
                 </div>
                 <div class="flex items-center justify-between py-2" style="border-bottom:1px solid #ffffff08;">

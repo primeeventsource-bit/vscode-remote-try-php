@@ -18,7 +18,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(\App\Services\AtlasAIService::class);
-        $this->app->singleton(\App\Services\BatchDataService::class);
+        $this->app->singleton(\App\Services\TracerfyService::class);
     }
 
     public function boot(): void

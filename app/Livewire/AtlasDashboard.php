@@ -5,7 +5,7 @@ namespace App\Livewire;
 use App\Models\AtlasLead;
 use App\Models\AtlasParseLog;
 use App\Services\AtlasAIService;
-use App\Services\BatchDataService;
+use App\Services\TracerfyService;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -69,10 +69,14 @@ class AtlasDashboard extends Component
     public string $formZip = '';
 
     // Settings
-    public string $batchDataKey = '';
+    public string $tracerfyKey = '';
     public string $anthropicKey = '';
     public bool $keyIsSaved = false;
     public bool $aiKeyIsSaved = false;
+
+    // Tracerfy queue tracking
+    public ?int $traceQueueId = null;
+    public bool $traceQueuePending = false;
 
     // Counties
     public string $countySearch = '';
@@ -184,13 +188,13 @@ class AtlasDashboard extends Component
         $this->successMessage = "{$imported} leads imported from spreadsheet.";
     }
 
-    // ─── BatchData Skip Trace ───────────────────────────
+    // ─── Tracerfy Skip Trace ───────────────────────────
     public function runSkipTrace()
     {
-        $service = app(BatchDataService::class);
+        $service = app(TracerfyService::class);
 
         if (!$service->isConfigured()) {
-            $this->traceError = 'BatchData API key not set. Go to Settings tab.';
+            $this->traceError = 'Tracerfy API key not set. Go to Settings tab.';
             return;
         }
 
@@ -205,25 +209,78 @@ class AtlasDashboard extends Component
         $this->traceProgress = 0;
         $this->traceResults = [];
         $this->traceError = '';
-        $tracedCount = 0;
 
-        foreach ($leads->chunk(100) as $chunk) {
-            $requests = $chunk->map(fn($l) => [
-                'firstName' => explode(' ', explode(',', $l->grantee)[0])[0] ?? '',
-                'lastName'  => last(explode(' ', trim(explode(',', $l->grantee)[0]))) ?? '',
+        // Build lead data for Tracerfy CSV upload
+        $requests = $leads->map(function ($l) {
+            $nameParts = preg_split('/[\s,]+/', trim($l->grantee), 2);
+            return [
+                'firstName' => $nameParts[0] ?? '',
+                'lastName'  => $nameParts[1] ?? ($nameParts[0] ?? ''),
                 'address'   => $l->address ?? '',
                 'city'      => $l->city ?? '',
                 'state'     => $l->state ?? '',
-                'postalCode' => $l->zip ?? '',
-            ])->toArray();
+                'zip'       => $l->zip ?? '',
+            ];
+        })->toArray();
 
-            try {
-                $results = $service->skipTrace($requests);
+        try {
+            $result = $service->batchTrace($requests);
+            $this->traceQueueId = $result['queue_id'] ?? null;
+            $this->traceQueuePending = true;
+            $this->tracing = false;
 
-                foreach ($chunk->values() as $i => $lead) {
-                    $result = $results[$i] ?? [];
-                    $normalized = $service->normalizeResult($result);
+            if ($this->traceQueueId) {
+                $this->successMessage = "Tracerfy batch submitted! Queue #{$this->traceQueueId} — {$this->traceTotal} leads. Click 'Check Results' when ready.";
+            }
 
+            AtlasParseLog::create([
+                'user_id' => auth()->id(),
+                'parse_type' => 'skip-trace',
+                'leads_found' => $this->traceTotal,
+                'cost_estimate' => $this->traceTotal * 0.02,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Tracerfy skip trace error', ['error' => $e->getMessage()]);
+            $this->traceError = $e->getMessage();
+            $this->tracing = false;
+        }
+    }
+
+    public function checkTraceResults()
+    {
+        if (!$this->traceQueueId) {
+            $this->traceError = 'No pending trace queue.';
+            return;
+        }
+
+        $service = app(TracerfyService::class);
+
+        try {
+            // Check all queues to see if our queue is done
+            $queues = $service->getQueues();
+            $ourQueue = collect($queues)->firstWhere('id', $this->traceQueueId);
+
+            if (!$ourQueue || ($ourQueue['pending'] ?? true)) {
+                $this->traceError = "Queue #{$this->traceQueueId} is still processing. Try again in a moment.";
+                return;
+            }
+
+            // Queue is done — fetch results
+            $results = $service->getQueue($this->traceQueueId);
+            if (empty($results)) {
+                $this->traceError = 'No results returned.';
+                return;
+            }
+
+            $leads = AtlasLead::whereIn('status', ['new', 'searched'])->get();
+            $tracedCount = 0;
+            $this->traceResults = [];
+
+            foreach ($results as $i => $result) {
+                $normalized = $service->normalizeResult($result);
+                $lead = $leads[$i] ?? null;
+
+                if ($lead) {
                     $lead->update([
                         'phone_1' => $normalized['phones'][0]['number'] ?? null,
                         'phone_1_type' => $normalized['phones'][0]['type'] ?? null,
@@ -254,24 +311,23 @@ class AtlasDashboard extends Component
                         'confidence' => $normalized['confidence'],
                     ];
                 }
-            } catch (\Throwable $e) {
-                Log::error('BatchData skip trace error', ['error' => $e->getMessage()]);
-                $this->traceError = $e->getMessage();
             }
 
-            $this->traceProgress += $chunk->count();
+            $this->traceQueuePending = false;
+            $this->traceProgress = $this->traceTotal;
+            $this->successMessage = "Skip trace complete: {$tracedCount}/{$this->traceTotal} leads matched.";
+
+            AtlasParseLog::create([
+                'user_id' => auth()->id(),
+                'parse_type' => 'skip-trace',
+                'leads_found' => $this->traceTotal,
+                'leads_traced' => $tracedCount,
+                'cost_estimate' => $this->traceTotal * 0.02,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Tracerfy results error', ['error' => $e->getMessage()]);
+            $this->traceError = $e->getMessage();
         }
-
-        AtlasParseLog::create([
-            'user_id' => auth()->id(),
-            'parse_type' => 'skip-trace',
-            'leads_found' => $this->traceTotal,
-            'leads_traced' => $tracedCount,
-            'cost_estimate' => $this->traceTotal * 0.12,
-        ]);
-
-        $this->tracing = false;
-        $this->successMessage = "Skip trace complete: {$tracedCount}/{$this->traceTotal} leads matched.";
     }
 
     // ─── AI Text Parse ──────────────────────────────────
@@ -475,22 +531,22 @@ class AtlasDashboard extends Component
     }
 
     // ─── Settings ───────────────────────────────────────
-    public function saveBatchDataKey()
+    public function saveTracerfyKey()
     {
-        if (empty(trim($this->batchDataKey))) {
+        if (empty(trim($this->tracerfyKey))) {
             $this->errorMessage = 'Please enter a valid API key.';
             return;
         }
 
         try {
             \Illuminate\Support\Facades\DB::table('crm_settings')->updateOrInsert(
-                ['key' => 'batchdata.api_key'],
-                ['value' => json_encode(encrypt($this->batchDataKey))]
+                ['key' => 'tracerfy.api_key'],
+                ['value' => json_encode(encrypt($this->tracerfyKey))]
             );
             $this->keyIsSaved = true;
-            $this->successMessage = 'BatchData API key saved securely.';
+            $this->successMessage = 'Tracerfy API key saved securely.';
         } catch (\Throwable $e) {
-            config(['services.batchdata.key' => $this->batchDataKey]);
+            config(['services.tracerfy.key' => $this->tracerfyKey]);
             $this->keyIsSaved = true;
             $this->successMessage = 'API key saved for this session.';
         }
@@ -656,11 +712,20 @@ class AtlasDashboard extends Component
                 || str_contains(strtolower($c['resorts']), $s);
         })->values();
 
-        $batchConfigured = app(BatchDataService::class)->isConfigured();
+        $traceConfigured = app(TracerfyService::class)->isConfigured();
         $aiConfigured = app(AtlasAIService::class)->isConfigured();
 
+        // Get Tracerfy balance if configured
+        $traceBalance = null;
+        if ($traceConfigured) {
+            try {
+                $analytics = app(TracerfyService::class)->getAnalytics();
+                $traceBalance = $analytics['balance'] ?? null;
+            } catch (\Throwable $e) {}
+        }
+
         return view('livewire.atlas-dashboard', compact(
-            'leads', 'stats', 'recentLogs', 'counties', 'filteredCounties', 'batchConfigured', 'aiConfigured'
+            'leads', 'stats', 'recentLogs', 'counties', 'filteredCounties', 'traceConfigured', 'aiConfigured', 'traceBalance'
         ));
     }
 }
