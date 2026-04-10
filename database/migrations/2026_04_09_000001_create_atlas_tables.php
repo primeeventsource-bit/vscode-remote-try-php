@@ -42,8 +42,8 @@ return new class extends Migration
                 $table->string('email_3', 255)->nullable();
 
                 // Metadata
-                $table->enum('status', ['new', 'searched', 'traced', 'imported'])->default('new');
-                $table->enum('source', ['manual', 'sheets', 'ai-text', 'ai-pdf'])->default('manual');
+                $table->string('status', 20)->default('new');
+                $table->string('source', 20)->default('manual');
                 $table->string('source_filename', 255)->nullable();
                 $table->text('notes')->nullable();
                 $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
@@ -55,6 +55,34 @@ return new class extends Migration
                 $table->index(['county', 'state']);
                 $table->index('created_at');
                 $table->index('traced_at');
+            });
+        } else {
+            // Add v4 columns to existing v3 table
+            Schema::table('atlas_leads', function (Blueprint $table) {
+                $cols = Schema::getColumnListing('atlas_leads');
+                if (!in_array('existing_phone', $cols)) $table->string('existing_phone', 20)->nullable()->after('deed_type');
+                if (!in_array('phone_1', $cols)) {
+                    $table->string('phone_1', 20)->nullable();
+                    $table->string('phone_1_type', 20)->nullable();
+                    $table->string('phone_2', 20)->nullable();
+                    $table->string('phone_2_type', 20)->nullable();
+                    $table->string('phone_3', 20)->nullable();
+                    $table->string('phone_3_type', 20)->nullable();
+                    $table->string('phone_4', 20)->nullable();
+                    $table->string('phone_4_type', 20)->nullable();
+                    $table->string('phone_5', 20)->nullable();
+                    $table->string('phone_5_type', 20)->nullable();
+                    $table->enum('phone_confidence', ['high', 'medium', 'low', 'none'])->nullable();
+                }
+                if (!in_array('email_1', $cols)) {
+                    $table->string('email_1', 255)->nullable();
+                    $table->string('email_2', 255)->nullable();
+                    $table->string('email_3', 255)->nullable();
+                }
+                if (!in_array('city', $cols)) $table->string('city', 100)->nullable();
+                if (!in_array('zip', $cols)) $table->string('zip', 10)->nullable();
+                if (!in_array('traced_at', $cols)) $table->timestamp('traced_at')->nullable();
+                if (!in_array('source_filename', $cols)) $table->string('source_filename', 255)->nullable();
             });
         }
 
@@ -72,6 +100,13 @@ return new class extends Migration
                 $table->decimal('cost_estimate', 8, 2)->nullable();
                 $table->text('raw_input_preview')->nullable();
                 $table->timestamps();
+            });
+        } else {
+            Schema::table('atlas_parse_logs', function (Blueprint $table) {
+                $cols = Schema::getColumnListing('atlas_parse_logs');
+                if (!in_array('leads_traced', $cols)) $table->integer('leads_traced')->default(0);
+                if (!in_array('cost_estimate', $cols)) $table->decimal('cost_estimate', 8, 2)->nullable();
+                if (!in_array('files_processed', $cols)) $table->integer('files_processed')->default(0);
             });
         }
     }
