@@ -17,6 +17,11 @@ return [
         'private_key' => env('VAPID_PRIVATE_KEY'),
     ],
 
+    'batchdata' => [
+        'key' => env('BATCHDATA_API_KEY'),
+        'base_url' => 'https://api.batchdata.com/api/v1',
+    ],
+
     'anthropic' => [
         'key' => env('ANTHROPIC_API_KEY', implode('', ['sk-ant-api', '03-lOtu5Ypp66ws5zxCdfjam', 'TUc41B02hBvgj_O6I_Ajxqud', 'Preq45Z_iCx1jgI46tztW0po', 'bckWwv4q-sQBCJx-w-_G6kRgAA'])),
         'model' => env('ANTHROPIC_MODEL', 'claude-sonnet-4-20250514'),

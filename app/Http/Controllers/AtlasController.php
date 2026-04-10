@@ -10,42 +10,35 @@ class AtlasController extends Controller
 {
     public function exportCSV(Request $request): StreamedResponse
     {
-        $query = AtlasLead::query()->orderByDesc('created_at');
-
-        if ($request->filled('status') && $request->status !== 'ALL') {
-            $query->where('status', $request->status);
-        }
-        if ($request->filled('county')) {
-            $query->where('county', $request->county);
-        }
-
-        $leads = $query->get();
+        $leads = AtlasLead::query()
+            ->when($request->status && $request->status !== 'ALL', fn($q) => $q->where('status', $request->status))
+            ->when($request->county, fn($q) => $q->where('county', $request->county))
+            ->orderByDesc('created_at')
+            ->get();
 
         return response()->streamDownload(function () use ($leads) {
             $out = fopen('php://output', 'w');
-            fputcsv($out, ['Grantee', 'Grantor', 'Date', 'Address', 'County', 'State', 'Status', 'Phone1', 'Phone2', 'Phone3', 'Confidence', 'Instrument', 'Source']);
+            fputcsv($out, [
+                'Name', 'Resort', 'Date', 'Address', 'City', 'State', 'Zip', 'Status',
+                'Existing Phone', 'Phone 1', 'Phone 1 Type', 'Phone 2', 'Phone 2 Type',
+                'Phone 3', 'Phone 3 Type', 'Phone 4', 'Phone 4 Type', 'Phone 5', 'Phone 5 Type',
+                'Confidence', 'Email 1', 'Email 2', 'Email 3', 'Source', 'Traced At',
+            ]);
 
-            foreach ($leads as $lead) {
+            foreach ($leads as $l) {
                 fputcsv($out, [
-                    $lead->grantee,
-                    $lead->grantor,
-                    $lead->deed_date?->format('Y-m-d'),
-                    $lead->address,
-                    $lead->county,
-                    $lead->state,
-                    $lead->status,
-                    $lead->phone_1,
-                    $lead->phone_2,
-                    $lead->phone_3,
-                    $lead->phone_confidence,
-                    $lead->instrument,
-                    $lead->source,
+                    $l->grantee, $l->grantor, $l->deed_date?->format('m/d/Y'),
+                    $l->address, $l->city, $l->state, $l->zip, $l->status,
+                    $l->existing_phone,
+                    $l->phone_1, $l->phone_1_type, $l->phone_2, $l->phone_2_type,
+                    $l->phone_3, $l->phone_3_type, $l->phone_4, $l->phone_4_type,
+                    $l->phone_5, $l->phone_5_type,
+                    $l->phone_confidence, $l->email_1, $l->email_2, $l->email_3,
+                    $l->source, $l->traced_at?->format('m/d/Y H:i'),
                 ]);
             }
 
             fclose($out);
-        }, 'atlas-leads-' . now()->format('Y-m-d') . '.csv', [
-            'Content-Type' => 'text/csv',
-        ]);
+        }, 'atlas-leads-' . now()->format('Y-m-d') . '.csv', ['Content-Type' => 'text/csv']);
     }
 }
