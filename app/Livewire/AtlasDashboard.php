@@ -97,7 +97,7 @@ class AtlasDashboard extends Component
     {
         if (!$this->csvFile) return;
 
-        $this->validate(['csvFile' => 'file|max:10240']);
+        $this->validate(['csvFile' => 'file|max:51200']);
         $content = file_get_contents($this->csvFile->getRealPath());
         $this->csvParsed = $this->parseCSVString($content);
         $this->autoMapColumns();
@@ -116,7 +116,7 @@ class AtlasDashboard extends Component
         $headers = array_map('trim', $headers);
 
         $rows = [];
-        foreach (array_slice($lines, 0, 500) as $line) {
+        foreach (array_slice($lines, 0, 10000) as $line) {
             if (trim($line) === '') continue;
             $row = str_getcsv($line, $delimiter);
             if (count($row) === count($headers)) {
