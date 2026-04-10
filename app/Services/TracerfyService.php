@@ -99,20 +99,20 @@ class TracerfyService
             ->withHeaders([
                 'Authorization' => "Bearer {$this->apiKey}",
             ])
-            ->asForm()
+            ->asMultipart()
             ->post("{$this->baseUrl}/trace/", [
-                'json_data' => json_encode($jsonRows),
-                'address_column' => 'address',
-                'city_column' => 'city',
-                'state_column' => 'state',
-                'zip_column' => 'zip',
-                'first_name_column' => 'first_name',
-                'last_name_column' => 'last_name',
-                'mail_address_column' => 'mail_address',
-                'mail_city_column' => 'mail_city',
-                'mail_state_column' => 'mail_state',
-                'mailing_zip_column' => 'mailing_zip',
-                'trace_type' => $traceType,
+                ['name' => 'json_data', 'contents' => json_encode($jsonRows)],
+                ['name' => 'address_column', 'contents' => 'address'],
+                ['name' => 'city_column', 'contents' => 'city'],
+                ['name' => 'state_column', 'contents' => 'state'],
+                ['name' => 'zip_column', 'contents' => 'zip'],
+                ['name' => 'first_name_column', 'contents' => 'first_name'],
+                ['name' => 'last_name_column', 'contents' => 'last_name'],
+                ['name' => 'mail_address_column', 'contents' => 'mail_address'],
+                ['name' => 'mail_city_column', 'contents' => 'mail_city'],
+                ['name' => 'mail_state_column', 'contents' => 'mail_state'],
+                ['name' => 'mailing_zip_column', 'contents' => 'mailing_zip'],
+                ['name' => 'trace_type', 'contents' => $traceType],
             ]);
 
         if (!$response->successful()) {
