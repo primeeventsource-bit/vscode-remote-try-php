@@ -40,13 +40,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/system-monitor', \App\Livewire\SystemMonitor::class)->name('system-monitor');
     Route::get('/sales-intelligence', \App\Livewire\SalesIntelligence::class)->name('sales-intelligence');
 
-    // Zoho CRM Integration
-    Route::get('/zoho-clients', \App\Livewire\ZohoClients::class)->name('zoho-clients.index');
-    Route::get('/zoho-clients/{client}', \App\Livewire\ZohoClientDetail::class)->name('zoho-clients.show');
-    Route::get('/zoho/redirect', [\App\Http\Controllers\ZohoController::class, 'redirect'])->name('zoho.redirect');
-    Route::get('/zoho/callback', [\App\Http\Controllers\ZohoController::class, 'callback'])->name('zoho.callback');
-    Route::post('/zoho/sync', [\App\Http\Controllers\ZohoController::class, 'manualSync'])->name('zoho.sync');
-    Route::get('/zoho/disconnect', [\App\Http\Controllers\ZohoController::class, 'disconnect'])->name('zoho.disconnect');
 
     // Payroll Commission Engine (v2)
     Route::get('/payroll-v2', \App\Livewire\Payroll\PayrollDashboard::class)->name('payroll-v2');
