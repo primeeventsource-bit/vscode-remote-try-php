@@ -38,4 +38,10 @@ return [
             'client_key' => env('TENOR_CLIENT_KEY', env('APP_NAME', 'prime-crm')),
         ],
     ],
+
+    'zoho' => [
+        'client_id' => env('ZOHO_CLIENT_ID'),
+        'client_secret' => env('ZOHO_CLIENT_SECRET'),
+        'redirect_uri' => env('ZOHO_REDIRECT_URI'),
+    ],
 ];

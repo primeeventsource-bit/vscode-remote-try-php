@@ -107,6 +107,7 @@
                         ['route' => 'deals',        'icon' => '📋', 'label' => 'Deals',           'perm' => 'view_deals', 'training' => 'nav-deals'],
                         ['route' => 'verification', 'icon' => '✓',  'label' => 'Verification',    'perm' => 'view_verification', 'training' => 'nav-verification'],
                         ['route' => 'clients',      'icon' => '💰', 'label' => 'Clients',         'perm' => 'view_all_leads', 'training' => 'nav-clients'],
+                        ['route' => 'zoho-clients.index', 'icon' => '🔗', 'label' => 'Zoho Clients', 'perm' => null, 'training' => 'nav-zoho-clients', 'href' => '/zoho-clients'],
                     ]],
                     ['title' => 'PERFORMANCE', 'items' => [
                         ['route' => 'stats',              'icon' => '📊', 'label' => 'Statistics',           'perm' => 'view_stats', 'training' => 'nav-stats'],
