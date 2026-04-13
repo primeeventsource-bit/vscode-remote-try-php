@@ -90,31 +90,37 @@ class ZohoClients extends Component
         try {
             $path = $this->csvFile->getRealPath();
             $handle = fopen($path, 'r');
-            $headers = array_map('trim', fgetcsv($handle));
+            $rawHeaders = fgetcsv($handle);
+            $headers = array_map('trim', $rawHeaders);
 
+            // Normalize headers to lowercase for case-insensitive matching
+            $headersLower = array_map('strtolower', $headers);
+
+            // Map: our field => possible CSV header names (all lowercase for matching)
             $map = [
-                'first_name' => ['First Name', 'First name', 'first_name'],
-                'last_name' => ['Last Name', 'Last name', 'last_name'],
-                'email' => ['Email', 'Email Address', 'email'],
-                'phone' => ['Phone', 'Phone Number', 'Business Phone', 'phone'],
-                'mobile' => ['Mobile', 'Mobile Phone', 'Cell Phone', 'mobile'],
-                'account_name' => ['Account Name', 'Company', 'account_name'],
-                'title' => ['Title', 'Job Title', 'title'],
-                'department' => ['Department', 'department'],
-                'mailing_address' => ['Mailing Street', 'Mailing Address', 'Street', 'mailing_street'],
-                'mailing_city' => ['Mailing City', 'City', 'mailing_city'],
-                'mailing_state' => ['Mailing State', 'State', 'mailing_state'],
-                'mailing_zip' => ['Mailing Zip', 'Zip', 'Zip Code', 'Postal Code', 'mailing_zip'],
-                'mailing_country' => ['Mailing Country', 'Country', 'mailing_country'],
-                'lead_source' => ['Lead Source', 'Source', 'lead_source'],
-                'contact_owner' => ['Contact Owner', 'Owner', 'contact_owner'],
-                'zoho_id' => ['Contact ID', 'Record ID', 'id', 'ID'],
+                'first_name'      => ['first name', 'first_name', 'firstname', 'given name', 'fname'],
+                'last_name'       => ['last name', 'last_name', 'lastname', 'surname', 'family name', 'lname'],
+                'email'           => ['email', 'email address', 'e-mail', 'email id', 'primary email'],
+                'phone'           => ['phone', 'phone number', 'business phone', 'work phone', 'phone1', 'primary phone'],
+                'mobile'          => ['mobile', 'mobile phone', 'cell phone', 'cell', 'mobile number'],
+                'account_name'    => ['account name', 'company', 'company name', 'organization', 'account', 'business name'],
+                'title'           => ['title', 'job title', 'designation', 'position'],
+                'department'      => ['department', 'dept'],
+                'mailing_address' => ['mailing street', 'mailing address', 'street', 'address', 'street address', 'mailing_street'],
+                'mailing_city'    => ['mailing city', 'city', 'mailing_city'],
+                'mailing_state'   => ['mailing state', 'state', 'state/province', 'mailing_state', 'province'],
+                'mailing_zip'     => ['mailing zip', 'zip', 'zip code', 'postal code', 'mailing_zip', 'zipcode', 'pin code'],
+                'mailing_country' => ['mailing country', 'country', 'mailing_country'],
+                'lead_source'     => ['lead source', 'source', 'lead_source', 'campaign source'],
+                'contact_owner'   => ['contact owner', 'owner', 'contact_owner', 'assigned to', 'record owner'],
+                'zoho_id'         => ['contact id', 'record id', 'id', 'zoho id', 'record_id', 'contact_id', 'zoho_id'],
             ];
 
+            // Build lookup: our_field => column_index (case-insensitive)
             $fieldIndex = [];
             foreach ($map as $field => $aliases) {
                 foreach ($aliases as $alias) {
-                    $key = array_search($alias, $headers);
+                    $key = array_search($alias, $headersLower);
                     if ($key !== false) {
                         $fieldIndex[$field] = $key;
                         break;
@@ -122,26 +128,54 @@ class ZohoClients extends Component
                 }
             }
 
+            // If no name fields matched, try to use first two columns as first/last name
+            if (!isset($fieldIndex['first_name']) && !isset($fieldIndex['last_name'])) {
+                // Check if there's a "Full Name" or "Name" column
+                $nameIdx = array_search('full name', $headersLower);
+                if ($nameIdx === false) $nameIdx = array_search('name', $headersLower);
+                if ($nameIdx === false) $nameIdx = array_search('contact name', $headersLower);
+
+                if ($nameIdx !== false) {
+                    $fieldIndex['_full_name'] = $nameIdx; // special handling below
+                } else {
+                    // Last resort: use first column as name
+                    $fieldIndex['first_name'] = 0;
+                }
+            }
+
             $created = 0;
             $updated = 0;
             $skipped = 0;
+            $matchedCols = count($fieldIndex);
 
             while (($row = fgetcsv($handle)) !== false) {
-                if (count($row) < 2) { $skipped++; continue; }
+                if (count($row) < 1) { $skipped++; continue; }
 
                 $data = [];
                 foreach ($fieldIndex as $field => $colIndex) {
+                    if ($field === '_full_name') continue; // handled below
                     $data[$field] = isset($row[$colIndex]) ? trim($row[$colIndex]) : null;
                 }
 
-                if (empty($data['first_name']) && empty($data['last_name'])) {
+                // Handle full name split
+                if (isset($fieldIndex['_full_name'])) {
+                    $fullName = trim($row[$fieldIndex['_full_name']] ?? '');
+                    $parts = preg_split('/\s+/', $fullName, 2);
+                    $data['first_name'] = $parts[0] ?? '';
+                    $data['last_name'] = $parts[1] ?? '';
+                }
+
+                // Skip only if we have absolutely nothing useful
+                $hasAnyData = !empty($data['first_name']) || !empty($data['last_name']) || !empty($data['email']) || !empty($data['phone']) || !empty($data['account_name']);
+                if (!$hasAnyData) {
                     $skipped++;
                     continue;
                 }
 
+                // Build zoho_id for dedup
                 $zohoId = !empty($data['zoho_id'])
                     ? $data['zoho_id']
-                    : 'csv_' . md5(($data['email'] ?? '') . ($data['first_name'] ?? '') . ($data['last_name'] ?? ''));
+                    : 'csv_' . md5(($data['email'] ?? '') . ($data['first_name'] ?? '') . ($data['last_name'] ?? '') . ($data['phone'] ?? ''));
 
                 unset($data['zoho_id']);
 
@@ -163,8 +197,11 @@ class ZohoClients extends Component
 
             $this->importing = false;
             $this->showImportModal = false;
-            $this->importResult = "Import complete — {$created} created, {$updated} updated, {$skipped} skipped.";
-            $this->importType = 'success';
+
+            $matchedNames = array_keys($fieldIndex);
+            $matchedStr = implode(', ', array_filter($matchedNames, fn($n) => $n !== '_full_name'));
+            $this->importResult = "Import complete — {$created} created, {$updated} updated, {$skipped} skipped. Matched {$matchedCols} columns: {$matchedStr}. CSV headers: " . implode(', ', array_slice($headers, 0, 8)) . (count($headers) > 8 ? '...' : '');
+            $this->importType = $created > 0 || $updated > 0 ? 'success' : 'error';
             $this->csvFile = null;
             $this->importPreview = [];
         } catch (\Throwable $e) {
