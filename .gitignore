@@ -6,3 +6,18 @@ storage/*.key
 .env
 .env.backup
 # .env.production is tracked — deployed as .env to Azure via GitHub Actions
+
+# OneDrive sync conflict copies (per-machine backup files)
+*-LAPTOP-*
+
+# Local SQLite dev DB
+database/database.sqlite
+database/*.sqlite
+
+# Composer installer artefact
+composer-setup.php
+
+# IDE / tooling scratch dirs
+.claude/
+prime-crm/
+desktop-app/
