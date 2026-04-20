@@ -214,7 +214,7 @@
                                 <div class="text-[10px] text-crm-t3 uppercase tracking-wider mb-1 font-semibold">Commission Breakdown</div>
                                 <div class="space-y-1 text-xs">
                                     <div class="flex justify-between"><span class="text-crm-t3">Gross Revenue</span><span class="font-mono font-semibold">${{ number_format($card['gross_revenue'] ?? 0, 2) }}</span></div>
-                                    <div class="flex justify-between"><span class="text-crm-t3">Commission Rate</span><span class="font-mono">{{ $card['commission_rate'] ?? 0 }}%</span></div>
+                                    <div class="flex justify-between"><span class="text-crm-t3">Commission Rate</span><span class="font-mono">{{ ($card['gross_revenue'] ?? 0) > 0 ? round((($card['commission'] ?? 0) / $card['gross_revenue']) * 100, 1) : 0 }}%</span></div>
                                     <div class="flex justify-between"><span class="text-crm-t3">Commission</span><span class="font-mono font-semibold text-emerald-500">${{ number_format($card['commission'] ?? 0, 2) }}</span></div>
                                     @if(isset($card['chargebacks']) && $card['chargebacks'] > 0)
                                         <div class="flex justify-between"><span class="text-crm-t3">Chargebacks</span><span class="font-mono text-red-500">-${{ number_format($card['chargebacks'], 2) }}</span></div>

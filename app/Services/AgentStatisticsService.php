@@ -25,6 +25,16 @@ class AgentStatisticsService
         return $den == 0 ? 0.0 : round($num / $den * 100, $precision);
     }
 
+    /**
+     * Like safePct but capped at 100. Use for ratio metrics (close rate,
+     * conversion rate) where values > 100% indicate a data anomaly — e.g.,
+     * closer credited with closing deals they were never formally assigned.
+     */
+    private static function safePctCapped(int|float $num, int|float $den, int $precision = 1): float
+    {
+        return min(100.0, self::safePct($num, $den, $precision));
+    }
+
     private static function safeDiv(int|float $num, int|float $den, int $precision = 2): float
     {
         return $den == 0 ? 0.0 : round($num / $den, $precision);
@@ -62,7 +72,7 @@ class AgentStatisticsService
             'closer' => [
                 'deals_closed' => $closerData['deals_closed'],
                 'revenue' => $closerData['revenue'],
-                'close_rate' => self::safePct($closerData['deals_closed'], max($closerData['deals_received'], 1)),
+                'close_rate' => self::safePctCapped($closerData['deals_closed'], max($closerData['deals_received'], 1)),
                 'avg_deal_value' => self::safeDiv($closerData['revenue'], max($closerData['deals_closed'], 1)),
                 'deals_received' => $closerData['deals_received'],
                 'deals_lost' => $closerData['deals_lost'],
@@ -208,7 +218,7 @@ class AgentStatisticsService
                 'deals_closed' => $closerData['deals_closed'],
                 'deals_lost' => $closerData['deals_lost'],
                 'revenue' => $closerData['revenue'],
-                'close_rate' => self::safePct(
+                'close_rate' => self::safePctCapped(
                     $closerData['deals_closed'],
                     max($closerData['deals_received'], 1)
                 ),
@@ -289,7 +299,7 @@ class AgentStatisticsService
                     'transfers' => $transferred,
                     'deals_closed' => $dealsClosed,
                     'revenue' => $revenue,
-                    'close_rate' => self::safePct($dealsClosed, max($transferred, 1)),
+                    'close_rate' => self::safePctCapped($dealsClosed, max($transferred, 1)),
                     'badge' => self::computeBadge('fronter', $dealsClosed, $revenue, self::safePct($dealsClosed, max($transferred, 1))),
                 ];
             } else {
@@ -330,7 +340,7 @@ class AgentStatisticsService
                 if ($to) $revQuery->where('charged_date', '<=', $to);
                 $revenue = (float) $revQuery->sum('fee');
 
-                $closeRate = self::safePct($closed, max($received, 1));
+                $closeRate = self::safePctCapped($closed, max($received, 1));
                 $avgDealValue = self::safeDiv($revenue, max($closed, 1));
 
                 $result[] = [

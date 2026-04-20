@@ -15,7 +15,6 @@
                     <tr class="border-b border-crm-border bg-crm-surface">
                         <th class="text-left px-4 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Name</th>
                         <th class="text-left px-4 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Username</th>
-                        <th class="text-left px-4 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Password</th>
                         <th class="text-left px-4 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Email</th>
                         <th class="text-left px-4 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Role</th>
                         <th class="text-left px-4 py-2.5 text-[10px] uppercase tracking-wider text-crm-t3 font-semibold">Comm%</th>
@@ -45,10 +44,6 @@
                                 </div>
                             </td>
                             <td class="px-4 py-2.5 font-mono text-xs text-crm-t2">{{ $user->username }}</td>
-                            <td class="px-4 py-2.5 font-mono text-xs" x-data="{ show: false }">
-                                <span x-show="!show" class="text-crm-t3 cursor-pointer" @click="show = true">********</span>
-                                <span x-show="show" class="text-crm-t1" @click="show = false" style="display: none;">{{ $user->password }}</span>
-                            </td>
                             <td class="px-4 py-2.5 text-xs text-crm-t2">{{ $user->email ?? '--' }}</td>
                             <td class="px-4 py-2.5">
                                 @if($isAdmin)
