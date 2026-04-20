@@ -5,8 +5,10 @@ namespace App\Livewire;
 use App\Models\Deal;
 use App\Models\Lead;
 use App\Models\User;
+use App\Models\WeeklyStatsSnapshot;
 use App\Repositories\StatisticsRepository;
 use App\Services\AgentStatisticsService;
+use App\Services\WeeklyStatsService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
@@ -18,6 +20,79 @@ use Livewire\Component;
 class Dashboard extends Component
 {
     public string $statsRange = 'live';
+
+    // ── Weekly stats navigator ─────────────────────────────
+    public string $viewingWeek   = '';
+    public string $activeTab     = 'overview';   // overview | closers | fronters | chart
+    public string $closerSort    = 'revenue';    // revenue | deals | closed
+    public string $fronterSort   = 'sets';       // sets | conversion | revenue_assisted
+    public string $officeFilter  = 'all';        // all | US | Panama
+
+    public function mount(): void
+    {
+        if ($this->viewingWeek === '') {
+            $this->viewingWeek = WeeklyStatsSnapshot::weekKeyFor(now());
+        }
+    }
+
+    public function goToPreviousWeek(): void
+    {
+        $this->viewingWeek = WeeklyStatsSnapshot::prevWeekKey($this->viewingWeek);
+    }
+
+    public function goToNextWeek(): void
+    {
+        $nextKey = WeeklyStatsSnapshot::nextWeekKey($this->viewingWeek);
+        // Don't go past the current week
+        if (WeeklyStatsSnapshot::mondayOf($nextKey)->lte(now()->startOfWeek())) {
+            $this->viewingWeek = $nextKey;
+        }
+    }
+
+    public function goToCurrentWeek(): void
+    {
+        $this->viewingWeek = WeeklyStatsSnapshot::weekKeyFor(now());
+    }
+
+    public function jumpToWeek(string $weekKey): void
+    {
+        if (! $weekKey) return;
+        abort_unless($this->isAdminUser(), 403);
+        $this->viewingWeek = $weekKey;
+    }
+
+    public function forceSnapshot(): void
+    {
+        abort_unless($this->isAdminUser(), 403);
+        app(WeeklyStatsService::class)->snapshotWeek($this->viewingWeek);
+        session()->flash('weekly_stats_message', 'Snapshot saved for ' . $this->viewingWeek);
+    }
+
+    public function setTab(string $tab): void
+    {
+        $this->activeTab = in_array($tab, ['overview','closers','fronters','chart']) ? $tab : 'overview';
+    }
+
+    public function setSortCloser(string $sort): void
+    {
+        $this->closerSort = in_array($sort, ['revenue','deals','closed']) ? $sort : 'revenue';
+    }
+
+    public function setSortFronter(string $sort): void
+    {
+        $this->fronterSort = in_array($sort, ['sets','conversion','revenue_assisted']) ? $sort : 'sets';
+    }
+
+    public function setOfficeFilter(string $office): void
+    {
+        $this->officeFilter = in_array($office, ['all','US','Panama']) ? $office : 'all';
+    }
+
+    private function isAdminUser(): bool
+    {
+        $role = auth()->user()?->role ?? '';
+        return in_array($role, ['admin', 'admin_limited', 'master_admin']);
+    }
 
     public function render()
     {
@@ -199,6 +274,85 @@ class Dashboard extends Component
             }
         } catch (\Throwable $e) {}
 
+        // ── Weekly stats for navigator / tabs ──────────────────
+        $weeklyService  = app(WeeklyStatsService::class);
+        $currentWeekKey = WeeklyStatsSnapshot::weekKeyFor(now());
+        $weekStats      = [];
+        $availableWeeks = [];
+        $isCurrentWeek  = true;
+        $weekClosers    = [];
+        $weekFronters   = [];
+        $chartData      = [
+            'labels'    => [],
+            'this_week' => ['deals' => [], 'revenue' => []],
+            'last_week' => ['deals' => [], 'revenue' => []],
+            'totals'    => [
+                'this_deals' => 0, 'this_revenue' => 0,
+                'prev_deals' => 0, 'prev_revenue' => 0,
+                'deals_pct'  => null, 'revenue_pct' => null,
+            ],
+        ];
+
+        try {
+            $weekStats      = $weeklyService->getWeekStats($this->viewingWeek);
+            $availableWeeks = $weeklyService->availableWeeks()->toArray();
+            $isCurrentWeek  = ($this->viewingWeek === $currentWeekKey);
+
+            // Apply office filter + sort for closer list
+            $closerList = collect($weekStats['closer_breakdown'] ?? []);
+            if ($this->officeFilter !== 'all') {
+                $closerList = $closerList->where('office', $this->officeFilter);
+            }
+            $weekClosers = match ($this->closerSort) {
+                'deals'  => $closerList->sortByDesc('deals')->values()->toArray(),
+                'closed' => $closerList->sortByDesc('closed')->values()->toArray(),
+                default  => $closerList->sortByDesc('revenue')->values()->toArray(),
+            };
+
+            // Apply office filter + sort for fronter list
+            $fronterList = collect($weekStats['fronter_breakdown'] ?? []);
+            if ($this->officeFilter !== 'all') {
+                $fronterList = $fronterList->where('office', $this->officeFilter);
+            }
+            $weekFronters = match ($this->fronterSort) {
+                'conversion'       => $fronterList->sortByDesc('conversion_rate')->values()->toArray(),
+                'revenue_assisted' => $fronterList->sortByDesc('revenue_assisted')->values()->toArray(),
+                default            => $fronterList->sortByDesc('sets')->values()->toArray(),
+            };
+
+            // Chart comparison: this week vs last week
+            $daily     = collect($weekStats['daily_breakdown'] ?? []);
+            $prevDaily = collect($weekStats['comparison_vs_prev']['prev_daily'] ?? []);
+            $chartData = [
+                'labels'    => $daily->pluck('day_name')->toArray(),
+                'this_week' => [
+                    'deals'   => $daily->pluck('deals')->toArray(),
+                    'revenue' => $daily->pluck('revenue')->toArray(),
+                ],
+                'last_week' => [
+                    'deals'   => $prevDaily->pluck('deals')->toArray(),
+                    'revenue' => $prevDaily->pluck('revenue')->toArray(),
+                ],
+                'totals' => [
+                    'this_deals'    => $weekStats['total_deals'] ?? 0,
+                    'this_revenue'  => $weekStats['total_revenue'] ?? 0,
+                    'prev_deals'    => $weekStats['comparison_vs_prev']['prev_deals'] ?? 0,
+                    'prev_revenue'  => $weekStats['comparison_vs_prev']['prev_revenue'] ?? 0,
+                    'deals_pct'     => $weekStats['comparison_vs_prev']['deals_pct'] ?? null,
+                    'revenue_pct'   => $weekStats['comparison_vs_prev']['revenue_pct'] ?? null,
+                ],
+            ];
+        } catch (\Throwable $e) {
+            // Fail gracefully if weekly stats tables aren't migrated yet.
+            report($e);
+            $weekStats = [
+                'is_live' => true, 'week_key' => $currentWeekKey,
+                'week_start' => now()->startOfWeek()->toDateString(),
+                'week_end'   => now()->endOfWeek()->toDateString(),
+                'total_deals' => 0, 'total_revenue' => 0,
+            ];
+        }
+
         return view('livewire.dashboard', compact(
             'totalLeads', 'assignedLeads', 'deals', 'charged', 'chargebacks',
             'pending', 'cancelled', 'totalRev', 'cbRev', 'pendRev',
@@ -206,7 +360,9 @@ class Dashboard extends Component
             'isFronter', 'isCloser', 'isAdmin', 'isMaster', 'userRole',
             'monthlyData', 'monthlyChargebackData', 'pipelineStats',
             'taskWidget', 'dashboardTasks', 'showTaskScreen',
-            'agentSummary', 'roleBreakdown', 'topAgents', 'aiInsights', 'canSeeStats'
+            'agentSummary', 'roleBreakdown', 'topAgents', 'aiInsights', 'canSeeStats',
+            'weekStats', 'availableWeeks', 'isCurrentWeek',
+            'weekClosers', 'weekFronters', 'chartData'
         ));
     }
 

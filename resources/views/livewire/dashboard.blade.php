@@ -23,6 +23,115 @@
     </div>
 
     {{-- ══════════════════════════════════════════════
+         WEEK NAVIGATOR BAR
+    ══════════════════════════════════════════════ --}}
+    <div class="flex items-center justify-between bg-crm-card border border-crm-border rounded-xl px-5 py-3 mb-5">
+        <div class="flex items-center gap-3">
+            <button wire:click="goToPreviousWeek"
+                class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-crm-t3 hover:text-black transition text-lg"
+                title="Previous week">‹</button>
+
+            <div>
+                <div class="flex items-center gap-2">
+                    @if($isCurrentWeek ?? true)
+                        <span class="inline-flex items-center gap-1 text-[10px] bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-full px-2 py-0.5 font-semibold">
+                            <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span> LIVE
+                        </span>
+                    @else
+                        <span class="text-[10px] bg-amber-50 text-amber-600 border border-amber-200 rounded-full px-2 py-0.5 font-semibold">
+                            ARCHIVED
+                        </span>
+                    @endif
+                    <span class="font-semibold text-sm">
+                        @if($isCurrentWeek ?? true)
+                            Current Week
+                        @else
+                            {{ \Carbon\Carbon::parse($weekStats['week_start'])->format('M d') }}
+                            – {{ \Carbon\Carbon::parse($weekStats['week_end'])->format('M d, Y') }}
+                        @endif
+                    </span>
+                    <span class="text-crm-t3 text-xs font-mono">{{ $viewingWeek }}</span>
+                </div>
+                <div class="text-crm-t3 text-xs mt-0.5">
+                    {{ $weekStats['total_deals'] ?? 0 }} deals ·
+                    ${{ number_format((float)($weekStats['total_revenue'] ?? 0), 0) }} revenue
+                </div>
+            </div>
+
+            <button wire:click="goToNextWeek"
+                @class([
+                    'w-8 h-8 flex items-center justify-center rounded-lg transition text-lg',
+                    'text-gray-300 cursor-not-allowed' => ($isCurrentWeek ?? true),
+                    'hover:bg-gray-100 text-crm-t3 hover:text-black' => !($isCurrentWeek ?? true),
+                ])
+                @disabled($isCurrentWeek ?? true)
+                title="Next week">›</button>
+        </div>
+
+        @if($isMaster || $isAdmin)
+        <div class="flex items-center gap-2">
+            <select wire:change="jumpToWeek($event.target.value)"
+                class="bg-white border border-crm-border text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400">
+                <option value="">Jump to week…</option>
+                @foreach(($availableWeeks ?? []) as $wk)
+                    <option value="{{ $wk }}" @selected($wk === $viewingWeek)>{{ $wk }}</option>
+                @endforeach
+            </select>
+
+            @if(!($isCurrentWeek ?? true))
+            <button wire:click="goToCurrentWeek"
+                class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg transition">
+                ↩ Live
+            </button>
+            @endif
+
+            <button wire:click="forceSnapshot"
+                wire:loading.attr="disabled"
+                class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg transition"
+                title="Save snapshot for this week">
+                <span wire:loading.remove wire:target="forceSnapshot">💾 Snapshot</span>
+                <span wire:loading wire:target="forceSnapshot">Saving…</span>
+            </button>
+        </div>
+        @endif
+    </div>
+
+    @if(!($isCurrentWeek ?? true))
+    <div class="mb-4 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 text-amber-700 text-sm">
+        ⚠ Viewing archived stats for <strong>{{ $viewingWeek }}</strong>
+        ({{ \Carbon\Carbon::parse($weekStats['week_start'])->format('M d') }}–{{ \Carbon\Carbon::parse($weekStats['week_end'])->format('M d, Y') }})
+        — not live data
+    </div>
+    @endif
+
+    @if(session('weekly_stats_message'))
+    <div class="mb-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg px-4 py-2 text-sm">
+        ✓ {{ session('weekly_stats_message') }}
+    </div>
+    @endif
+
+    {{-- ══════════════════════════════════════════════
+         TAB NAV
+    ══════════════════════════════════════════════ --}}
+    <div class="flex gap-1 bg-gray-100 rounded-xl p-1 mb-5 w-fit">
+        @foreach(['overview' => 'Overview', 'closers' => 'Closers', 'fronters' => 'Fronters', 'chart' => 'Chart'] as $tab => $label)
+        <button wire:click="setTab('{{ $tab }}')"
+            @class([
+                'px-4 py-1.5 rounded-lg text-sm font-medium transition',
+                'bg-white text-black shadow-sm' => $activeTab === $tab,
+                'text-crm-t3 hover:text-black' => $activeTab !== $tab,
+            ])>
+            {{ $label }}
+        </button>
+        @endforeach
+    </div>
+
+    {{-- ══════════════════════════════════════════════
+         TAB: OVERVIEW — existing dashboard content
+    ══════════════════════════════════════════════ --}}
+    @if($activeTab === 'overview')
+
+    {{-- ══════════════════════════════════════════════
          MY PIPELINE STATS (role-scoped, per user)
     ══════════════════════════════════════════════ --}}
     @if($userRole === 'fronter')
@@ -496,4 +605,318 @@
         @endforelse
     </div>
     @endif
+
+    {{-- End of Overview tab --}}
+    @endif
+
+    {{-- ══════════════════════════════════════════════
+         TAB: CLOSERS BREAKDOWN
+    ══════════════════════════════════════════════ --}}
+    @if($activeTab === 'closers')
+    <div>
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <div class="flex gap-2">
+                @foreach(['revenue' => 'By Revenue', 'deals' => 'By Deals', 'closed' => 'By Closed'] as $s => $label)
+                <button wire:click="setSortCloser('{{ $s }}')"
+                    @class([
+                        'px-3 py-1.5 text-xs rounded-lg transition font-medium',
+                        'bg-blue-600 text-white' => $closerSort === $s,
+                        'bg-gray-100 text-crm-t3 hover:bg-gray-200' => $closerSort !== $s,
+                    ])>
+                    {{ $label }}
+                </button>
+                @endforeach
+            </div>
+            <div class="flex gap-2">
+                @foreach(['all' => 'All Offices', 'US' => '🇺🇸 US', 'Panama' => '🇵🇦 Panama'] as $o => $label)
+                <button wire:click="setOfficeFilter('{{ $o }}')"
+                    @class([
+                        'px-3 py-1.5 text-xs rounded-lg transition font-medium',
+                        'bg-purple-600 text-white' => $officeFilter === $o,
+                        'bg-gray-100 text-crm-t3 hover:bg-gray-200' => $officeFilter !== $o,
+                    ])>
+                    {{ $label }}
+                </button>
+                @endforeach
+            </div>
+        </div>
+
+        @if(count($weekClosers ?? []) === 0)
+            <div class="text-center text-crm-t3 py-12">No closer data for this week.</div>
+        @else
+        <div class="overflow-x-auto rounded-xl border border-crm-border bg-crm-card">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-gray-50 text-crm-t3 text-[11px] uppercase tracking-wider">
+                        <th class="px-4 py-3 text-left">#</th>
+                        <th class="px-4 py-3 text-left">Closer</th>
+                        <th class="px-4 py-3 text-left">Office</th>
+                        <th class="px-4 py-3 text-right">Deals</th>
+                        <th class="px-4 py-3 text-right">Closed</th>
+                        <th class="px-4 py-3 text-right">Cancelled</th>
+                        <th class="px-4 py-3 text-right">Pending</th>
+                        <th class="px-4 py-3 text-right">Revenue</th>
+                        <th class="px-4 py-3 text-right">Commission</th>
+                        <th class="px-4 py-3 text-right">Avg Sale</th>
+                        <th class="px-4 py-3 text-right">Close %</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-crm-border">
+                    @foreach($weekClosers as $i => $c)
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="px-4 py-3 font-mono text-crm-t3">
+                            @if($i === 0) 🥇 @elseif($i === 1) 🥈 @elseif($i === 2) 🥉 @else {{ $i + 1 }} @endif
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="font-semibold">{{ $c['name'] }}</div>
+                            <div class="text-crm-t3 text-xs capitalize">{{ str_replace('_', ' ', $c['role']) }}</div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="text-xs px-2 py-0.5 rounded-full {{ $c['office'] === 'Panama' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600' }}">
+                                {{ $c['office'] }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-right font-semibold">{{ $c['deals'] }}</td>
+                        <td class="px-4 py-3 text-right text-emerald-600 font-semibold">{{ $c['closed'] }}</td>
+                        <td class="px-4 py-3 text-right text-red-500">{{ $c['cancelled'] }}</td>
+                        <td class="px-4 py-3 text-right text-amber-600">{{ $c['pending'] }}</td>
+                        <td class="px-4 py-3 text-right font-semibold">${{ number_format((float)$c['revenue'], 0) }}</td>
+                        <td class="px-4 py-3 text-right text-emerald-700">${{ number_format((float)$c['commission'], 0) }}</td>
+                        <td class="px-4 py-3 text-right text-crm-t2">${{ number_format((float)$c['avg_sale'], 0) }}</td>
+                        <td class="px-4 py-3 text-right">
+                            @php $pct = $c['deals'] > 0 ? round(($c['closed'] / $c['deals']) * 100) : 0; @endphp
+                            <span @class([
+                                'font-semibold',
+                                'text-emerald-600' => $pct >= 60,
+                                'text-amber-600' => $pct >= 30 && $pct < 60,
+                                'text-red-500' => $pct < 30,
+                            ])>{{ $pct }}%</span>
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+                <tfoot>
+                    <tr class="bg-gray-50 font-semibold border-t border-crm-border">
+                        <td colspan="3" class="px-4 py-3 text-crm-t3 text-[11px] uppercase">Totals</td>
+                        <td class="px-4 py-3 text-right">{{ collect($weekClosers)->sum('deals') }}</td>
+                        <td class="px-4 py-3 text-right text-emerald-600">{{ collect($weekClosers)->sum('closed') }}</td>
+                        <td class="px-4 py-3 text-right text-red-500">{{ collect($weekClosers)->sum('cancelled') }}</td>
+                        <td class="px-4 py-3 text-right text-amber-600">{{ collect($weekClosers)->sum('pending') }}</td>
+                        <td class="px-4 py-3 text-right">${{ number_format((float)collect($weekClosers)->sum('revenue'), 0) }}</td>
+                        <td class="px-4 py-3 text-right text-emerald-700">${{ number_format((float)collect($weekClosers)->sum('commission'), 0) }}</td>
+                        <td colspan="2"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        @endif
+    </div>
+    @endif
+
+    {{-- ══════════════════════════════════════════════
+         TAB: FRONTERS BREAKDOWN
+    ══════════════════════════════════════════════ --}}
+    @if($activeTab === 'fronters')
+    <div>
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <div class="flex gap-2">
+                @foreach(['sets' => 'By Sets', 'conversion' => 'By Conversion', 'revenue_assisted' => 'By Revenue'] as $s => $label)
+                <button wire:click="setSortFronter('{{ $s }}')"
+                    @class([
+                        'px-3 py-1.5 text-xs rounded-lg transition font-medium',
+                        'bg-blue-600 text-white' => $fronterSort === $s,
+                        'bg-gray-100 text-crm-t3 hover:bg-gray-200' => $fronterSort !== $s,
+                    ])>
+                    {{ $label }}
+                </button>
+                @endforeach
+            </div>
+            <div class="flex gap-2">
+                @foreach(['all' => 'All Offices', 'US' => '🇺🇸 US', 'Panama' => '🇵🇦 Panama'] as $o => $label)
+                <button wire:click="setOfficeFilter('{{ $o }}')"
+                    @class([
+                        'px-3 py-1.5 text-xs rounded-lg transition font-medium',
+                        'bg-purple-600 text-white' => $officeFilter === $o,
+                        'bg-gray-100 text-crm-t3 hover:bg-gray-200' => $officeFilter !== $o,
+                    ])>
+                    {{ $label }}
+                </button>
+                @endforeach
+            </div>
+        </div>
+
+        @if(count($weekFronters ?? []) === 0)
+            <div class="text-center text-crm-t3 py-12">No fronter data for this week.</div>
+        @else
+        <div class="overflow-x-auto rounded-xl border border-crm-border bg-crm-card">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-gray-50 text-crm-t3 text-[11px] uppercase tracking-wider">
+                        <th class="px-4 py-3 text-left">#</th>
+                        <th class="px-4 py-3 text-left">Fronter</th>
+                        <th class="px-4 py-3 text-left">Office</th>
+                        <th class="px-4 py-3 text-right">Sets</th>
+                        <th class="px-4 py-3 text-right">Closed</th>
+                        <th class="px-4 py-3 text-right">Cancelled</th>
+                        <th class="px-4 py-3 text-right">Conversion</th>
+                        <th class="px-4 py-3 text-right">Revenue Assisted</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-crm-border">
+                    @foreach($weekFronters as $i => $f)
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="px-4 py-3 font-mono text-crm-t3">
+                            @if($i === 0) 🥇 @elseif($i === 1) 🥈 @elseif($i === 2) 🥉 @else {{ $i + 1 }} @endif
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="font-semibold">{{ $f['name'] }}</div>
+                            <div class="text-crm-t3 text-xs capitalize">{{ str_replace('_', ' ', $f['role']) }}</div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="text-xs px-2 py-0.5 rounded-full {{ $f['office'] === 'Panama' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600' }}">
+                                {{ $f['office'] }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-right font-semibold">{{ $f['sets'] }}</td>
+                        <td class="px-4 py-3 text-right text-emerald-600">{{ $f['sets_closed'] }}</td>
+                        <td class="px-4 py-3 text-right text-red-500">{{ $f['cancelled'] }}</td>
+                        <td class="px-4 py-3 text-right">
+                            <span @class([
+                                'font-semibold',
+                                'text-emerald-600' => $f['conversion_rate'] >= 50,
+                                'text-amber-600' => $f['conversion_rate'] >= 25 && $f['conversion_rate'] < 50,
+                                'text-red-500' => $f['conversion_rate'] < 25,
+                            ])>{{ $f['conversion_rate'] }}%</span>
+                        </td>
+                        <td class="px-4 py-3 text-right text-crm-t2">${{ number_format((float)$f['revenue_assisted'], 0) }}</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+                <tfoot>
+                    <tr class="bg-gray-50 font-semibold border-t border-crm-border">
+                        <td colspan="3" class="px-4 py-3 text-crm-t3 text-[11px] uppercase">Totals</td>
+                        <td class="px-4 py-3 text-right">{{ collect($weekFronters)->sum('sets') }}</td>
+                        <td class="px-4 py-3 text-right text-emerald-600">{{ collect($weekFronters)->sum('sets_closed') }}</td>
+                        <td class="px-4 py-3 text-right text-red-500">{{ collect($weekFronters)->sum('cancelled') }}</td>
+                        <td class="px-4 py-3 text-right text-crm-t3">
+                            @php
+                                $totalSets   = collect($weekFronters)->sum('sets');
+                                $totalClosed = collect($weekFronters)->sum('sets_closed');
+                                $avgConv = $totalSets > 0 ? round(($totalClosed / $totalSets) * 100, 1) : 0;
+                            @endphp
+                            {{ $avgConv }}% avg
+                        </td>
+                        <td class="px-4 py-3 text-right">${{ number_format((float)collect($weekFronters)->sum('revenue_assisted'), 0) }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        @endif
+    </div>
+    @endif
+
+    {{-- ══════════════════════════════════════════════
+         TAB: COMPARISON CHART (Chart.js)
+    ══════════════════════════════════════════════ --}}
+    @if($activeTab === 'chart')
+    @php $totals = $chartData['totals']; @endphp
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-crm-card rounded-xl p-4 border border-crm-border">
+            <div class="text-crm-t3 text-xs mb-1">This Week Deals</div>
+            <div class="text-2xl font-bold">{{ $totals['this_deals'] }}</div>
+        </div>
+        <div class="bg-crm-card rounded-xl p-4 border border-crm-border">
+            <div class="text-crm-t3 text-xs mb-1">Last Week Deals</div>
+            <div class="text-2xl font-bold text-crm-t3">{{ $totals['prev_deals'] }}</div>
+        </div>
+        <div class="bg-crm-card rounded-xl p-4 border border-crm-border">
+            <div class="text-crm-t3 text-xs mb-1">This Week Revenue</div>
+            <div class="text-2xl font-bold">${{ number_format((float)$totals['this_revenue'], 0) }}</div>
+        </div>
+        <div class="bg-crm-card rounded-xl p-4 border border-crm-border">
+            <div class="text-crm-t3 text-xs mb-1">Last Week Revenue</div>
+            <div class="text-2xl font-bold text-crm-t3">${{ number_format((float)$totals['prev_revenue'], 0) }}</div>
+        </div>
+    </div>
+
+    @if($totals['deals_pct'] !== null || $totals['revenue_pct'] !== null)
+    <div class="grid grid-cols-2 gap-4 mb-6">
+        <div class="bg-crm-card rounded-xl p-4 border border-crm-border">
+            <div class="text-crm-t3 text-xs mb-1">Deals — vs Last Week</div>
+            <div @class([
+                'text-xl font-bold',
+                'text-emerald-600' => ($totals['deals_pct'] ?? 0) >= 0,
+                'text-red-500' => ($totals['deals_pct'] ?? 0) < 0,
+            ])>
+                {{ ($totals['deals_pct'] ?? 0) >= 0 ? '▲' : '▼' }} {{ abs($totals['deals_pct'] ?? 0) }}%
+            </div>
+        </div>
+        <div class="bg-crm-card rounded-xl p-4 border border-crm-border">
+            <div class="text-crm-t3 text-xs mb-1">Revenue — vs Last Week</div>
+            <div @class([
+                'text-xl font-bold',
+                'text-emerald-600' => ($totals['revenue_pct'] ?? 0) >= 0,
+                'text-red-500' => ($totals['revenue_pct'] ?? 0) < 0,
+            ])>
+                {{ ($totals['revenue_pct'] ?? 0) >= 0 ? '▲' : '▼' }} {{ abs($totals['revenue_pct'] ?? 0) }}%
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <div class="bg-crm-card rounded-xl p-5 border border-crm-border">
+        <h3 class="text-sm font-semibold mb-4">Daily Comparison — This Week vs Last Week</h3>
+        <div style="height: 360px; position: relative;">
+            <canvas id="weeklyComparisonChart"
+                    wire:ignore
+                    x-data
+                    x-init="
+                        (async () => {
+                            if (typeof window.Chart === 'undefined') {
+                                await new Promise((resolve, reject) => {
+                                    const s = document.createElement('script');
+                                    s.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+                                    s.onload = resolve; s.onerror = reject;
+                                    document.head.appendChild(s);
+                                });
+                            }
+                            const ctx = $el.getContext('2d');
+                            if (window._weeklyChart) window._weeklyChart.destroy();
+                            window._weeklyChart = new window.Chart(ctx, {
+                                type: 'bar',
+                                data: {
+                                    labels: @js($chartData['labels']),
+                                    datasets: [
+                                        {
+                                            label: 'This Week — Deals',
+                                            data: @js($chartData['this_week']['deals']),
+                                            backgroundColor: '#3b82f6',
+                                            borderRadius: 6,
+                                        },
+                                        {
+                                            label: 'Last Week — Deals',
+                                            data: @js($chartData['last_week']['deals']),
+                                            backgroundColor: '#94a3b8',
+                                            borderRadius: 6,
+                                        },
+                                    ],
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {
+                                        legend: { position: 'top', labels: { font: { size: 12 } } },
+                                        tooltip: { mode: 'index', intersect: false },
+                                    },
+                                    scales: {
+                                        y: { beginAtZero: true, ticks: { precision: 0 } },
+                                    },
+                                },
+                            });
+                        })();
+                    "></canvas>
+        </div>
+    </div>
+    @endif
+
 </div>

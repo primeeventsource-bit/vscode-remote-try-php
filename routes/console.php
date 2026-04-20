@@ -64,3 +64,29 @@ Schedule::call(function () {
             ->delete();
     } catch (\Throwable $e) {}
 })->dailyAt('04:00');
+
+// ─── Weekly stats snapshot (Mondays 00:01) ───────────────────
+// Snapshots the week that just ended. Running a snapshot for the
+// current (now previous) week freezes its numbers so historical
+// views always match reality even if a deal is later edited.
+Schedule::call(function () {
+    try {
+        $prevWeekKey = \App\Models\WeeklyStatsSnapshot::weekKeyFor(now()->subWeek());
+        app(\App\Services\WeeklyStatsService::class)->snapshotWeek($prevWeekKey);
+        \Illuminate\Support\Facades\Log::info("Weekly stats snapshot saved: {$prevWeekKey}");
+    } catch (\Throwable $e) {
+        report($e);
+    }
+})->weeklyOn(1, '00:01')->name('weekly-stats-snapshot')->withoutOverlapping();
+
+// ─── Nightly running snapshot of the current week (23:58) ────
+// Ensures current-week data is always recoverable even if the
+// Monday job misses; updates the current week row in place.
+Schedule::call(function () {
+    try {
+        $currentKey = \App\Models\WeeklyStatsSnapshot::weekKeyFor(now());
+        app(\App\Services\WeeklyStatsService::class)->snapshotWeek($currentKey);
+    } catch (\Throwable $e) {
+        report($e);
+    }
+})->dailyAt('23:58')->name('nightly-stats-backup')->withoutOverlapping();
