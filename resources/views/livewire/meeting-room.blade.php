@@ -107,8 +107,13 @@
 
         {{-- Control Dock --}}
         <div class="flex items-center justify-center gap-3 py-5 bg-pc-surface/60 backdrop-blur-sm flex-shrink-0 border-t border-white/5">
+            {{-- View-Only Badge --}}
+            <template x-if="viewOnly">
+                <span class="px-2 py-1 text-[10px] font-bold text-white bg-pc-ring/80 rounded-md self-center" title="No camera or mic detected">VIEW ONLY</span>
+            </template>
+
             {{-- Mic Toggle --}}
-            <button @click="toggleMic()" class="group relative w-14 h-14 rounded-full flex items-center justify-center text-white transition-all duration-200"
+            <button @click="toggleMic()" :disabled="viewOnly" class="group relative w-14 h-14 rounded-full flex items-center justify-center text-white transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
                 :class="micOn ? 'bg-pc-panel hover:bg-white/15' : 'bg-pc-end hover:brightness-110'">
                 <template x-if="micOn">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
@@ -120,7 +125,7 @@
             </button>
 
             {{-- Camera Toggle --}}
-            <button @click="toggleCamera()" class="group relative w-14 h-14 rounded-full flex items-center justify-center text-white transition-all duration-200"
+            <button @click="toggleCamera()" :disabled="viewOnly" class="group relative w-14 h-14 rounded-full flex items-center justify-center text-white transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
                 :class="cameraOn ? 'bg-pc-panel hover:bg-white/15' : 'bg-pc-end hover:brightness-110'">
                 <template x-if="cameraOn">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
@@ -168,6 +173,7 @@ function meetingApp() {
         micOn: true,
         cameraOn: true,
         connected: false,
+        viewOnly: false,
         mediaError: '',
         participantCount: 1,
         meetingUuid: @json($uuid),
@@ -251,8 +257,12 @@ function meetingApp() {
                         this.mediaError = explainMediaError(e, 'Camera') + ' Audio-only mode active.';
                     } catch(e2) {
                         console.warn('Audio-only also failed:', e2);
-                        this.mediaError = explainMediaError(e2, 'Camera/mic');
+                        // View-only fallback: join the room with no local tracks so the
+                        // user can still see/hear other participants. Better than being
+                        // locked out entirely when the device isn't available.
+                        this.mediaError = explainMediaError(e2, 'Camera/mic') + ' Joined view-only — you can see and hear others.';
                         this.micOn = false; this.cameraOn = false;
+                        this.viewOnly = true;
                     }
                 }
 
@@ -342,11 +352,13 @@ function meetingApp() {
         },
 
         toggleMic() {
+            if (this.viewOnly) return; // no local audio track to toggle
             this.micOn = !this.micOn;
             _twilioLocalTracks.forEach(t => { if (t.kind === 'audio') t.enable(this.micOn); });
         },
 
         toggleCamera() {
+            if (this.viewOnly) return; // no local video track to toggle
             this.cameraOn = !this.cameraOn;
             _twilioLocalTracks.forEach(t => { if (t.kind === 'video') t.enable(this.cameraOn); });
         },
@@ -356,6 +368,7 @@ function meetingApp() {
             this.cleanup();
             this.micOn = true;
             this.cameraOn = true;
+            this.viewOnly = false;
             await this.connectToRoom();
         },
 
