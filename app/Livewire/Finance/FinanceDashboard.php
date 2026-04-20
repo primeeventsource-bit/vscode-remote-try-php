@@ -13,7 +13,7 @@ use Livewire\Component;
 #[Title('Finance Command Center')]
 class FinanceDashboard extends Component
 {
-    public string $dateRange = '30d';
+    public string $dateRange = 'all';
     public string $midFilter = 'all';
 
     public function render()
