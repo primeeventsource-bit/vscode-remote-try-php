@@ -70,7 +70,8 @@
 
         @if($isMaster || $isAdmin)
         <div class="flex items-center gap-2">
-            <select wire:change="jumpToWeek($event.target.value)"
+            <select id="week-navigator-select" name="week_navigator" autocomplete="off"
+                wire:change="jumpToWeek($event.target.value)"
                 class="bg-white border border-crm-border text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400">
                 <option value="">Jump to week…</option>
                 @foreach(($availableWeeks ?? []) as $wk)
