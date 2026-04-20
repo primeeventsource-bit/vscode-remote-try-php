@@ -44,16 +44,22 @@ Cloud runs `php artisan schedule:run` every minute. All scheduled commands
 in `routes/console.php` (heartbeat, presence, duplicate scan, stuck-import
 recovery, weekly stats, etc.) are picked up automatically.
 
-## 4. Post-Deploy Hooks
+## 4. Post-Deploy Hook
 
-Add to the Laravel Cloud **Build / Deploy hooks** section (or your `.cloud/`
-config if using file-based config):
+The repo ships [deploy.sh](deploy.sh) at the root with the migrate + cache
+warm-up commands. Wire it into Laravel Cloud once:
+
+1. Open **Environment → Settings → Deploy hook**
+2. Command: `bash deploy.sh`
+
+After that, every push that triggers a deploy also runs migrations and
+rebuilds caches automatically — no more "Nothing to migrate" because the
+new file wasn't on the server yet, no more manual `migrate --force` calls.
+
+`storage:link` is a one-time setup; run it once via SSH after the first
+deploy:
 
 ```bash
-php artisan migrate --force
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
 php artisan storage:link
 ```
 
