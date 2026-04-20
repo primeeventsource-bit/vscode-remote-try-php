@@ -307,7 +307,7 @@
                         @php $isUnread = !$isMine && empty($msg->seen_at); @endphp
 
                         {{-- Message Bubble --}}
-                        <div class="flex {{ $isMine ? 'justify-end' : 'justify-start' }} mb-1 {{ $isUnread ? 'msg-unread rounded-lg' : '' }}">
+                        <div wire:key="msg-{{ $msg->id }}" class="flex {{ $isMine ? 'justify-end' : 'justify-start' }} mb-1 {{ $isUnread ? 'msg-unread rounded-lg' : '' }}">
                             @if(!$isMine)
                                 <div class="flex-shrink-0 mr-2 mt-1">
                                     @if($msgUser?->avatar_path)

@@ -42,7 +42,7 @@
     @if($pendingInvites->isNotEmpty())
         <div class="mb-5 space-y-2">
             @foreach($pendingInvites as $invite)
-                <div class="flex items-center justify-between bg-gradient-to-r from-pc-primary/5 to-pc-accent/5 border border-pc-primary/20 rounded-xl px-4 py-3 pc-card-enter">
+                <div wire:key="invite-{{ $invite->id }}" class="flex items-center justify-between bg-gradient-to-r from-pc-primary/5 to-pc-accent/5 border border-pc-primary/20 rounded-xl px-4 py-3 pc-card-enter">
                     <div class="flex items-center gap-3">
                         <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-pc-primary to-pc-accent flex items-center justify-center text-white">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
@@ -122,7 +122,7 @@
                     <div class="max-h-52 overflow-y-auto border border-crm-border rounded-xl mt-1 bg-white">
                         @foreach($allUsers as $u)
                             @if($u->id !== auth()->id())
-                                <label class="flex items-center gap-3 px-4 py-2.5 border-b border-crm-border last:border-0 hover:bg-pc-primary/5 cursor-pointer transition">
+                                <label wire:key="invite-user-{{ $u->id }}" class="flex items-center gap-3 px-4 py-2.5 border-b border-crm-border last:border-0 hover:bg-pc-primary/5 cursor-pointer transition">
                                     <input id="fld-invite-{{ $u->id }}" type="checkbox" wire:model="invitedUserIds" value="{{ $u->id }}"
                                         class="h-4 w-4 rounded border-crm-border text-pc-primary focus:ring-pc-primary/20">
                                     <div class="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold text-white" style="background: {{ $u->color ?? '#6b7280' }}">{{ $u->avatar ?? substr($u->name, 0, 2) }}</div>
@@ -193,7 +193,7 @@
                 {{-- Participants --}}
                 <div class="flex items-center gap-0.5 mt-3 pl-14">
                     @foreach($meeting->participants->take(8) as $p)
-                        <div class="w-7 h-7 rounded-full flex items-center justify-center text-[8px] font-bold text-white border-2 border-white -ml-1.5 first:ml-0 shadow-sm" style="background: {{ $p->user?->color ?? '#6b7280' }}" title="{{ $p->user?->name }}">
+                        <div wire:key="meeting-{{ $meeting->id }}-participant-{{ $p->id }}" class="w-7 h-7 rounded-full flex items-center justify-center text-[8px] font-bold text-white border-2 border-white -ml-1.5 first:ml-0 shadow-sm" style="background: {{ $p->user?->color ?? '#6b7280' }}" title="{{ $p->user?->name }}">
                             {{ $p->user?->avatar ?? substr($p->user?->name ?? '?', 0, 2) }}
                         </div>
                     @endforeach

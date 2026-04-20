@@ -90,6 +90,22 @@ class Deal extends Model
         'charged_by_user_id',
         'charged_at',
         'is_green',
+        // Payroll / finance snapshot fields (mass-assigned from PipelineStateService
+        // and DealPayrollSyncService — silently dropped if not listed here)
+        'fronter_user_id',
+        'closer_user_id_payroll',
+        'admin_user_id_payroll',
+        'payroll_status',
+        'commission_status',
+        'payroll_locked_at',
+        'payroll_locked_by',
+        'finance_snapshot_id',
+        'gross_amount',
+        'collected_amount',
+        'payment_date',
+        // Week tracking (populated by WeeklyStatsService when snapshotting)
+        'week_key',
+        'week_start_date',
     ];
 
     /**
