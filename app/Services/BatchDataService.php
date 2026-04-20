@@ -36,7 +36,7 @@ class BatchDataService
     public function skipTrace(array $leads): array
     {
         if (!$this->isConfigured()) {
-            throw new \RuntimeException('BatchData API key not configured. Add it in Atlas Settings.');
+            throw new \RuntimeException('BatchData API key not configured. Add it in Admin Settings.');
         }
 
         $response = Http::timeout(60)

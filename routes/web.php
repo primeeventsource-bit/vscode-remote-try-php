@@ -57,12 +57,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/finance/entries', \App\Livewire\Finance\FinancialEntries::class)->name('finance.entries');
     Route::get('/finance/settings', \App\Livewire\Finance\FinanceSettings::class)->name('finance.settings');
 
-    // Atlas Global — Lead Intelligence Platform
-    Route::middleware('role:master_admin')->prefix('atlas')->name('atlas.')->group(function () {
-        Route::get('/', \App\Livewire\AtlasDashboard::class)->name('dashboard');
-        Route::get('/export-csv', [\App\Http\Controllers\AtlasController::class, 'exportCSV'])->name('export-csv');
-    });
-
     // Enterprise Lead Management
     Route::get('/leads/duplicates', \App\Livewire\DuplicateReview::class)->name('duplicate-review');
     Route::get('/leads/imports', \App\Livewire\LeadImports::class)->name('lead-imports');

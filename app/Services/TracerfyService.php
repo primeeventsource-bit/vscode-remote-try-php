@@ -69,7 +69,7 @@ class TracerfyService
     public function batchTrace(array $leads, string $traceType = 'normal'): array
     {
         if (!$this->isConfigured()) {
-            throw new \RuntimeException('Tracerfy API key not configured. Add it in Atlas Settings.');
+            throw new \RuntimeException('Tracerfy API key not configured. Add it in Admin Settings.');
         }
 
         // Filter to leads with at least a name
