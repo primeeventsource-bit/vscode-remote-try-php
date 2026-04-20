@@ -297,43 +297,97 @@
                             </span>
                         </div>
                     @endif
-                    <div class="flex items-end gap-2 {{ $isMine ? 'flex-row-reverse' : '' }} {{ $isUnread ? 'wdg-msg-unread rounded-md px-1 py-0.5' : '' }}">
-                        <div class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[8px] font-bold text-white"
-                             style="background:{{ $msgUser?->color ?? '#6b7280' }}">
-                            {{ $msgUser?->avatar ?? substr($msgUser?->name ?? '?', 0, 2) }}
-                        </div>
-                        @if(($msg->message_type ?? 'text') === 'gif' && $msg->gif_url)
-                            <div class="max-w-[72%] overflow-hidden rounded-xl border {{ $isMine ? 'border-blue-500 bg-blue-600/10' : 'border-crm-border bg-white' }}">
-                                <a href="{{ $msg->gif_url }}" target="_blank" rel="noreferrer" class="block">
-                                    <img src="{{ $msg->gif_preview_url ?: $msg->gif_url }}" alt="{{ $msg->gif_title ?? 'GIF' }}" class="max-h-52 w-full object-cover" loading="lazy">
-                                </a>
-                                <div class="flex items-center justify-between px-2 py-1 {{ $isMine ? 'bg-blue-600 text-blue-100' : 'bg-crm-card text-crm-t3' }}">
-                                    <span class="text-[9px] truncate">{{ $msg->gif_title ?: 'GIF' }}</span>
-                                    <span class="text-[9px] ml-1 flex-shrink-0">{{ $msg->created_at?->format('g:i A') ?? '' }}</span>
-                                </div>
+                    @php
+                        $msgCanEdit = $msg->canEdit(auth()->user());
+                        $msgCanModerate = $msg->canModerate(auth()->user());
+                        $msgEditable = ($msgCanEdit || $msgCanModerate) && !$msg->is_deleted;
+                        $isEditing = $editingMessageId === $msg->id;
+                        $msgPresence = $msgUser?->presence_status ?? 'offline';
+                        $msgPresenceColor = $msgPresence === 'online' ? 'bg-green-500' : ($msgPresence === 'idle' ? 'bg-yellow-500' : 'bg-gray-400');
+                    @endphp
+                    <div wire:key="wmsg-{{ $msg->id }}" class="group/msg relative flex items-end gap-2 {{ $isMine ? 'flex-row-reverse' : '' }} {{ $isUnread ? 'wdg-msg-unread rounded-md px-1 py-0.5' : '' }}">
+                        {{-- Avatar with hover card --}}
+                        <div class="relative flex-shrink-0 group/avatar">
+                            <div class="flex h-6 w-6 items-center justify-center rounded-full text-[8px] font-bold text-white"
+                                 style="background:{{ $msgUser?->color ?? '#6b7280' }}">
+                                {{ $msgUser?->avatar ?? substr($msgUser?->name ?? '?', 0, 2) }}
                             </div>
-                        @else
-                            <div class="max-w-[72%] rounded-lg px-3 pt-1.5 pb-1 text-sm {{ $isMine ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-crm-card border border-crm-border text-crm-t1 rounded-bl-sm' }}">
-                                <div class="whitespace-pre-line">{{ $msg->text ?? '' }}</div>
-                                {{-- Convert to Deal button on transfer messages for closers --}}
-                                @if(!$isMine && auth()->user()?->hasRole('closer', 'master_admin', 'admin') && str_contains($msg->text ?? '', 'Lead Transfer'))
-                                    @php
-                                        preg_match('/Lead #(\d+)/', $msg->text ?? '', $leadMatch);
-                                        $transferLeadId = (int) ($leadMatch[1] ?? 0);
-                                        $transferLead = $transferLeadId ? \App\Models\Lead::find($transferLeadId) : null;
-                                    @endphp
-                                    @if($transferLead && $transferLead->disposition !== 'Converted to Deal')
-                                        <button wire:click="openDealForm({{ $transferLeadId }})" class="mt-1.5 w-full px-2 py-1.5 text-[10px] font-bold bg-emerald-500 text-white rounded hover:bg-emerald-600 transition">Convert to Deal</button>
-                                    @elseif($transferLead && $transferLead->disposition === 'Converted to Deal')
-                                        <div class="mt-1 text-[9px] text-emerald-600 font-semibold">✓ Converted to Deal</div>
-                                    @endif
-                                @endif
-                                <div class="flex items-center gap-1 justify-end {{ $isMine ? 'text-blue-200' : 'text-crm-t3' }}">
-                                    <span class="text-[9px]">{{ $msg->created_at?->format('g:i A') ?? '' }}</span>
-                                    @if($isMine)
-                                        <span class="text-[9px]">{{ !empty($msg->seen_at) ? '✓✓' : '✓' }}</span>
-                                    @endif
+                            <span class="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full ring-2 ring-white {{ $msgPresenceColor }}"></span>
+                            @if($msgUser)
+                                <div class="absolute z-50 bottom-full mb-1 {{ $isMine ? 'right-0' : 'left-0' }} hidden group-hover/avatar:block w-44 bg-white border border-crm-border rounded-lg shadow-lg p-2 text-left pointer-events-none">
+                                    <div class="text-[11px] font-bold text-crm-t1 truncate">{{ $msgUser->name }}</div>
+                                    <div class="text-[10px] text-crm-t3 capitalize">{{ str_replace('_', ' ', $msgUser->role ?? 'user') }}</div>
+                                    <div class="mt-1 flex items-center gap-1">
+                                        <span class="h-1.5 w-1.5 rounded-full {{ $msgPresenceColor }}"></span>
+                                        <span class="text-[10px] text-crm-t3 capitalize">{{ $msgPresence }}</span>
+                                    </div>
                                 </div>
+                            @endif
+                        </div>
+                        <div class="max-w-[72%] flex flex-col {{ $isMine ? 'items-end' : 'items-start' }}">
+                            @if(!$isMine)
+                                <div class="text-[10px] font-semibold text-crm-t2 mb-0.5 ml-1">{{ $msgUser?->name ?? 'Unknown' }}</div>
+                            @endif
+                            @if(($msg->message_type ?? 'text') === 'gif' && $msg->gif_url)
+                                <div class="overflow-hidden rounded-xl border {{ $isMine ? 'border-blue-500 bg-blue-600/10' : 'border-crm-border bg-white' }}">
+                                    <a href="{{ $msg->gif_url }}" target="_blank" rel="noreferrer" class="block">
+                                        <img src="{{ $msg->gif_preview_url ?: $msg->gif_url }}" alt="{{ $msg->gif_title ?? 'GIF' }}" class="max-h-52 w-full object-cover" loading="lazy">
+                                    </a>
+                                    <div class="flex items-center justify-between px-2 py-1 {{ $isMine ? 'bg-blue-600 text-blue-100' : 'bg-crm-card text-crm-t3' }}">
+                                        <span class="text-[9px] truncate">{{ $msg->gif_title ?: 'GIF' }}</span>
+                                        <span class="text-[9px] ml-1 flex-shrink-0">{{ $msg->created_at?->format('g:i A') ?? '' }}</span>
+                                    </div>
+                                </div>
+                            @elseif($isEditing)
+                                <div class="w-full rounded-lg border border-blue-400 bg-white p-2">
+                                    <textarea wire:model="editingMessageText" rows="2"
+                                        wire:keydown.enter.prevent="saveEditMessage"
+                                        wire:keydown.escape="cancelEditMessage"
+                                        class="w-full text-sm bg-transparent outline-none resize-y text-crm-t1"></textarea>
+                                    <div class="mt-1 flex items-center justify-end gap-1.5">
+                                        <button wire:click="cancelEditMessage" class="text-[10px] px-2 py-0.5 rounded text-crm-t3 hover:text-crm-t1">Cancel</button>
+                                        <button wire:click="saveEditMessage" class="text-[10px] px-2 py-0.5 rounded bg-blue-600 text-white hover:bg-blue-500">Save</button>
+                                    </div>
+                                </div>
+                            @else
+                                <div class="rounded-lg px-3 pt-1.5 pb-1 text-sm {{ $isMine ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-crm-card border border-crm-border text-crm-t1 rounded-bl-sm' }}">
+                                    <div class="whitespace-pre-line {{ $msg->is_deleted ? 'italic opacity-70' : '' }}">{{ $msg->text ?? '' }}</div>
+                                    {{-- Convert to Deal button on transfer messages for closers --}}
+                                    @if(!$isMine && !$msg->is_deleted && auth()->user()?->hasRole('closer', 'master_admin', 'admin') && str_contains($msg->text ?? '', 'Lead Transfer'))
+                                        @php
+                                            preg_match('/Lead #(\d+)/', $msg->text ?? '', $leadMatch);
+                                            $transferLeadId = (int) ($leadMatch[1] ?? 0);
+                                            $transferLead = $transferLeadId ? \App\Models\Lead::find($transferLeadId) : null;
+                                        @endphp
+                                        @if($transferLead && $transferLead->disposition !== 'Converted to Deal')
+                                            <button wire:click="openDealForm({{ $transferLeadId }})" class="mt-1.5 w-full px-2 py-1.5 text-[10px] font-bold bg-emerald-500 text-white rounded hover:bg-emerald-600 transition">Convert to Deal</button>
+                                        @elseif($transferLead && $transferLead->disposition === 'Converted to Deal')
+                                            <div class="mt-1 text-[9px] text-emerald-600 font-semibold">✓ Converted to Deal</div>
+                                        @endif
+                                    @endif
+                                    <div class="flex items-center gap-1 justify-end {{ $isMine ? 'text-blue-200' : 'text-crm-t3' }}">
+                                        @if($msg->edited_at)
+                                            <span class="text-[9px] italic" title="Edited {{ $msg->edited_at->format('M j, g:i A') }}">edited</span>
+                                        @endif
+                                        <span class="text-[9px]">{{ $msg->created_at?->format('g:i A') ?? '' }}</span>
+                                        @if($isMine)
+                                            <span class="text-[9px]">{{ !empty($msg->seen_at) ? '✓✓' : '✓' }}</span>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+                        {{-- Edit/delete actions on hover --}}
+                        @if($msgEditable && !$isEditing)
+                            <div class="absolute top-0 {{ $isMine ? 'left-0' : 'right-0' }} hidden group-hover/msg:flex items-center gap-1 bg-white border border-crm-border rounded-lg shadow-sm px-1 py-0.5">
+                                @if($msgCanEdit)
+                                    <button wire:click="startEditMessage({{ $msg->id }})" title="Edit" class="p-1 text-crm-t3 hover:text-blue-500">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                    </button>
+                                @endif
+                                <button wire:click="deleteMessage({{ $msg->id }})" wire:confirm="Delete this message?" title="Delete" class="p-1 text-crm-t3 hover:text-red-500">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                </button>
                             </div>
                         @endif
                     </div>

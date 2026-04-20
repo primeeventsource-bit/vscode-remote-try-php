@@ -197,7 +197,8 @@ class MessageService
         if (!$chatId) return collect();
 
         try {
-            return Message::where('chat_id', $chatId)
+            return Message::with('sender')
+                ->where('chat_id', $chatId)
                 ->orderBy('id')
                 ->limit($limit)
                 ->get();

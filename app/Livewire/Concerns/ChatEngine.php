@@ -3,6 +3,7 @@
 namespace App\Livewire\Concerns;
 
 use App\Models\Chat;
+use App\Models\Message;
 use App\Models\User;
 use App\Services\Chat\CallService;
 use App\Services\Chat\ChatService;
@@ -19,6 +20,13 @@ use Illuminate\Support\Facades\DB;
  */
 trait ChatEngine
 {
+    // ═══════════════════════════════════════════════════════
+    // EDIT / DELETE STATE (shared by ChatWidget + ChatPage)
+    // ═══════════════════════════════════════════════════════
+
+    public ?int $editingMessageId = null;
+    public string $editingMessageText = '';
+
     // ═══════════════════════════════════════════════════════
     // SERVICE ACCESSORS
     // ═══════════════════════════════════════════════════════
@@ -255,6 +263,95 @@ trait ChatEngine
                 ->first();
         } catch (\Throwable $e) {
             return null;
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // EDIT MESSAGE
+    // ═══════════════════════════════════════════════════════
+
+    public function startEditMessage(int $id): void
+    {
+        $msg = Message::find($id);
+        $user = auth()->user();
+        if (!$msg || (!$msg->canEdit($user) && !$msg->canModerate($user))) return;
+
+        $this->editingMessageId = $id;
+        $this->editingMessageText = (string) $msg->text;
+    }
+
+    public function saveEditMessage(): void
+    {
+        if (!$this->editingMessageId) return;
+
+        $text = trim($this->editingMessageText);
+        if ($text === '' || mb_strlen($text) > 4000) {
+            $this->cancelEditMessage();
+            return;
+        }
+
+        $msg = Message::find($this->editingMessageId);
+        $user = auth()->user();
+        if (!$msg || (!$msg->canEdit($user) && !$msg->canModerate($user))) {
+            $this->cancelEditMessage();
+            return;
+        }
+
+        // Preserve original on first edit so admins can audit / revert
+        if (empty($msg->original_text)) {
+            $msg->original_text = $msg->text;
+        }
+        $msg->text = $text;
+        $msg->edited_at = now();
+        $msg->save();
+
+        $this->cancelEditMessage();
+    }
+
+    public function cancelEditMessage(): void
+    {
+        $this->editingMessageId = null;
+        $this->editingMessageText = '';
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // DELETE MESSAGE (soft — keeps row, replaces text)
+    // ═══════════════════════════════════════════════════════
+
+    public function deleteMessage(int $id): void
+    {
+        $msg = Message::find($id);
+        $user = auth()->user();
+        if (!$msg || (!$msg->canEdit($user) && !$msg->canModerate($user))) return;
+
+        if (empty($msg->original_text)) {
+            $msg->original_text = $msg->text;
+        }
+        $msg->is_deleted = true;
+        $msg->text = '[Message deleted]';
+        $msg->save();
+
+        if ($this->editingMessageId === $id) {
+            $this->cancelEditMessage();
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // DELETE CHAT (soft — admin or creator only)
+    // ═══════════════════════════════════════════════════════
+
+    public function deleteChat(int $id): void
+    {
+        $chat = Chat::find($id);
+        $user = auth()->user();
+        if (!$chat || !$chat->canDelete($user)) return;
+
+        $chat->forceFill(['deleted_by' => $user->id])->save();
+        $chat->delete();
+
+        if ($this->selectedChat === $id) {
+            $this->selectedChat = null;
+            $this->messageInput = '';
         }
     }
 

@@ -33,15 +33,35 @@ class Message extends Model
         'status',
         'delivered_at',
         'seen_at',
+        'edited_at',
+        'is_deleted',
+        'original_text',
     ];
 
     protected $casts = [
         'reactions' => 'array',
         'metadata' => 'array',
         'is_system' => 'boolean',
+        'is_deleted' => 'boolean',
         'delivered_at' => 'datetime',
         'seen_at' => 'datetime',
+        'edited_at' => 'datetime',
     ];
+
+    public function canEdit(?User $user): bool
+    {
+        if (!$user) return false;
+        if ($this->is_system) return false;
+        if ($this->is_deleted) return false;
+        if (($this->message_type ?? 'text') !== 'text') return false;
+        if ((int) $this->sender_id !== (int) $user->id) return false;
+        return $this->created_at && $this->created_at->gt(now()->subDay());
+    }
+
+    public function canModerate(?User $user): bool
+    {
+        return $user instanceof User && in_array($user->role, ['admin', 'master_admin'], true);
+    }
 
     public function chat()
     {

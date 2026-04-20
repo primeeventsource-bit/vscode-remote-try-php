@@ -109,7 +109,8 @@
                         // Last message preview (pre-loaded in render, no N+1)
                         $lastMsg = ($lastMessages ?? collect())->get($chat->id);
                     @endphp
-                    <button wire:key="chat-{{ $chat->id }}" wire:click="selectChat({{ $chat->id }})"
+                    <div wire:key="chat-{{ $chat->id }}" class="group/row relative">
+                    <button wire:click="selectChat({{ $chat->id }})"
                         class="flex w-full items-center gap-3 border-b border-crm-border px-3 py-2.5 text-left transition {{ $isSelected ? 'bg-blue-50 border-l-2 border-l-blue-500' : ($chatUnread > 0 ? ($isDm ? 'bg-blue-50/40' : 'bg-red-50/40') : 'hover:bg-crm-hover') }}">
                         {{-- Avatar --}}
                         <div class="relative flex-shrink-0">
@@ -156,6 +157,15 @@
                             </div>
                         </div>
                     </button>
+                    @if($chat->canDelete(auth()->user()))
+                        <button wire:click="deleteChat({{ $chat->id }})"
+                                wire:confirm="Delete this conversation? Messages will be hidden but kept in the database."
+                                title="Delete conversation"
+                                class="absolute top-1/2 right-2 -translate-y-1/2 hidden group-hover/row:flex h-6 w-6 items-center justify-center rounded text-crm-t3 hover:text-red-500 hover:bg-white/90">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        </button>
+                    @endif
+                    </div>
                 @empty
                     <div class="px-4 py-12 text-center">
                         <div class="text-2xl mb-2">{{ match($chatTab) { 'direct' => '👤', 'group' => '👥', 'unread' => '✓', default => '💬' } }}</div>
@@ -304,23 +314,42 @@
                             </div>
                         @endif
 
-                        @php $isUnread = !$isMine && empty($msg->seen_at); @endphp
+                        @php
+                            $isUnread = !$isMine && empty($msg->seen_at);
+                            $msgCanEdit = $msg->canEdit(auth()->user());
+                            $msgCanModerate = $msg->canModerate(auth()->user());
+                            $msgEditable = ($msgCanEdit || $msgCanModerate) && !$msg->is_deleted;
+                            $isEditing = $editingMessageId === $msg->id;
+                            $msgPresence = $msgUser?->presence_status ?? 'offline';
+                            $msgPresenceColor = $msgPresence === 'online' ? 'bg-emerald-500' : ($msgPresence === 'idle' ? 'bg-amber-400' : 'bg-gray-400');
+                        @endphp
 
                         {{-- Message Bubble --}}
-                        <div wire:key="msg-{{ $msg->id }}" class="flex {{ $isMine ? 'justify-end' : 'justify-start' }} mb-1 {{ $isUnread ? 'msg-unread rounded-lg' : '' }}">
+                        <div wire:key="msg-{{ $msg->id }}" class="group/msg relative flex {{ $isMine ? 'justify-end' : 'justify-start' }} mb-1 {{ $isUnread ? 'msg-unread rounded-lg' : '' }}">
                             @if(!$isMine)
-                                <div class="flex-shrink-0 mr-2 mt-1">
+                                <div class="flex-shrink-0 mr-2 mt-1 relative group/avatar">
                                     @if($msgUser?->avatar_path)
                                         <img src="{{ asset('storage/' . $msgUser?->avatar_path) }}" class="w-7 h-7 rounded-full object-cover">
                                     @else
                                         <div class="w-7 h-7 rounded-full flex items-center justify-center text-[8px] font-bold text-white" style="background: {{ $msgUser?->color ?? '#6b7280' }}">{{ $msgUser?->avatar ?? substr($msgUser?->name ?? '?', 0, 2) }}</div>
                                     @endif
+                                    <span class="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full ring-2 ring-white {{ $msgPresenceColor }}"></span>
+                                    @if($msgUser)
+                                        <div class="absolute z-50 bottom-full mb-1 left-0 hidden group-hover/avatar:block w-48 bg-white border border-crm-border rounded-lg shadow-lg p-2 text-left pointer-events-none">
+                                            <div class="text-xs font-bold text-crm-t1 truncate">{{ $msgUser->name }}</div>
+                                            <div class="text-[10px] text-crm-t3 capitalize">{{ str_replace('_', ' ', $msgUser->role ?? 'user') }}</div>
+                                            <div class="mt-1 flex items-center gap-1">
+                                                <span class="h-1.5 w-1.5 rounded-full {{ $msgPresenceColor }}"></span>
+                                                <span class="text-[10px] text-crm-t3 capitalize">{{ $msgPresence }}</span>
+                                            </div>
+                                        </div>
+                                    @endif
                                 </div>
                             @endif
 
                             <div class="max-w-[70%]">
-                                @if(!$isMine && $isGroup)
-                                    <div class="text-[10px] font-semibold text-crm-t3 mb-0.5 ml-1">{{ $msgUser?->name ?? 'Unknown' }}</div>
+                                @if(!$isMine)
+                                    <div class="text-[11px] font-semibold text-crm-t2 mb-0.5 ml-1">{{ $msgUser?->name ?? 'Unknown' }}</div>
                                 @endif
 
                                 @if(($msg->message_type ?? 'text') === 'gif' && $msg->gif_url)
@@ -328,20 +357,32 @@
                                         <a href="{{ $msg->gif_url }}" target="_blank" rel="noreferrer" class="block bg-black/5">
                                             <img src="{{ $msg->gif_preview_url ?: $msg->gif_url }}" alt="{{ $msg->gif_title ?? 'GIF' }}" class="max-h-64 w-full object-cover" loading="lazy">
                                         </a>
-                                        {{-- Timestamp inside GIF bubble --}}
                                         <div class="flex items-center justify-between px-2.5 py-1 {{ $isMine ? 'bg-blue-600 text-blue-100' : 'bg-gray-100 text-gray-400' }}">
                                             <span class="text-[10px]">{{ $msg->gif_title ?: 'GIF' }}</span>
                                             <span class="text-[10px]">{{ $msg->created_at?->format('g:i A') ?? '' }}@if($isMine) @if(!empty($msg->seen_at)) ✓✓ @elseif(!empty($msg->delivered_at)) ✓✓ @else ✓ @endif @endif</span>
                                         </div>
                                     </div>
+                                @elseif($isEditing)
+                                    <div class="rounded-2xl border border-blue-400 bg-white p-2 shadow-sm">
+                                        <textarea wire:model="editingMessageText" rows="2"
+                                            wire:keydown.enter.prevent="saveEditMessage"
+                                            wire:keydown.escape="cancelEditMessage"
+                                            class="w-full text-sm bg-transparent outline-none resize-y text-crm-t1"></textarea>
+                                        <div class="mt-1 flex items-center justify-end gap-2">
+                                            <button wire:click="cancelEditMessage" class="text-xs px-2 py-1 rounded text-crm-t3 hover:text-crm-t1">Cancel</button>
+                                            <button wire:click="saveEditMessage" class="text-xs px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-500">Save</button>
+                                        </div>
+                                    </div>
                                 @else
-                                    {{-- Text bubble with timestamp INSIDE --}}
                                     <div class="px-3 pt-2 pb-1 text-sm leading-relaxed shadow-sm
                                         {{ $isMine
                                             ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl rounded-br-md'
                                             : 'bg-white border border-gray-200 text-gray-900 rounded-2xl rounded-bl-md' }}">
-                                        <div>{{ $msg->text ?? '' }}</div>
+                                        <div class="{{ $msg->is_deleted ? 'italic opacity-70' : '' }}">{{ $msg->text ?? '' }}</div>
                                         <div class="flex items-center gap-1 justify-end mt-0.5 {{ $isMine ? 'text-blue-200' : 'text-gray-400' }}">
+                                            @if($msg->edited_at)
+                                                <span class="text-[10px] italic" title="Edited {{ $msg->edited_at->format('M j, g:i A') }}">edited</span>
+                                            @endif
                                             <span class="text-[10px]">{{ $msg->created_at?->format('g:i A') ?? '' }}</span>
                                             @if($isMine)
                                                 @if(!empty($msg->seen_at))
@@ -356,6 +397,20 @@
                                     </div>
                                 @endif
                             </div>
+
+                            {{-- Hover actions --}}
+                            @if($msgEditable && !$isEditing)
+                                <div class="absolute top-0 {{ $isMine ? 'left-0 -translate-x-full' : 'right-0 translate-x-full' }} hidden group-hover/msg:flex items-center gap-1 px-1">
+                                    @if($msgCanEdit)
+                                        <button wire:click="startEditMessage({{ $msg->id }})" title="Edit" class="p-1 rounded text-crm-t3 hover:text-blue-500 hover:bg-white/80">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                        </button>
+                                    @endif
+                                    <button wire:click="deleteMessage({{ $msg->id }})" wire:confirm="Delete this message?" title="Delete" class="p-1 rounded text-crm-t3 hover:text-red-500 hover:bg-white/80">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                    </button>
+                                </div>
+                            @endif
                         </div>
                     @endforeach
                 @else

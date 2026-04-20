@@ -7,21 +7,29 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Chat extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $table = 'chats';
 
     protected $fillable = [
-        'name', 'type', 'members', 'icon_path', 'icon_emoji', 'created_by', 'pinned',
+        'name', 'type', 'members', 'icon_path', 'icon_emoji', 'created_by', 'pinned', 'deleted_by',
     ];
 
     protected $casts = [
         'members' => 'array',
         'pinned'  => 'boolean',
     ];
+
+    public function canDelete(?User $user): bool
+    {
+        if (!$user) return false;
+        if (in_array($user->role, ['admin', 'master_admin'], true)) return true;
+        return (int) $this->created_by === (int) $user->id;
+    }
 
     // ── Relationships ──────────────────────────────
 
