@@ -137,8 +137,10 @@ class Verification extends Component
             if ($this->tab !== 'all' && isset($tabs[$this->tab])) $query->where('status', $tabs[$this->tab]);
             $deals = $query->paginate($this->perPage);
 
-            // Single aggregation query for all tab counts instead of N+1 count queries
-            $countRows = (clone $base)->selectRaw('status, COUNT(*) as cnt')->groupBy('status')->pluck('cnt', 'status');
+            // Single aggregation query for all tab counts instead of N+1 count queries.
+            // reorder() drops the parent orderBy('id'); MySQL's only_full_group_by mode
+            // rejects ORDER BY id alongside GROUP BY status (id isn't aggregated).
+            $countRows = (clone $base)->reorder()->selectRaw('status, COUNT(*) as cnt')->groupBy('status')->pluck('cnt', 'status');
             $counts = [];
             foreach ($tabs as $k => $v) { $counts[$k] = $countRows->get($v, 0); }
             $counts['all'] = $countRows->sum();

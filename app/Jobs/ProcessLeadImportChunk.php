@@ -140,7 +140,7 @@ class ProcessLeadImportChunk implements ShouldQueue
                     'lead_import_batch_id' => $this->batchId,
                     'row_number' => $rowNum,
                     'raw_row' => $row,
-                    'reason' => 'Exception: ' . substr($e->getMessage(), 0, 500),
+                    'reason' => 'Exception: ' . mb_substr($e->getMessage(), 0, 2000),
                     'failure_type' => 'exception',
                 ]);
                 $failedCount++;
