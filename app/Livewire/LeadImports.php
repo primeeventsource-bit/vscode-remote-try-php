@@ -55,6 +55,33 @@ class LeadImports extends Component
         ]);
     }
 
+    public function forceFailBatch(int $id): void
+    {
+        $user = auth()->user();
+        if (!$user || !$user->hasRole('master_admin', 'admin')) return;
+
+        $batch = LeadImportBatch::find($id);
+        if (!$batch || !in_array($batch->status, ['pending', 'processing'])) return;
+
+        $importedCount = \App\Models\Lead::where('import_batch_id', $id)->count();
+
+        $batch->update([
+            'status' => 'failed',
+            'completed_at' => now(),
+            'successful_rows' => $importedCount,
+            'processed_rows' => max($batch->processed_rows, $importedCount),
+            'error_message' => 'Manually marked as failed by ' . $user->name,
+            'summary_json' => [
+                'total' => $batch->total_rows,
+                'imported' => $importedCount,
+                'duplicates' => $batch->duplicate_rows,
+                'invalid' => $batch->invalid_rows,
+                'failed' => max(0, $batch->total_rows - $importedCount - $batch->duplicate_rows - $batch->invalid_rows),
+                'force_failed' => true,
+            ],
+        ]);
+    }
+
     public function retryBatch(int $id): void
     {
         $batch = LeadImportBatch::find($id);
@@ -79,7 +106,7 @@ class LeadImports extends Component
             'failed_rows' => 0,
         ]);
 
-        \App\Jobs\ProcessLeadImportChunk::dispatchSync(
+        \App\Jobs\ProcessLeadImportChunk::dispatch(
             $batch->id,
             $rows,
             1,

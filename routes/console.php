@@ -22,6 +22,13 @@ Schedule::command('leads:scan-duplicates --chunk=500')
     ->dailyAt('03:00')
     ->withoutOverlapping();
 
+// ─── Recover stuck CSV imports (every 5 minutes) ─────────────
+// Auto-fails batches stuck in pending/processing > 30 min so the
+// "Processing..." UI does not hang after a PHP timeout.
+Schedule::command('leads:recover-stuck-imports --minutes=30')
+    ->everyFiveMinutes()
+    ->withoutOverlapping();
+
 // ─── Expire stale API tokens ─────────────────────────────────
 Schedule::call(function () {
     \Illuminate\Support\Facades\DB::table('api_tokens')

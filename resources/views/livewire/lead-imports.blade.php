@@ -81,6 +81,7 @@
                                     @endif
                                     @if(in_array($import->status, ['pending', 'processing']) && auth()->user()?->hasRole('master_admin', 'admin'))
                                         <button wire:click="forceCompleteBatch({{ $import->id }})" wire:confirm="Force-complete this stuck batch? It will count actual imported leads." class="px-2 py-1 text-[10px] font-semibold rounded bg-amber-50 text-amber-600 border border-amber-200 hover:bg-amber-100 transition">Force Complete</button>
+                                        <button wire:click="forceFailBatch({{ $import->id }})" wire:confirm="Mark this stuck batch as FAILED? Use this if the import errored mid-run." class="px-2 py-1 text-[10px] font-semibold rounded bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition">Force Fail</button>
                                     @endif
                                 </div>
                             </td>

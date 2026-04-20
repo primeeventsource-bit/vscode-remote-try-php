@@ -29,7 +29,7 @@ class Leads extends Component
 {
     use WithFileUploads, SendsTransferDm, WithPagination;
 
-    private const MAX_IMPORT_ROWS = 10000;
+    private const MAX_IMPORT_ROWS = 100000;
     private const IMPORT_CHUNK_SIZE = 500;
 
     // ── Filters & Search ────────────────────────────────────
@@ -56,7 +56,6 @@ class Leads extends Component
     // ── Import ──────────────────────────────────────────────
     public bool $showImportModal = false;
     public string $csvText = '';
-    public int $importRowsProcessed = 0;
     public $leadFile = null;
     public string $importStatus = '';
     public string $importError = '';
@@ -355,73 +354,106 @@ class Leads extends Component
         $this->importStatus = '';
         $this->importError = '';
 
-        $csvContent = '';
+        // Safety net for large CSVs: parsing 100k+ rows can spike memory.
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
+
+        // Resolve source to a file path so we can stream it the same way
+        // for both uploads and pasted text.
+        $sourcePath = null;
+        $tempPath = null;
+        $sourceLabel = 'pasted_csv';
 
         if ($this->leadFile) {
             try {
                 $this->validate(['leadFile' => 'file|max:102400|mimes:csv,txt']);
-                $csvContent = file_get_contents($this->leadFile->getRealPath());
-                $csvContent = preg_replace('/^\xEF\xBB\xBF/', '', $csvContent);
+                $sourcePath = $this->leadFile->getRealPath();
+                $sourceLabel = $this->leadFile->getClientOriginalName();
             } catch (\Throwable $e) {
                 $this->importError = 'Invalid file: ' . $e->getMessage();
                 return;
             }
         } elseif (trim($this->csvText) !== '') {
-            $csvContent = $this->csvText;
+            $tempPath = tempnam(sys_get_temp_dir(), 'leadcsv_');
+            file_put_contents($tempPath, preg_replace('/^\xEF\xBB\xBF/', '', $this->csvText));
+            $sourcePath = $tempPath;
         } else {
             $this->importError = 'Upload a CSV file or paste CSV data before importing.';
             return;
         }
 
-        $rows = $this->parseCsvToRows($csvContent);
-
-        if (empty($rows)) {
-            $this->importError = 'No importable rows found in the file.';
-            return;
-        }
-
         try {
-            // Create import batch record
             $batch = LeadImportBatch::create([
                 'user_id' => auth()->id(),
-                'original_filename' => $this->leadFile?->getClientOriginalName() ?? 'pasted_csv',
+                'original_filename' => $sourceLabel,
                 'file_type' => 'csv',
-                'total_rows' => count($rows),
+                'total_rows' => 0,
                 'status' => 'pending',
                 'duplicate_strategy' => $this->duplicateStrategy,
             ]);
 
-            // Process import chunks synchronously to avoid pending queue issues
-            $chunks = array_chunk($rows, self::IMPORT_CHUNK_SIZE);
+            // Stream rows; buffer up to IMPORT_CHUNK_SIZE then dispatch.
+            // Hold one chunk back so we know which dispatch is the last
+            // (which triggers batch finalization in the job).
+            $buffer = [];
+            $pending = null;
             $rowOffset = 1;
+            $chunkCount = 0;
+            $totalRows = 0;
 
-            foreach ($chunks as $i => $chunk) {
-                $isLast = ($i === count($chunks) - 1);
-                try {
-                    ProcessLeadImportChunk::dispatchSync(
-                        $batch->id,
-                        $chunk,
-                        $rowOffset,
-                        $isLast
-                    );
-                } catch (\Throwable $e) {
-                    \Log::error('Failed to process import chunk', ['batch' => $batch->id, 'chunk' => $i, 'error' => $e->getMessage()]);
-                    $this->importStatus = "Import partially completed — some chunks failed. Check Import History.";
+            foreach ($this->streamCsvRows($sourcePath) as $row) {
+                $buffer[] = $row;
+                $totalRows++;
+
+                if ($totalRows > self::MAX_IMPORT_ROWS) {
+                    $batch->delete();
+                    $this->importError = 'CSV exceeds the ' . number_format(self::MAX_IMPORT_ROWS) . '-row limit per import. Split the file.';
                     return;
                 }
-                $rowOffset += count($chunk);
+
+                if (count($buffer) >= self::IMPORT_CHUNK_SIZE) {
+                    if ($pending !== null) {
+                        ProcessLeadImportChunk::dispatch($batch->id, $pending['rows'], $pending['offset'], false);
+                        $chunkCount++;
+                    }
+                    $pending = ['rows' => $buffer, 'offset' => $rowOffset];
+                    $rowOffset += count($buffer);
+                    $buffer = [];
+                }
             }
 
-            $batch->refresh();
-            $this->importStatus = "Import complete: {$batch->successful_rows} of {$batch->total_rows} rows imported successfully.";
+            if (!empty($buffer)) {
+                if ($pending !== null) {
+                    ProcessLeadImportChunk::dispatch($batch->id, $pending['rows'], $pending['offset'], false);
+                    $chunkCount++;
+                }
+                $pending = ['rows' => $buffer, 'offset' => $rowOffset];
+            }
+
+            if ($pending === null) {
+                $batch->delete();
+                $this->importError = 'No importable rows found in the file.';
+                return;
+            }
+
+            ProcessLeadImportChunk::dispatch($batch->id, $pending['rows'], $pending['offset'], true);
+            $chunkCount++;
+
+            $batch->update(['total_rows' => $totalRows]);
+
+            $this->importStatus = "Queued " . number_format($totalRows) . " rows in {$chunkCount} chunk(s). Track progress on the Lead Imports page.";
             $this->leadFile = null;
             $this->csvText = '';
             $this->showImportModal = false;
 
-            Log::info('Lead import queued', ['user' => auth()->id(), 'batch' => $batch->id, 'rows' => $batch->total_rows]);
+            Log::info('Lead import queued', ['user' => auth()->id(), 'batch' => $batch->id, 'rows' => $totalRows, 'chunks' => $chunkCount]);
         } catch (\Throwable $e) {
             Log::error('Lead import failed', ['error' => $e->getMessage(), 'user' => auth()->id()]);
             $this->importError = 'Import failed: ' . $e->getMessage();
+        } finally {
+            if ($tempPath && file_exists($tempPath)) {
+                @unlink($tempPath);
+            }
         }
     }
 
@@ -431,102 +463,167 @@ class Leads extends Component
         $this->importLeads();
     }
 
-    private function parseCsvToRows(string $csv): array
+    /**
+     * Maps each Lead column to a list of accepted CSV header synonyms (normalized).
+     * Header normalization: lowercased, non-alphanumeric stripped.
+     * e.g. "Phone Number1" → "phonenumber1", "County/State" → "countystate".
+     */
+    private const CSV_FIELD_SYNONYMS = [
+        'resort'          => ['resort', 'resortname', 'property', 'club'],
+        'owner_name'      => ['ownername', 'owner', 'name', 'fullname', 'primaryowner'],
+        'phone1'          => ['phone1', 'phonenumber1', 'phone', 'phonenumber', 'primaryphone', 'mobile', 'cell'],
+        'phone2'          => ['phone2', 'phonenumber2', 'secondaryphone', 'altphone', 'altphonenumber'],
+        'city'            => ['city', 'town'],
+        'st'              => ['st', 'state'],
+        'zip'             => ['zip', 'zipcode', 'postal', 'postalcode'],
+        'resort_location' => ['resortlocation', 'location', 'resortcity', 'resortcitystate'],
+        'email'           => ['email', 'emailaddress', 'mail'],
+        // Combined fields handled in mapCsvRow():
+        'countystate'     => ['countystate', 'county_state', 'countyandstate'],
+    ];
+
+    private function streamCsvRows(string $path): \Generator
     {
-        $lines = preg_split('/\r\n|\r|\n/', trim($csv));
-        if (!$lines) return [];
+        // Safety net for \r-only line endings (old-Mac / Excel "CSV for Macintosh"):
+        // fgetcsv would read the entire file as a single row in that case.
+        // \r\n (Windows) and \n (Unix) are handled natively, no rewrite needed.
+        $effectivePath = $path;
+        $normalizedTemp = null;
 
-        $startIndex = 0;
-        $firstRow = array_map('trim', str_getcsv($lines[0]));
-        $h0 = strtolower($firstRow[0] ?? '');
-        $h1 = strtolower($firstRow[1] ?? '');
-
-        if (str_contains($h0, 'resort') || str_contains($h1, 'owner') || str_contains($h0, 'email')) {
-            $startIndex = 1;
-        }
-
-        $rows = [];
-        for ($i = $startIndex; $i < count($lines); $i++) {
-            $v = array_map('trim', str_getcsv($lines[$i]));
-            if (count($v) < 2 || ($v[0] === '' && $v[1] === '')) continue;
-
-            $rows[] = [
-                'resort' => $v[0] ?? '',
-                'owner_name' => $v[1] ?? '',
-                'phone1' => $v[2] ?? '',
-                'phone2' => $v[3] ?? '',
-                'city' => $v[4] ?? '',
-                'st' => $v[5] ?? '',
-                'zip' => $v[6] ?? '',
-                'resort_location' => $v[7] ?? '',
-                'email' => $v[8] ?? '',
-            ];
-        }
-
-        return $rows;
-    }
-
-    public function beginCsvImport(int $totalRows = 0): bool
-    {
-        $this->importRowsProcessed = 0;
-        $this->resetErrorBag('csvText');
-
-        if ($totalRows > self::MAX_IMPORT_ROWS) {
-            $this->addError('csvText', 'CSV exceeds the 10,000 lead limit. Split the file and import 10,000 or fewer rows at a time.');
-            return false;
-        }
-
-        return true;
-    }
-
-    public function importCsvChunk(array $lines, bool $firstChunk = false): bool
-    {
-        if (empty($lines)) return true;
-
-        $startIndex = 0;
-        if ($firstChunk) {
-            $firstRow = array_map('trim', str_getcsv((string) ($lines[0] ?? '')));
-            $h0 = strtolower($firstRow[0] ?? '');
-            $h1 = strtolower($firstRow[1] ?? '');
-            if (str_contains($h0, 'resort') || str_contains($h1, 'owner')) {
-                $startIndex = 1;
+        $peek = @file_get_contents($path, false, null, 0, 8192);
+        if ($peek !== false && str_contains($peek, "\r") && !str_contains($peek, "\n")) {
+            $normalizedTemp = tempnam(sys_get_temp_dir(), 'leadcsv_norm_');
+            $in = fopen($path, 'rb');
+            $out = fopen($normalizedTemp, 'wb');
+            if ($in && $out) {
+                while (!feof($in)) {
+                    $buf = fread($in, 65536);
+                    if ($buf === false) break;
+                    fwrite($out, str_replace("\r", "\n", $buf));
+                }
+                fclose($in);
+                fclose($out);
+                $effectivePath = $normalizedTemp;
             }
         }
 
-        for ($i = $startIndex; $i < count($lines); $i++) {
-            if ($this->importRowsProcessed >= self::MAX_IMPORT_ROWS) {
-                $this->addError('csvText', 'CSV exceeds the 10,000 lead limit. Split the file and import 10,000 or fewer rows at a time.');
-                return false;
-            }
-
-            $line = trim((string) $lines[$i]);
-            if ($line === '') continue;
-
-            $v = array_map('trim', str_getcsv($line));
-            if (count($v) < 2) continue;
-
-            Lead::create([
-                'resort' => $v[0] ?? '',
-                'owner_name' => $v[1] ?? '',
-                'phone1' => $v[2] ?? '',
-                'phone2' => $v[3] ?? '',
-                'city' => $v[4] ?? '',
-                'st' => $v[5] ?? '',
-                'zip' => $v[6] ?? '',
-                'resort_location' => $v[7] ?? '',
-                'source' => 'csv',
-            ]);
-
-            $this->importRowsProcessed++;
+        $handle = @fopen($effectivePath, 'r');
+        if (!$handle) {
+            if ($normalizedTemp && file_exists($normalizedTemp)) @unlink($normalizedTemp);
+            return;
         }
 
-        return true;
+        try {
+            $first = fgetcsv($handle);
+            if ($first === false) return;
+
+            if (isset($first[0])) {
+                $first[0] = preg_replace('/^\xEF\xBB\xBF/', '', (string) $first[0]);
+            }
+            $first = array_map(fn($v) => trim((string) $v), $first);
+
+            // Decide whether the first row is a header by trying to map it.
+            // If any cell normalizes to a known synonym, treat it as a header.
+            $headerMap = $this->buildHeaderMap($first);
+            $hasHeader = !empty($headerMap);
+
+            if (!$hasHeader) {
+                // Legacy positional fallback for headerless CSVs in the old
+                // resort/owner/phone1/phone2/city/st/zip/resort_location/email order.
+                $row = $this->mapCsvRowPositional($first);
+                if ($row !== null) yield $row;
+            }
+
+            while (($v = fgetcsv($handle)) !== false) {
+                $v = array_map(fn($x) => trim((string) $x), $v);
+                $row = $hasHeader
+                    ? $this->mapCsvRowByHeader($v, $headerMap)
+                    : $this->mapCsvRowPositional($v);
+                if ($row !== null) yield $row;
+            }
+        } finally {
+            fclose($handle);
+            if ($normalizedTemp && file_exists($normalizedTemp)) @unlink($normalizedTemp);
+        }
+    }
+
+    /**
+     * Build a map of [columnIndex => leadField] from the header row.
+     * Returns empty array if no header cells matched any known synonym.
+     */
+    private function buildHeaderMap(array $headerCells): array
+    {
+        // Flatten synonyms into [synonym => leadField]
+        $synonymToField = [];
+        foreach (self::CSV_FIELD_SYNONYMS as $field => $synonyms) {
+            foreach ($synonyms as $syn) {
+                $synonymToField[$syn] = $field;
+            }
+        }
+
+        $map = [];
+        foreach ($headerCells as $idx => $cell) {
+            $normalized = strtolower(preg_replace('/[^a-z0-9]/i', '', (string) $cell));
+            if ($normalized === '') continue;
+            if (isset($synonymToField[$normalized])) {
+                $field = $synonymToField[$normalized];
+                // First match wins — keeps phone1 from being overwritten by a later "phone" header
+                if (!in_array($field, $map, true)) {
+                    $map[$idx] = $field;
+                }
+            }
+        }
+        return $map;
+    }
+
+    private function mapCsvRowByHeader(array $v, array $headerMap): ?array
+    {
+        $row = [
+            'resort' => '', 'owner_name' => '', 'phone1' => '', 'phone2' => '',
+            'city' => '', 'st' => '', 'zip' => '', 'resort_location' => '', 'email' => '',
+        ];
+
+        foreach ($headerMap as $idx => $field) {
+            $val = (string) ($v[$idx] ?? '');
+
+            if ($field === 'countystate') {
+                // Split "ORANGE, FL" → city=ORANGE, st=FL (only fill if not already set)
+                $parts = array_map('trim', explode(',', $val));
+                if ($row['city'] === '' && isset($parts[0])) $row['city'] = $parts[0];
+                if ($row['st'] === '' && isset($parts[1])) $row['st'] = $parts[1];
+                continue;
+            }
+
+            $row[$field] = $val;
+        }
+
+        if ($row['owner_name'] === '' && $row['resort'] === '' && $row['phone1'] === '') {
+            return null;
+        }
+
+        return $row;
+    }
+
+    private function mapCsvRowPositional(array $v): ?array
+    {
+        if (count($v) < 2 || ($v[0] === '' && ($v[1] ?? '') === '')) return null;
+
+        return [
+            'resort' => $v[0] ?? '',
+            'owner_name' => $v[1] ?? '',
+            'phone1' => $v[2] ?? '',
+            'phone2' => $v[3] ?? '',
+            'city' => $v[4] ?? '',
+            'st' => $v[5] ?? '',
+            'zip' => $v[6] ?? '',
+            'resort_location' => $v[7] ?? '',
+            'email' => $v[8] ?? '',
+        ];
     }
 
     public function clearImportState(): void
     {
         $this->csvText = '';
-        $this->importRowsProcessed = 0;
         $this->resetErrorBag('csvText');
         $this->showImportModal = false;
     }
