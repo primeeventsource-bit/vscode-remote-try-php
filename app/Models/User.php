@@ -27,6 +27,7 @@ class User extends Authenticatable
         'last_seen_at',
         'last_active_at',
         'idle_since_at',
+        'pwa_dismissed_at',
     ];
 
     // role and permissions are NOT in $fillable — set them explicitly:
@@ -41,7 +42,13 @@ class User extends Authenticatable
         'last_seen_at' => 'datetime',
         'last_active_at' => 'datetime',
         'idle_since_at' => 'datetime',
+        'pwa_dismissed_at' => 'datetime',
     ];
+
+    public function hasDismissedPwaBanner(): bool
+    {
+        return $this->pwa_dismissed_at !== null;
+    }
 
     public function hasPerm(string $perm): bool
     {

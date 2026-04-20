@@ -239,6 +239,15 @@ Route::middleware('auth')->group(function () {
         return response()->json(['ok' => true]);
     })->name('presence.heartbeat');
 
+    Route::post('/user/dismiss-pwa-banner', function () {
+        $user = auth()->user();
+        if (!$user) return response()->json(['ok' => false], 401);
+        if ($user->pwa_dismissed_at === null) {
+            $user->forceFill(['pwa_dismissed_at' => now()])->save();
+        }
+        return response()->json(['ok' => true]);
+    })->name('user.dismiss-pwa-banner');
+
     Route::post('/logout', function () {
         $user = auth()->user();
         if ($user) {

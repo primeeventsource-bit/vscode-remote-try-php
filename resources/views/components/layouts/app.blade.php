@@ -426,6 +426,7 @@
 
     {{-- PWA Install Prompt --}}
     @auth
+    @if(!auth()->user()->hasDismissedPwaBanner())
     <div id="pwa-install-banner" style="display:none; position:fixed; bottom:80px; left:16px; right:16px; z-index:99990; max-width:360px; margin-left:auto;">
         <div style="border-radius:16px; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); border:1px solid rgba(191,219,254,0.5); background:#fff;">
             <div style="background:linear-gradient(to right,#0f172a,#1e293b); padding:16px 20px 12px;">
@@ -511,11 +512,25 @@
         }
         if (type === 'never') {
             localStorage.setItem('pwa_install_dismissed', 'never');
+            // Persist dismissal server-side so it survives logout, new devices,
+            // cleared browser storage. localStorage is kept only as optimistic UI state.
+            try {
+                fetch('/user/dismiss-pwa-banner', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                        'Accept': 'application/json',
+                    },
+                }).catch(function() {});
+            } catch (e) {}
         } else {
             localStorage.setItem('pwa_install_dismissed', String(Date.now()));
         }
     }
     </script>
+    @endif
     @endauth
 </body>
 </html>
