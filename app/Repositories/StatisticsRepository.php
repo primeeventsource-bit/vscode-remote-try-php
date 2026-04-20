@@ -523,6 +523,12 @@ class StatisticsRepository
             $dealsClosed = $dq->count();
         }
 
+        // Cohort safeguard — deals_closed counts closes of leads *from*
+        // this fronter's cohort, but when the date range truncates the
+        // cohort (e.g. closes happening this week for transfers sent
+        // last week), dealsClosed can exceed transfersSent and yield
+        // >100% close_pct. Clamp so ratios stay in [0, 100].
+        $dealsClosed = min($dealsClosed, $transfersSent);
         $noDeals = max(0, $transfersSent - $dealsClosed);
         return [
             'transfers_sent' => $transfersSent,
@@ -564,6 +570,10 @@ class StatisticsRepository
             $sentToVerification = $vq->count();
         }
 
+        // Cohort safeguards — deals/verifications can outnumber transfers
+        // when date range truncates the cohort. Clamp to keep ratios sane.
+        $dealsClosed       = min($dealsClosed, $transfersReceived);
+        $sentToVerification = min($sentToVerification, $dealsClosed);
         $notClosed = max(0, $transfersReceived - $dealsClosed);
         return [
             'transfers_received' => $transfersReceived,
@@ -607,6 +617,11 @@ class StatisticsRepository
             $notCharged = $nq->count();
         }
 
+        // Cohort safeguards — a charge/not-charged event can land in the
+        // window for a deal received outside the window. Clamp so a
+        // charge_pct cannot exceed 100%.
+        $chargedGreen = min($chargedGreen, $received);
+        $notCharged   = min($notCharged, $received);
         return [
             'received' => $received,
             'charged_green' => $chargedGreen,

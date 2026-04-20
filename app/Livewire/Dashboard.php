@@ -19,7 +19,10 @@ use Livewire\Component;
 #[Title('Dashboard')]
 class Dashboard extends Component
 {
-    public string $statsRange = 'live';
+    // Default view is the current ISO week (Mon 00:00 → now) so the
+    // dashboard resets every Monday. 'live' (all-time) is still available
+    // from the dropdown for anyone who wants lifetime numbers.
+    public string $statsRange = 'weekly';
 
     // ── Weekly stats navigator ─────────────────────────────
     public string $viewingWeek   = '';
