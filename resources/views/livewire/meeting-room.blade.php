@@ -199,7 +199,42 @@ function meetingApp() {
                 }
                 const data = await res.json();
 
-                // Get local media with graceful fallback
+                // Pre-flight: getUserMedia requires a secure context AND mediaDevices API.
+                if (!window.isSecureContext) {
+                    this.mediaError = 'Camera/mic require HTTPS. Reload the page using https://...';
+                    this.micOn = false; this.cameraOn = false;
+                    _twilioConnecting = false; return;
+                }
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    this.mediaError = 'This browser does not support camera/mic. Use Chrome, Edge, Firefox, or Safari.';
+                    this.micOn = false; this.cameraOn = false;
+                    _twilioConnecting = false; return;
+                }
+
+                // Map browser error to a specific, actionable message
+                const explainMediaError = (e, kind) => {
+                    const name = e?.name || 'Error';
+                    const detail = e?.message ? ` (${e.message})` : '';
+                    switch (name) {
+                        case 'NotAllowedError':
+                        case 'SecurityError':
+                            return `${kind} blocked: permission denied. Click the camera icon in the address bar -> Allow, then reload.`;
+                        case 'NotFoundError':
+                        case 'DevicesNotFoundError':
+                            return `No ${kind.toLowerCase()} device found. Plug one in or pick the right one in browser settings.`;
+                        case 'NotReadableError':
+                        case 'TrackStartError':
+                            return `${kind} is in use by another app (Zoom/Teams/OBS). Close it and retry.`;
+                        case 'OverconstrainedError':
+                        case 'ConstraintNotSatisfiedError':
+                            return `${kind} cannot match the requested settings. Try a different device.`;
+                        case 'AbortError':
+                            return `${kind} request was dismissed. Click Try Again.`;
+                        default:
+                            return `${kind} error: ${name}${detail}`;
+                    }
+                };
+
                 let localTracks = [];
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -208,13 +243,15 @@ function meetingApp() {
                         else localTracks.push(new Twilio.Video.LocalVideoTrack(t));
                     }
                 } catch(e) {
+                    console.warn('Camera+mic failed:', e);
                     try {
                         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                         localTracks = [new Twilio.Video.LocalAudioTrack(stream.getAudioTracks()[0])];
                         this.cameraOn = false;
-                        this.mediaError = 'Camera unavailable — audio only mode.';
+                        this.mediaError = explainMediaError(e, 'Camera') + ' Audio-only mode active.';
                     } catch(e2) {
-                        this.mediaError = 'Camera and mic blocked. Click the lock icon in your browser to allow.';
+                        console.warn('Audio-only also failed:', e2);
+                        this.mediaError = explainMediaError(e2, 'Camera/mic');
                         this.micOn = false; this.cameraOn = false;
                     }
                 }
