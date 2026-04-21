@@ -226,7 +226,15 @@ class ProcessLeadImportChunk implements ShouldQueue
         try {
             Lead::insert($rows);
             if ($strategy === 'flag' || $strategy === 'import_all') {
-                $this->recordDuplicatesForInserted($rows);
+                try {
+                    $this->recordDuplicatesForInserted($rows);
+                } catch (\Throwable $dupErr) {
+                    // Duplicate bookkeeping failing must not undo the insert.
+                    Log::warning('recordDuplicatesForInserted threw after successful insert', [
+                        'batch_id' => $this->batchId,
+                        'error'    => mb_substr($dupErr->getMessage(), 0, 500),
+                    ]);
+                }
             }
             return 0;
         } catch (\Throwable $bulkError) {
@@ -256,7 +264,14 @@ class ProcessLeadImportChunk implements ShouldQueue
         }
 
         if (!empty($succeeded) && ($strategy === 'flag' || $strategy === 'import_all')) {
-            $this->recordDuplicatesForInserted($succeeded);
+            try {
+                $this->recordDuplicatesForInserted($succeeded);
+            } catch (\Throwable $dupErr) {
+                Log::warning('recordDuplicatesForInserted threw after fallback insert', [
+                    'batch_id' => $this->batchId,
+                    'error'    => mb_substr($dupErr->getMessage(), 0, 500),
+                ]);
+            }
         }
 
         return $failed;
