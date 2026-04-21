@@ -58,6 +58,36 @@ class Deals extends Component
         }
     }
 
+    /**
+     * MySQL strict mode rejects '' for numeric, foreign-key, and date
+     * columns. Form selects send empty strings when blank, so coerce known
+     * non-string columns to null before save.
+     */
+    private function sanitizeDealData(array $data): array
+    {
+        $nullIfEmpty = [
+            // FK / numeric
+            'fronter', 'closer', 'assigned_admin', 'fee',
+            'closer_user_id', 'verification_admin_user_id',
+            'fronter_user_id', 'closer_user_id_payroll', 'admin_user_id_payroll',
+            'gross_amount', 'collected_amount',
+            'closer_comm_amount', 'fronter_comm_amount',
+            'snr_deduction', 'vd_deduction', 'closer_net_pay',
+            'closer_comm_pct', 'finance_snapshot_id',
+            // Dates
+            'charged_date', 'closing_date', 'callback_date', 'payment_date',
+            'sent_to_verification_at', 'verification_received_at', 'charged_at',
+            'payroll_locked_at', 'last_edited_at',
+            'week_start_date',
+        ];
+        foreach ($nullIfEmpty as $col) {
+            if (array_key_exists($col, $data) && $data[$col] === '') {
+                $data[$col] = null;
+            }
+        }
+        return $data;
+    }
+
     public function resetForm()
     {
         $this->dealForm = ['timestamp' => now()->format('n/j/Y'), 'charged_date' => '', 'was_vd' => 'No', 'fronter' => '', 'closer' => auth()->id(),
@@ -101,10 +131,17 @@ class Deals extends Component
                     'updated_by',                  // managed by Clients component
                 ])
                 ->toArray();
+            $updateData = $this->sanitizeDealData($updateData);
             $updateData['last_edited_by'] = auth()->id();
             $updateData['last_edited_at'] = now();
 
-            $affected = Deal::where('id', $this->dealForm['id'])->update($updateData);
+            try {
+                $affected = Deal::where('id', $this->dealForm['id'])->update($updateData);
+            } catch (\Throwable $e) {
+                Log::error('Deal update failed', ['deal_id' => $this->dealForm['id'], 'error' => $e->getMessage()]);
+                session()->flash('deal_error', 'Save failed: ' . $e->getMessage());
+                return;
+            }
 
             if ($affected === 0) {
                 session()->flash('deal_error', 'Save failed — no rows were updated. Please try again.');
@@ -123,22 +160,7 @@ class Deals extends Component
             $createData = collect($this->newDeal ?: $this->dealForm)
                 ->except(['cv2', 'cv2_2', 'card_number', 'card_number2'])
                 ->toArray();
-
-            // MySQL strict mode rejects '' for numeric / FK columns. Form
-            // sends empty strings when the user leaves a select blank, so
-            // coerce known numeric/FK fields to null when empty.
-            $nullIfEmpty = ['fronter', 'closer', 'assigned_admin', 'fee', 'closer_user_id', 'verification_admin_user_id', 'fronter_user_id', 'closer_user_id_payroll', 'admin_user_id_payroll', 'gross_amount', 'collected_amount'];
-            foreach ($nullIfEmpty as $col) {
-                if (array_key_exists($col, $createData) && $createData[$col] === '') {
-                    $createData[$col] = null;
-                }
-            }
-            // Same for date columns
-            foreach (['charged_date', 'closing_date', 'callback_date', 'payment_date'] as $col) {
-                if (array_key_exists($col, $createData) && $createData[$col] === '') {
-                    $createData[$col] = null;
-                }
-            }
+            $createData = $this->sanitizeDealData($createData);
 
             try {
                 $deal = Deal::create($createData);
@@ -192,11 +214,18 @@ class Deals extends Component
                 'updated_by',
             ])
             ->toArray();
+        $updateData = $this->sanitizeDealData($updateData);
         $updateData['last_edited_by'] = auth()->id();
         $updateData['last_edited_at'] = now();
         $updateData['is_locked'] = true;
 
-        $affected = Deal::where('id', $deal->id)->update($updateData);
+        try {
+            $affected = Deal::where('id', $deal->id)->update($updateData);
+        } catch (\Throwable $e) {
+            Log::error('Deal save-and-lock failed', ['deal_id' => $deal->id, 'error' => $e->getMessage()]);
+            session()->flash('deal_error', 'Save failed: ' . $e->getMessage());
+            return;
+        }
 
         if ($affected === 0) {
             session()->flash('deal_error', 'Save failed — no rows were updated.');
