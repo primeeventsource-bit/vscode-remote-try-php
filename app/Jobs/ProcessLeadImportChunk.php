@@ -126,13 +126,7 @@ class ProcessLeadImportChunk implements ShouldQueue
 
                 // Batch insert every 500 rows
                 if (count($inserted) >= 500) {
-                    Lead::insert($inserted);
-
-                    // Record duplicates for inserted leads
-                    if ($strategy === 'flag' || $strategy === 'import_all') {
-                        $this->recordDuplicatesForInserted($inserted);
-                    }
-
+                    $failedCount += $this->safeBulkInsert($inserted, $strategy);
                     $inserted = [];
                 }
             } catch (\Throwable $e) {
@@ -149,10 +143,7 @@ class ProcessLeadImportChunk implements ShouldQueue
 
         // Insert remaining
         if (!empty($inserted)) {
-            Lead::insert($inserted);
-            if ($strategy === 'flag' || $strategy === 'import_all') {
-                $this->recordDuplicatesForInserted($inserted);
-            }
+            $failedCount += $this->safeBulkInsert($inserted, $strategy);
         }
 
         $successCount = count($this->rows) - $duplicateCount - $invalidCount - $failedCount;
@@ -219,6 +210,56 @@ class ProcessLeadImportChunk implements ShouldQueue
                 );
             }
         }
+    }
+
+    /**
+     * Bulk insert with graceful fallback. If the whole chunk fails (e.g. a
+     * single row has a too-long string or some other constraint violation),
+     * retry row-by-row so surviving rows still land and we can log the
+     * specific bad row to lead_import_failures. Returns the number of rows
+     * that failed so the caller can track them.
+     */
+    private function safeBulkInsert(array $rows, string $strategy): int
+    {
+        if (empty($rows)) return 0;
+
+        try {
+            Lead::insert($rows);
+            if ($strategy === 'flag' || $strategy === 'import_all') {
+                $this->recordDuplicatesForInserted($rows);
+            }
+            return 0;
+        } catch (\Throwable $bulkError) {
+            Log::warning('Bulk lead insert failed, falling back to per-row', [
+                'batch_id' => $this->batchId,
+                'rows'     => count($rows),
+                'error'    => mb_substr($bulkError->getMessage(), 0, 500),
+            ]);
+        }
+
+        $failed = 0;
+        $succeeded = [];
+        foreach ($rows as $row) {
+            try {
+                Lead::insert([$row]);
+                $succeeded[] = $row;
+            } catch (\Throwable $rowError) {
+                LeadImportFailure::create([
+                    'lead_import_batch_id' => $this->batchId,
+                    'row_number' => 0, // row_number is per-chunk; at fallback time we don't know original index
+                    'raw_row' => $row,
+                    'reason' => 'Insert failed: ' . mb_substr($rowError->getMessage(), 0, 2000),
+                    'failure_type' => 'exception',
+                ]);
+                $failed++;
+            }
+        }
+
+        if (!empty($succeeded) && ($strategy === 'flag' || $strategy === 'import_all')) {
+            $this->recordDuplicatesForInserted($succeeded);
+        }
+
+        return $failed;
     }
 
     public function failed(\Throwable $exception): void
