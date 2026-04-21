@@ -608,17 +608,45 @@ class Leads extends Component
     {
         if (count($v) < 2 || ($v[0] === '' && ($v[1] ?? '') === '')) return null;
 
-        return [
-            'resort' => $v[0] ?? '',
-            'owner_name' => $v[1] ?? '',
-            'phone1' => $v[2] ?? '',
-            'phone2' => $v[3] ?? '',
-            'city' => $v[4] ?? '',
-            'st' => $v[5] ?? '',
-            'zip' => $v[6] ?? '',
-            'resort_location' => $v[7] ?? '',
-            'email' => $v[8] ?? '',
+        // Legacy 9-column order:
+        //   resort, owner_name, phone1, phone2, city, st, zip, resort_location, email
+        // Shorter/shuffled CSVs (e.g. 5 cols: resort, owner, phone, email, state)
+        // used to land email in phone2 and state in city. Fix that by nudging
+        // obvious misplacements based on content rather than position.
+        $row = [
+            'resort'          => trim($v[0] ?? ''),
+            'owner_name'      => trim($v[1] ?? ''),
+            'phone1'          => trim($v[2] ?? ''),
+            'phone2'          => trim($v[3] ?? ''),
+            'city'            => trim($v[4] ?? ''),
+            'st'              => trim($v[5] ?? ''),
+            'zip'             => trim($v[6] ?? ''),
+            'resort_location' => trim($v[7] ?? ''),
+            'email'           => trim($v[8] ?? ''),
         ];
+
+        // phone2 that's actually an email -> move to email
+        if ($row['phone2'] !== '' && str_contains($row['phone2'], '@') && $row['email'] === '') {
+            $row['email'] = $row['phone2'];
+            $row['phone2'] = '';
+        }
+        // phone1 that's actually an email (rare) -> also move
+        if ($row['phone1'] !== '' && str_contains($row['phone1'], '@') && $row['email'] === '') {
+            $row['email'] = $row['phone1'];
+            $row['phone1'] = '';
+        }
+        // 2-letter code in city with empty st -> it's the state
+        if ($row['city'] !== '' && $row['st'] === '' && preg_match('/^[A-Za-z]{2}$/', $row['city'])) {
+            $row['st'] = strtoupper($row['city']);
+            $row['city'] = '';
+        }
+        // zip that's actually a 2-letter state code -> shift to st
+        if ($row['zip'] !== '' && $row['st'] === '' && preg_match('/^[A-Za-z]{2}$/', $row['zip'])) {
+            $row['st'] = strtoupper($row['zip']);
+            $row['zip'] = '';
+        }
+
+        return $row;
     }
 
     public function clearImportState(): void
