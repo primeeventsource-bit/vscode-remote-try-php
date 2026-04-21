@@ -4,7 +4,13 @@
             <h2 class="text-xl font-bold">Lead Import History</h2>
             <p class="text-xs text-crm-t3 mt-1">Track and manage CSV import batches</p>
         </div>
-        <a href="{{ route('leads') }}" class="px-3 py-1.5 bg-crm-card border border-crm-border text-xs font-semibold rounded-lg hover:bg-crm-hover transition">Back to Leads</a>
+        <div class="flex items-center gap-2">
+            <a href="/leads/ai-import" class="px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition">+ AI Import</a>
+            @if(auth()->user()?->hasRole('master_admin'))
+                <a href="/leads/sweep-log" class="px-3 py-1.5 bg-crm-card border border-crm-border text-xs font-semibold rounded-lg hover:bg-crm-hover transition">Sweep Log</a>
+            @endif
+            <a href="{{ route('leads') }}" class="px-3 py-1.5 bg-crm-card border border-crm-border text-xs font-semibold rounded-lg hover:bg-crm-hover transition">Back to Leads</a>
+        </div>
     </div>
 
     {{-- Filters --}}

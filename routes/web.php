@@ -60,6 +60,8 @@ Route::middleware('auth')->group(function () {
     // Enterprise Lead Management
     Route::get('/leads/duplicates', \App\Livewire\DuplicateReview::class)->name('duplicate-review');
     Route::get('/leads/imports', \App\Livewire\LeadImports::class)->name('lead-imports');
+    Route::get('/leads/ai-import', \App\Livewire\LeadImportWizard::class)->name('lead-import-wizard');
+    Route::get('/leads/sweep-log', \App\Livewire\LeadSweepLogPage::class)->name('lead-sweep-log');
 
     // Twilio ICE servers for video calls (web route — session-authenticated)
     Route::get('/ice-servers', function () {
