@@ -54,15 +54,18 @@
     </div>
 
     {{-- Bulk Actions --}}
-    @if(count($selectedIds) > 0)
     <div class="mb-4 flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 p-2">
-        <span class="text-xs font-semibold text-blue-700">{{ count($selectedIds) }} selected</span>
-        <button wire:click="bulkKeep" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 transition">Keep All</button>
-        <button wire:click="bulkIgnore" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-500 text-white hover:bg-gray-600 transition">Ignore All</button>
-        <button wire:click="bulkDelete" onclick="return confirm('Delete {{ count($selectedIds) }} duplicate leads?')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-500 text-white hover:bg-red-600 transition">Delete Duplicates</button>
-        <button wire:click="$set('selectedIds', [])" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white border border-crm-border hover:bg-crm-hover transition">Clear</button>
+        <button wire:click="selectAllOnPage" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">Select All Pending on Page</button>
+        @if(count($selectedIds) > 0)
+            <span class="text-xs font-semibold text-blue-700">{{ count($selectedIds) }} selected</span>
+            <button wire:click="bulkKeep" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 transition">Keep All</button>
+            <button wire:click="bulkIgnore" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-500 text-white hover:bg-gray-600 transition">Ignore All</button>
+            <button wire:click="bulkDelete" onclick="return confirm('Delete {{ count($selectedIds) }} duplicate leads?')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-500 text-white hover:bg-red-600 transition">Delete Duplicates</button>
+            <button wire:click="$set('selectedIds', [])" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white border border-crm-border hover:bg-crm-hover transition">Clear</button>
+        @else
+            <span class="text-xs text-crm-t3">No rows selected — tick a checkbox or use the button above.</span>
+        @endif
     </div>
-    @endif
 
     {{-- Duplicates List --}}
     <div class="space-y-3">

@@ -47,7 +47,15 @@ class Deals extends Component
     public function updatedStatusFilter() { $this->resetPage(); }
     public function updatedPerPage() { $this->resetPage(); }
 
-    public function mount() { $this->resetForm(); }
+    public function mount()
+    {
+        $this->resetForm();
+        // Deep-link: /deals?new=1 opens the New Deal modal on load.
+        // Lets Clients (and any other page) send users here to create a deal.
+        if (request()->boolean('new')) {
+            $this->showNewDeal = true;
+        }
+    }
 
     public function resetForm()
     {

@@ -58,6 +58,36 @@ class DuplicateReview extends Component
         }
     }
 
+    public function selectAllOnPage(): void
+    {
+        // Rebuild the same query render() uses and pick pending IDs on the
+        // current page, then merge into selectedIds (preserve selections
+        // from other pages if the user is paginating).
+        $query = LeadDuplicate::query()->orderByDesc('detected_at');
+
+        if ($this->typeFilter !== 'all') {
+            $query->where('duplicate_type', $this->typeFilter);
+        }
+        if ($this->statusFilter !== 'all') {
+            $query->where('review_status', $this->statusFilter);
+        }
+        if ($this->search) {
+            $s = $this->search;
+            $query->where(function ($q) use ($s) {
+                $q->whereHas('lead', fn($lq) => $lq->where('owner_name', 'like', "%{$s}%")->orWhere('phone1', 'like', "%{$s}%"))
+                  ->orWhereHas('duplicateLead', fn($lq) => $lq->where('owner_name', 'like', "%{$s}%")->orWhere('phone1', 'like', "%{$s}%"));
+            });
+        }
+
+        $ids = $query->where('review_status', 'pending')
+            ->paginate($this->perPage)
+            ->pluck('id')
+            ->map(fn($id) => (string) $id)
+            ->toArray();
+
+        $this->selectedIds = array_values(array_unique(array_merge($this->selectedIds, $ids)));
+    }
+
     public function bulkKeep(): void
     {
         if (empty($this->selectedIds)) return;

@@ -1,7 +1,10 @@
 <div class="p-5">
-    <div class="mb-5">
-        <h2 class="text-xl font-bold">Clients</h2>
-        <p class="text-xs text-crm-t3 mt-1">{{ number_format($clients->total()) }} clients &middot; Page {{ $clients->currentPage() }} of {{ $clients->lastPage() }}</p>
+    <div class="mb-5 flex items-center justify-between gap-3">
+        <div>
+            <h2 class="text-xl font-bold">Clients</h2>
+            <p class="text-xs text-crm-t3 mt-1">{{ number_format($clients->total()) }} clients &middot; Page {{ $clients->currentPage() }} of {{ $clients->lastPage() }}</p>
+        </div>
+        <a href="/deals?new=1" class="px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition">+ New Deal</a>
     </div>
 
     {{-- Flash Messages --}}
