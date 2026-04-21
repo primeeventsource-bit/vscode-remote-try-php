@@ -10,6 +10,7 @@ use App\Services\CommissionCalculator;
 use App\Services\CrmNoteService;
 use App\Services\PipelineStateService;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -122,7 +123,30 @@ class Deals extends Component
             $createData = collect($this->newDeal ?: $this->dealForm)
                 ->except(['cv2', 'cv2_2', 'card_number', 'card_number2'])
                 ->toArray();
-            $deal = Deal::create($createData);
+
+            // MySQL strict mode rejects '' for numeric / FK columns. Form
+            // sends empty strings when the user leaves a select blank, so
+            // coerce known numeric/FK fields to null when empty.
+            $nullIfEmpty = ['fronter', 'closer', 'assigned_admin', 'fee', 'closer_user_id', 'verification_admin_user_id', 'fronter_user_id', 'closer_user_id_payroll', 'admin_user_id_payroll', 'gross_amount', 'collected_amount'];
+            foreach ($nullIfEmpty as $col) {
+                if (array_key_exists($col, $createData) && $createData[$col] === '') {
+                    $createData[$col] = null;
+                }
+            }
+            // Same for date columns
+            foreach (['charged_date', 'closing_date', 'callback_date', 'payment_date'] as $col) {
+                if (array_key_exists($col, $createData) && $createData[$col] === '') {
+                    $createData[$col] = null;
+                }
+            }
+
+            try {
+                $deal = Deal::create($createData);
+            } catch (\Throwable $e) {
+                Log::error('Deal create failed', ['error' => $e->getMessage(), 'data_keys' => array_keys($createData)]);
+                session()->flash('deal_error', 'Failed to create deal: ' . $e->getMessage());
+                return;
+            }
 
             if (!$deal || !$deal->exists) {
                 session()->flash('deal_error', 'Failed to create deal.');
