@@ -110,6 +110,7 @@ class ProcessLeadImportChunk implements ShouldQueue
                 $inserted[] = [
                     'resort' => $resort,
                     'owner_name' => $ownerName,
+                    'owner_name_2' => trim($row['owner_name_2'] ?? '') ?: null,
                     'phone1' => trim($row['phone1'] ?? ''),
                     'phone2' => trim($row['phone2'] ?? ''),
                     'city' => trim($row['city'] ?? ''),
@@ -117,6 +118,7 @@ class ProcessLeadImportChunk implements ShouldQueue
                     'zip' => trim($row['zip'] ?? ''),
                     'resort_location' => trim($row['resort_location'] ?? ''),
                     'email' => trim($row['email'] ?? '') ?: null,
+                    'description' => trim($row['description'] ?? '') ?: null,
                     'source' => 'csv',
                     'imported_at' => $now,
                     'import_batch_id' => $this->batchId,

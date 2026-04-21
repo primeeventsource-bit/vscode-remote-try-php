@@ -470,7 +470,8 @@ class Leads extends Component
      */
     private const CSV_FIELD_SYNONYMS = [
         'resort'          => ['resort', 'resortname', 'property', 'club'],
-        'owner_name'      => ['ownername', 'owner', 'name', 'fullname', 'primaryowner'],
+        'owner_name'      => ['ownername', 'owner', 'name', 'fullname', 'primaryowner', 'owner1', 'ownerone'],
+        'owner_name_2'    => ['ownername2', 'owner2', 'ownertwo', 'secondaryowner', 'coowner', 'spouse', 'jointowner'],
         'phone1'          => ['phone1', 'phonenumber1', 'phone', 'phonenumber', 'primaryphone', 'mobile', 'cell'],
         'phone2'          => ['phone2', 'phonenumber2', 'secondaryphone', 'altphone', 'altphonenumber'],
         'city'            => ['city', 'town'],
@@ -478,6 +479,7 @@ class Leads extends Component
         'zip'             => ['zip', 'zipcode', 'postal', 'postalcode'],
         'resort_location' => ['resortlocation', 'location', 'resortcity', 'resortcitystate'],
         'email'           => ['email', 'emailaddress', 'mail'],
+        'description'     => ['description', 'notes', 'note', 'comments', 'comment', 'memo', 'remarks'],
         // Combined fields handled in mapCsvRow():
         'countystate'     => ['countystate', 'county_state', 'countyandstate'],
     ];
@@ -579,8 +581,8 @@ class Leads extends Component
     private function mapCsvRowByHeader(array $v, array $headerMap): ?array
     {
         $row = [
-            'resort' => '', 'owner_name' => '', 'phone1' => '', 'phone2' => '',
-            'city' => '', 'st' => '', 'zip' => '', 'resort_location' => '', 'email' => '',
+            'resort' => '', 'owner_name' => '', 'owner_name_2' => '', 'phone1' => '', 'phone2' => '',
+            'city' => '', 'st' => '', 'zip' => '', 'resort_location' => '', 'email' => '', 'description' => '',
         ];
 
         foreach ($headerMap as $idx => $field) {
@@ -608,8 +610,9 @@ class Leads extends Component
     {
         if (count($v) < 2 || ($v[0] === '' && ($v[1] ?? '') === '')) return null;
 
-        // Legacy 9-column order:
-        //   resort, owner_name, phone1, phone2, city, st, zip, resort_location, email
+        // Legacy 9-column order extended with owner_name_2 (10) and description (11):
+        //   resort, owner_name, phone1, phone2, city, st, zip, resort_location, email,
+        //   owner_name_2, description
         // Shorter/shuffled CSVs (e.g. 5 cols: resort, owner, phone, email, state)
         // used to land email in phone2 and state in city. Fix that by nudging
         // obvious misplacements based on content rather than position.
@@ -623,6 +626,8 @@ class Leads extends Component
             'zip'             => trim($v[6] ?? ''),
             'resort_location' => trim($v[7] ?? ''),
             'email'           => trim($v[8] ?? ''),
+            'owner_name_2'    => trim($v[9] ?? ''),
+            'description'     => trim($v[10] ?? ''),
         ];
 
         // phone2 that's actually an email -> move to email

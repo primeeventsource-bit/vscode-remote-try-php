@@ -20,8 +20,8 @@ class LeadImportAiMapper
 {
     /** @var array<string> Lead columns the AI is allowed to suggest. */
     private const ALLOWED_FIELDS = [
-        'resort', 'owner_name', 'phone1', 'phone2',
-        'email', 'city', 'st', 'zip', 'resort_location',
+        'resort', 'owner_name', 'owner_name_2', 'phone1', 'phone2',
+        'email', 'city', 'st', 'zip', 'resort_location', 'description',
     ];
 
     public function map(string $header, array $sampleValues = []): array
@@ -39,7 +39,9 @@ class LeadImportAiMapper
             . "  - phone1 = primary phone, phone2 = secondary/alt phone\n"
             . "  - st = US/territory state code (e.g. FL, PR), city = city or county\n"
             . "  - resort = timeshare brand (HILTON, BLUEGREEN, etc.)\n"
-            . "  - owner_name = a person's full name\n\n"
+            . "  - owner_name = primary owner's full name\n"
+            . "  - owner_name_2 = secondary/joint/spouse owner's full name\n"
+            . "  - description = free-text notes / comments / remarks\n\n"
             . "Header: " . json_encode($header) . "\n"
             . "Sample values: " . json_encode($samples) . "\n\n"
             . 'Respond with strict JSON only. Format: {"field": "<one of the allowed fields, or null>", "confidence": "high|medium|low"}. No prose, no markdown.';

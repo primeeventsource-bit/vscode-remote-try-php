@@ -42,8 +42,8 @@ class LeadImportWizard extends Component
 
     /** Lead columns users can pick in the dropdown. */
     public const LEAD_FIELDS = [
-        'resort', 'owner_name', 'phone1', 'phone2',
-        'email', 'city', 'st', 'zip', 'resort_location',
+        'resort', 'owner_name', 'owner_name_2', 'phone1', 'phone2',
+        'email', 'city', 'st', 'zip', 'resort_location', 'description',
     ];
 
     public function mount(): void
@@ -332,8 +332,8 @@ class LeadImportWizard extends Component
     private function mapRowByColMap(array $row, array $colMap): ?array
     {
         $out = [
-            'resort' => '', 'owner_name' => '', 'phone1' => '', 'phone2' => '',
-            'city' => '', 'st' => '', 'zip' => '', 'resort_location' => '', 'email' => '',
+            'resort' => '', 'owner_name' => '', 'owner_name_2' => '', 'phone1' => '', 'phone2' => '',
+            'city' => '', 'st' => '', 'zip' => '', 'resort_location' => '', 'email' => '', 'description' => '',
         ];
 
         foreach ($colMap as $idx => $field) {
@@ -348,7 +348,7 @@ class LeadImportWizard extends Component
                 continue;
             }
 
-            if (in_array($field, ['resort', 'owner_name', 'phone1', 'phone2', 'city', 'st', 'zip', 'resort_location', 'email'], true)) {
+            if (in_array($field, self::LEAD_FIELDS, true)) {
                 $out[$field] = $val;
             }
         }

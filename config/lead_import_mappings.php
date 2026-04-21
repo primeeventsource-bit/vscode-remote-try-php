@@ -24,6 +24,11 @@ return [
     'owner_name' => [
         'ownername', 'owner', 'name', 'fullname', 'primaryowner',
         'contactname', 'customer', 'customername', 'lead', 'leadname',
+        'owner1', 'ownerone', 'primaryownername',
+    ],
+    'owner_name_2' => [
+        'ownername2', 'owner2', 'ownertwo', 'secondaryowner', 'coowner',
+        'spouse', 'jointowner', 'secondaryownername',
     ],
     'phone1' => [
         'phone1', 'phonenumber1', 'phone', 'phonenumber', 'primaryphone',
@@ -49,6 +54,10 @@ return [
     'resort_location' => [
         'resortlocation', 'location', 'resortcity', 'resortcitystate',
         'resortaddress', 'propertylocation',
+    ],
+    'description' => [
+        'description', 'notes', 'note', 'comments', 'comment',
+        'memo', 'remarks', 'details', 'info', 'additionalinfo',
     ],
     // Combined helper: County/State "ORANGE, FL" → city + st
     'countystate' => [

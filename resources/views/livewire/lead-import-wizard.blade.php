@@ -4,7 +4,7 @@
             <h2 class="text-xl font-bold">AI Lead Import</h2>
             <p class="text-xs text-crm-t3 mt-1">Upload a CSV — the system maps columns automatically, you confirm, then it imports.</p>
         </div>
-        <a href="/lead-imports" class="px-3 py-1.5 bg-crm-card border border-crm-border text-xs font-semibold rounded-lg hover:bg-crm-hover transition">Import History</a>
+        <a href="/leads/imports" class="px-3 py-1.5 bg-crm-card border border-crm-border text-xs font-semibold rounded-lg hover:bg-crm-hover transition">Import History</a>
     </div>
 
     @if($error)
@@ -132,7 +132,7 @@
                 @endif
             </div>
             <div class="mt-4 flex items-center gap-2">
-                <a href="/lead-imports" class="px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700">Track progress on Import History</a>
+                <a href="/leads/imports" class="px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700">Track progress on Import History</a>
                 <button wire:click="cancel" class="px-3 py-1.5 text-xs font-semibold text-crm-t2 bg-white border border-crm-border rounded-lg hover:bg-crm-hover">Import Another File</button>
             </div>
         </div>

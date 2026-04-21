@@ -15,6 +15,7 @@ class Lead extends Model
     protected $fillable = [
         'resort',
         'owner_name',
+        'owner_name_2',
         'phone1',
         'phone2',
         'city',
@@ -22,6 +23,7 @@ class Lead extends Model
         'zip',
         'resort_location',
         'email',
+        'description',
         'assigned_to',
         'original_fronter',
         'disposition',
