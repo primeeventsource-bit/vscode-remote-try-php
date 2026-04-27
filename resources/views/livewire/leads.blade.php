@@ -263,6 +263,44 @@
     </div>
     @endif
 
+    {{-- ═══ Bulk Selection Banner (two-step select) ═══ --}}
+    @if($isAdmin && (count($selectedLeads) > 0 || $bulkSelectAllMatching))
+        @php
+            $cap = (int) config('leads.bulk_action_cap', 10000);
+            $totalMatching = (int) $leads->total();
+            $selectedCount = $bulkSelectAllMatching ? min($totalMatching, $cap) : count($selectedLeads);
+        @endphp
+        <div class="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs">
+            <span class="font-semibold text-blue-900">
+                {{ number_format($selectedCount) }} selected{{ $bulkSelectAllMatching ? ' (entire filter)' : '' }}
+            </span>
+            @if(!$bulkSelectAllMatching && $totalMatching > count($selectedLeads))
+                <button wire:click="selectAllMatchingFilter" class="text-blue-700 hover:text-blue-900 underline font-semibold">
+                    Select all {{ number_format(min($totalMatching, $cap)) }} leads matching this filter
+                </button>
+            @elseif($bulkSelectAllMatching)
+                <button wire:click="clearSelectedLeads" class="text-blue-700 hover:text-blue-900 underline font-semibold">Clear selection</button>
+            @endif
+            @if($totalMatching > $cap)
+                <span class="text-amber-700">(filter matches {{ number_format($totalMatching) }} — capped at {{ number_format($cap) }} per action)</span>
+            @endif
+        </div>
+
+        {{-- Sticky bulk action toolbar --}}
+        <div class="sticky top-0 z-30 mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-crm-border bg-white shadow-sm px-3 py-2">
+            <span class="text-xs font-semibold text-crm-t2">Bulk action:</span>
+            <button wire:click="openBulkAction('assign')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">Assign to Rep</button>
+            <button wire:click="openBulkAction('disposition')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition">Change Disposition</button>
+            <button wire:click="bulkExportCsv" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-crm-card border border-crm-border text-crm-t1 hover:bg-crm-hover transition">Export CSV</button>
+            @if(auth()->user()?->hasRole('master_admin'))
+                <button wire:click="openBulkAction('delete')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-600 text-white hover:bg-red-700 transition">Delete</button>
+            @else
+                <button disabled title="Master Admin only" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-300 text-white cursor-not-allowed">Delete</button>
+            @endif
+            <button wire:click="clearSelectedLeads" class="ml-auto px-3 py-1.5 text-xs font-semibold rounded-lg bg-white border border-crm-border hover:bg-crm-hover transition">Clear</button>
+        </div>
+    @endif
+
     {{-- Source-file flash + active chip (admin only) --}}
     @if($isAdmin && session('leads_flash'))
         <div class="mb-3 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-700">
@@ -962,5 +1000,57 @@
             </table>
         </div>
     </div>
+    @endif
+
+    {{-- ═══ Bulk Action Confirmation Modals (admin/master_admin) ═══ --}}
+    @if($isAdmin && $bulkAction)
+        @php
+            $bulkCount = $bulkSelectAllMatching ? min((int) $leads->total(), (int) config('leads.bulk_action_cap', 10000)) : count($selectedLeads);
+            $contextBits = [];
+            if ($sourceFileFilter !== 'all') $contextBits[] = 'file: ' . $sourceFileFilter;
+            if ($resortFilter !== 'all') $contextBits[] = 'resort: ' . $resortFilter;
+            if ($filter !== 'all') $contextBits[] = 'filter: ' . $filter;
+            $contextLine = $bulkSelectAllMatching && !empty($contextBits) ? ' (' . implode(' · ', $contextBits) . ')' : '';
+        @endphp
+        <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center backdrop-blur-sm" wire:click.self="cancelBulkAction">
+            <div class="bg-white rounded-lg p-5 w-full max-w-md mx-4">
+                @if($bulkAction === 'assign')
+                    <h3 class="text-base font-bold mb-3">Assign {{ number_format($bulkCount) }} leads{{ $contextLine }}</h3>
+                    <label for="bulkAssigneeId" class="text-[10px] text-crm-t3 uppercase tracking-wider">Assign to</label>
+                    <select id="bulkAssigneeId" name="bulkAssigneeId" wire:model="bulkAssigneeId" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                        <option value="">— Select user —</option>
+                        @foreach($users as $u)
+                            <option value="{{ $u->id }}">{{ $u->name }} ({{ ucfirst(str_replace('_',' ',$u->role ?? '')) }})</option>
+                        @endforeach
+                    </select>
+                    <div class="mt-4 flex justify-end gap-2">
+                        <button wire:click="cancelBulkAction" class="px-4 py-2 text-sm font-semibold text-crm-t2 bg-white border border-crm-border rounded-lg hover:bg-crm-hover">Cancel</button>
+                        <button wire:click="bulkAssignToUser" class="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700">Assign</button>
+                    </div>
+                @elseif($bulkAction === 'disposition')
+                    <h3 class="text-base font-bold mb-3">Set disposition for {{ number_format($bulkCount) }} leads{{ $contextLine }}</h3>
+                    <label for="bulkDispositionValue" class="text-[10px] text-crm-t3 uppercase tracking-wider">Disposition</label>
+                    <select id="bulkDispositionValue" name="bulkDispositionValue" wire:model="bulkDispositionValue" class="w-full px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none focus:border-blue-400">
+                        <option value="">— Select disposition —</option>
+                        @foreach(['Callback', 'Not Interested', 'Wrong Number', 'Do Not Call', 'Voicemail', 'No Answer', 'Transferred to Closer'] as $d)
+                            <option value="{{ $d }}">{{ $d }}</option>
+                        @endforeach
+                    </select>
+                    <div class="mt-4 flex justify-end gap-2">
+                        <button wire:click="cancelBulkAction" class="px-4 py-2 text-sm font-semibold text-crm-t2 bg-white border border-crm-border rounded-lg hover:bg-crm-hover">Cancel</button>
+                        <button wire:click="bulkSetDisposition" class="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700">Update</button>
+                    </div>
+                @elseif($bulkAction === 'delete')
+                    <h3 class="text-base font-bold text-red-700 mb-3">Delete {{ number_format($bulkCount) }} leads{{ $contextLine }}</h3>
+                    <p class="text-sm text-crm-t2 mb-3">This is a soft delete (recoverable from the database). Type <span class="font-mono font-bold text-red-700">DELETE</span> to confirm.</p>
+                    <label for="bulkDeleteConfirm" class="text-[10px] text-crm-t3 uppercase tracking-wider">Confirmation</label>
+                    <input id="bulkDeleteConfirm" name="bulkDeleteConfirm" wire:model.live="bulkDeleteConfirm" type="text" placeholder="DELETE" class="w-full px-3 py-2 text-sm font-mono bg-white border border-red-300 rounded-lg focus:outline-none focus:border-red-500">
+                    <div class="mt-4 flex justify-end gap-2">
+                        <button wire:click="cancelBulkAction" class="px-4 py-2 text-sm font-semibold text-crm-t2 bg-white border border-crm-border rounded-lg hover:bg-crm-hover">Cancel</button>
+                        <button wire:click="bulkDeleteLeads" @disabled($bulkDeleteConfirm !== 'DELETE') class="px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed">Delete</button>
+                    </div>
+                @endif
+            </div>
+        </div>
     @endif
 </div>

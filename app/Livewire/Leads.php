@@ -50,6 +50,14 @@ class Leads extends Component
     public string $callbackDateTime = '';
     public array $selectedLeads = [];
     public string $bulkFronter = '';
+    // Filter-wide bulk: when true, bulk actions ignore $selectedLeads and run
+    // against the entire current filter result (capped at config('leads.bulk_action_cap')).
+    public bool $bulkSelectAllMatching = false;
+    // Per-action working state for the bulk modals
+    public string $bulkAssigneeId = '';
+    public string $bulkDispositionValue = '';
+    public string $bulkDeleteConfirm = '';
+    public ?string $bulkAction = null; // 'assign' | 'disposition' | 'delete' (which modal is open)
 
     // ── Add Lead ────────────────────────────────────────────
     public bool $showAddModal = false;
@@ -701,16 +709,256 @@ class Leads extends Component
 
     public function selectAllVisibleLeads(): void
     {
+        // Selects only the currently rendered page (matches the perPage value).
         $this->selectedLeads = $this->baseLeadsQuery()
-            ->limit(500)
+            ->limit($this->perPage)
             ->pluck('id')
             ->map(fn($id) => (int) $id)
             ->toArray();
+        $this->bulkSelectAllMatching = false;
+    }
+
+    public function selectAllMatchingFilter(): void
+    {
+        // Switches to filter-wide mode. We do NOT load IDs into $selectedLeads —
+        // bulk actions re-query at execution time so the count is always live.
+        $this->bulkSelectAllMatching = true;
     }
 
     public function clearSelectedLeads(): void
     {
         $this->selectedLeads = [];
+        $this->bulkSelectAllMatching = false;
+        $this->bulkAction = null;
+    }
+
+    /**
+     * Number of leads the current bulk operation will affect.
+     */
+    public function bulkTargetCount(): int
+    {
+        if ($this->bulkSelectAllMatching) {
+            return (int) $this->baseLeadsQuery()->limit(config('leads.bulk_action_cap', 10000) + 1)->count();
+        }
+        return count($this->selectedLeads);
+    }
+
+    /**
+     * Resolve the bulk target into a query builder (filter-wide) or a where-in
+     * query (explicit selection). Caller can chain ->update / ->delete / ->get.
+     * Caps filter-wide queries at bulk_action_cap.
+     */
+    private function bulkTargetQuery()
+    {
+        $cap = (int) config('leads.bulk_action_cap', 10000);
+        if ($this->bulkSelectAllMatching) {
+            return $this->baseLeadsQuery()->limit($cap);
+        }
+        return Lead::query()->whereIn('id', array_slice(array_map('intval', $this->selectedLeads), 0, $cap));
+    }
+
+    /**
+     * Snapshot of the active filter for audit logging.
+     */
+    private function bulkFilterSnapshot(): array
+    {
+        return [
+            'search' => $this->search,
+            'filter' => $this->filter,
+            'resort_filter' => $this->resortFilter,
+            'role_filter' => $this->roleFilter,
+            'fronter_filter' => $this->fronterFilter,
+            'age_filter' => $this->ageFilter,
+            'duplicate_filter' => $this->duplicateFilter,
+            'source_file_filter' => $this->sourceFileFilter,
+        ];
+    }
+
+    private function ensureBulkAdmin(): bool
+    {
+        $user = auth()->user();
+        if (!$user || !$user->hasRole('master_admin', 'admin')) {
+            session()->flash('leads_flash', 'Only Admin or Master Admin can run bulk actions.');
+            return false;
+        }
+        return true;
+    }
+
+    private function bulkCapExceeded(): bool
+    {
+        $cap = (int) config('leads.bulk_action_cap', 10000);
+        $count = $this->bulkTargetCount();
+        if ($count > $cap) {
+            session()->flash('leads_flash', "Filter matches more than {$cap} leads — narrow the filter or use explicit selection.");
+            return true;
+        }
+        if ($count === 0) {
+            session()->flash('leads_flash', 'No leads selected.');
+            return true;
+        }
+        return false;
+    }
+
+    public function openBulkAction(string $which): void
+    {
+        if (!$this->ensureBulkAdmin()) return;
+        if (!in_array($which, ['assign', 'disposition', 'delete'], true)) return;
+        if ($this->bulkCapExceeded()) return;
+        $this->bulkAction = $which;
+        $this->bulkAssigneeId = '';
+        $this->bulkDispositionValue = '';
+        $this->bulkDeleteConfirm = '';
+    }
+
+    public function cancelBulkAction(): void
+    {
+        $this->bulkAction = null;
+        $this->bulkDeleteConfirm = '';
+    }
+
+    public function bulkAssignToUser(): void
+    {
+        if (!$this->ensureBulkAdmin()) return;
+        if ($this->bulkCapExceeded()) { $this->bulkAction = null; return; }
+        $assigneeId = (int) $this->bulkAssigneeId;
+        $assignee = $assigneeId ? User::find($assigneeId) : null;
+        if (!$assignee) {
+            session()->flash('leads_flash', 'Pick a user first.');
+            return;
+        }
+
+        $count = $this->bulkTargetCount();
+        try {
+            DB::transaction(function () use ($assigneeId) {
+                // Use pluck of IDs so we can also write transfer logs without
+                // dragging the whole row into memory.
+                $ids = (clone $this->bulkTargetQuery())->pluck('id');
+                Lead::whereIn('id', $ids)->update(['assigned_to' => $assigneeId]);
+                Lead::whereIn('id', $ids)->whereNull('original_fronter')->update(['original_fronter' => $assigneeId]);
+            });
+            \App\Models\AuditLog::record('leads.bulk_assign', null, null, [
+                'assignee_id' => $assigneeId,
+                'count' => $count,
+                'mode' => $this->bulkSelectAllMatching ? 'filter' : 'explicit',
+                'filter' => $this->bulkSelectAllMatching ? $this->bulkFilterSnapshot() : null,
+                'lead_ids' => $this->bulkSelectAllMatching ? null : $this->selectedLeads,
+            ]);
+            session()->flash('leads_flash', "Assigned {$count} leads to {$assignee->name}.");
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Bulk assign failed', ['error' => $e->getMessage()]);
+            session()->flash('leads_flash', 'Bulk assign failed: ' . $e->getMessage());
+        }
+        $this->clearSelectedLeads();
+    }
+
+    public function bulkSetDisposition(): void
+    {
+        if (!$this->ensureBulkAdmin()) return;
+        if ($this->bulkCapExceeded()) { $this->bulkAction = null; return; }
+        $dispo = trim($this->bulkDispositionValue);
+        if ($dispo === '') {
+            session()->flash('leads_flash', 'Pick a disposition first.');
+            return;
+        }
+
+        $count = $this->bulkTargetCount();
+        try {
+            DB::transaction(function () use ($dispo) {
+                $ids = (clone $this->bulkTargetQuery())->pluck('id');
+                Lead::whereIn('id', $ids)->update(['disposition' => $dispo]);
+            });
+            \App\Models\AuditLog::record('leads.bulk_disposition', null, null, [
+                'disposition' => $dispo,
+                'count' => $count,
+                'mode' => $this->bulkSelectAllMatching ? 'filter' : 'explicit',
+                'filter' => $this->bulkSelectAllMatching ? $this->bulkFilterSnapshot() : null,
+                'lead_ids' => $this->bulkSelectAllMatching ? null : $this->selectedLeads,
+            ]);
+            session()->flash('leads_flash', "Updated disposition for {$count} leads.");
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Bulk disposition failed', ['error' => $e->getMessage()]);
+            session()->flash('leads_flash', 'Bulk disposition failed: ' . $e->getMessage());
+        }
+        $this->clearSelectedLeads();
+    }
+
+    public function bulkDeleteLeads(): void
+    {
+        $user = auth()->user();
+        if (!$user || !$user->hasRole('master_admin')) {
+            session()->flash('leads_flash', 'Only Master Admin can bulk-delete leads.');
+            return;
+        }
+        if ($this->bulkDeleteConfirm !== 'DELETE') {
+            session()->flash('leads_flash', 'Type DELETE to confirm.');
+            return;
+        }
+        if ($this->bulkCapExceeded()) { $this->bulkAction = null; return; }
+
+        $count = $this->bulkTargetCount();
+        try {
+            DB::transaction(function () {
+                $ids = (clone $this->bulkTargetQuery())->pluck('id');
+                Lead::whereIn('id', $ids)->delete(); // soft delete (Lead uses SoftDeletes)
+            });
+            \App\Models\AuditLog::record('leads.bulk_delete', null, null, [
+                'count' => $count,
+                'mode' => $this->bulkSelectAllMatching ? 'filter' : 'explicit',
+                'filter' => $this->bulkSelectAllMatching ? $this->bulkFilterSnapshot() : null,
+                'lead_ids' => $this->bulkSelectAllMatching ? null : $this->selectedLeads,
+            ]);
+            session()->flash('leads_flash', "Deleted {$count} leads (soft delete; recoverable).");
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Bulk delete failed', ['error' => $e->getMessage()]);
+            session()->flash('leads_flash', 'Bulk delete failed: ' . $e->getMessage());
+        }
+        $this->clearSelectedLeads();
+    }
+
+    public function bulkExportCsv()
+    {
+        if (!$this->ensureBulkAdmin()) return;
+        if ($this->bulkCapExceeded()) return;
+
+        $count = $this->bulkTargetCount();
+        $filename = 'leads_export_' . now()->format('Y-m-d_Hi') . '.csv';
+        $columns = ['id', 'resort', 'owner_name', 'owner_name_2', 'phone1', 'phone2', 'city', 'st', 'zip', 'resort_location', 'email', 'description', 'disposition', 'source_file_name', 'assigned_to', 'created_at'];
+
+        \App\Models\AuditLog::record('leads.bulk_export', null, null, [
+            'count' => $count,
+            'mode' => $this->bulkSelectAllMatching ? 'filter' : 'explicit',
+            'filter' => $this->bulkSelectAllMatching ? $this->bulkFilterSnapshot() : null,
+            'lead_ids' => $this->bulkSelectAllMatching ? null : $this->selectedLeads,
+        ]);
+
+        // Capture state needed inside the streamed callback (Livewire serializes; closures don't).
+        $allMatching = $this->bulkSelectAllMatching;
+        $cap = (int) config('leads.bulk_action_cap', 10000);
+        $explicitIds = array_map('intval', $this->selectedLeads);
+        $filters = $this->bulkFilterSnapshot();
+
+        return response()->streamDownload(function () use ($allMatching, $cap, $explicitIds, $columns) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, $columns);
+
+            $query = $allMatching
+                ? $this->baseLeadsQuery()->limit($cap)
+                : Lead::query()->whereIn('id', array_slice($explicitIds, 0, $cap));
+
+            $query->chunkById(500, function ($rows) use ($out, $columns) {
+                foreach ($rows as $r) {
+                    $line = [];
+                    foreach ($columns as $col) {
+                        $line[] = (string) ($r->{$col} ?? '');
+                    }
+                    fputcsv($out, $line);
+                }
+            });
+
+            fclose($out);
+        }, $filename, [
+            'Content-Type' => 'text/csv',
+        ]);
     }
 
     public function assignSelectedToFronter(): void
