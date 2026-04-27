@@ -57,7 +57,14 @@ class Leads extends Component
     public string $bulkAssigneeId = '';
     public string $bulkDispositionValue = '';
     public string $bulkDeleteConfirm = '';
-    public ?string $bulkAction = null; // 'assign' | 'disposition' | 'delete' (which modal is open)
+    public ?string $bulkAction = null; // 'assign' | 'disposition' | 'delete' | 'distribute' (which modal is open)
+    // Round-robin distribute state
+    public int $distributeStep = 1;                  // 1: pick fronters, 2: strategy, 3: confirm
+    public array $distributeFronterIds = [];         // selected fronter ids (strings → ints)
+    public string $distributeStrategy = 'even';      // 'even' | 'weighted' | 'fill_target'
+    public array $distributeWeights = [];            // [user_id => int 1-10]
+    public array $distributeTargets = [];            // [user_id => int 0+]
+    public bool $distributeSkipAssigned = true;
 
     // ── Add Lead ────────────────────────────────────────────
     public bool $showAddModal = false;
@@ -744,6 +751,31 @@ class Leads extends Component
     }
 
     /**
+     * How many of the bulk target are already assigned to someone — used by
+     * the distribute modal to show the "already-assigned will be skipped" hint.
+     */
+    public function bulkAlreadyAssignedCount(): int
+    {
+        return (int) (clone $this->bulkTargetQuery())->whereNotNull('assigned_to')->count();
+    }
+
+    /**
+     * Per-fronter count of currently-open leads (no disposition set), keyed by
+     * user id. Used for the fronter list and fill_target preview.
+     */
+    public function frontersOpenLeadCounts(array $userIds): array
+    {
+        if (empty($userIds)) return [];
+        return Lead::query()
+            ->whereIn('assigned_to', array_map('intval', $userIds))
+            ->whereNull('disposition')
+            ->select('assigned_to', DB::raw('COUNT(*) as cnt'))
+            ->groupBy('assigned_to')
+            ->pluck('cnt', 'assigned_to')
+            ->all();
+    }
+
+    /**
      * Resolve the bulk target into a query builder (filter-wide) or a where-in
      * query (explicit selection). Caller can chain ->update / ->delete / ->get.
      * Caps filter-wide queries at bulk_action_cap.
@@ -959,6 +991,234 @@ class Leads extends Component
         }, $filename, [
             'Content-Type' => 'text/csv',
         ]);
+    }
+
+    // ── Round-Robin Distribute ──────────────────────────────────
+
+    public function openDistribute(): void
+    {
+        if (!$this->ensureBulkAdmin()) return;
+        if ($this->bulkCapExceeded()) return;
+        $this->bulkAction = 'distribute';
+        $this->distributeStep = 1;
+        $this->distributeFronterIds = [];
+        $this->distributeStrategy = 'even';
+        $this->distributeWeights = [];
+        $this->distributeTargets = [];
+        $this->distributeSkipAssigned = true;
+    }
+
+    public function distributeBack(): void
+    {
+        if ($this->distributeStep > 1) $this->distributeStep--;
+    }
+
+    public function distributeNext(): void
+    {
+        // Step 1 → 2: need ≥ 2 fronters
+        if ($this->distributeStep === 1) {
+            if (count($this->distributeFronterIds) < 2) {
+                session()->flash('leads_flash', 'Select at least 2 fronters to distribute.');
+                return;
+            }
+            // Initialise weights/targets defaults for the chosen fronters
+            foreach ($this->distributeFronterIds as $fid) {
+                $fid = (int) $fid;
+                if (!isset($this->distributeWeights[$fid])) $this->distributeWeights[$fid] = 1;
+                if (!isset($this->distributeTargets[$fid])) $this->distributeTargets[$fid] = 50;
+            }
+            $this->distributeStep = 2;
+            return;
+        }
+        // Step 2 → 3: validate strategy inputs
+        if ($this->distributeStep === 2) {
+            if ($this->distributeStrategy === 'weighted') {
+                $sum = 0;
+                foreach ($this->distributeFronterIds as $fid) {
+                    $w = (int) ($this->distributeWeights[(int)$fid] ?? 0);
+                    if ($w < 1 || $w > 10) {
+                        session()->flash('leads_flash', 'Each weight must be 1–10.');
+                        return;
+                    }
+                    $sum += $w;
+                }
+                if ($sum < 1) { session()->flash('leads_flash', 'Weights must sum to ≥ 1.'); return; }
+            }
+            if ($this->distributeStrategy === 'fill_target') {
+                foreach ($this->distributeFronterIds as $fid) {
+                    $t = (int) ($this->distributeTargets[(int)$fid] ?? 0);
+                    if ($t < 0) { session()->flash('leads_flash', 'Target must be 0 or more.'); return; }
+                }
+            }
+            $this->distributeStep = 3;
+        }
+    }
+
+    /**
+     * Returns [user_id => share_count] for the current preview, given
+     * $available unassigned/lead-pool size and current open-lead counts.
+     */
+    public function distributionShares(int $available, array $currentOpenCounts): array
+    {
+        $ids = array_map('intval', $this->distributeFronterIds);
+        if (empty($ids) || $available <= 0) return array_fill_keys($ids, 0);
+
+        if ($this->distributeStrategy === 'even') {
+            $base = intdiv($available, count($ids));
+            $rem = $available % count($ids);
+            $out = [];
+            foreach ($ids as $i => $fid) {
+                $out[$fid] = $base + ($i < $rem ? 1 : 0);
+            }
+            return $out;
+        }
+
+        if ($this->distributeStrategy === 'weighted') {
+            $weights = [];
+            $sum = 0;
+            foreach ($ids as $fid) {
+                $w = max(0, (int) ($this->distributeWeights[$fid] ?? 1));
+                $weights[$fid] = $w;
+                $sum += $w;
+            }
+            if ($sum === 0) return array_fill_keys($ids, 0);
+            $out = [];
+            $assigned = 0;
+            foreach ($ids as $fid) {
+                $share = (int) floor($available * $weights[$fid] / $sum);
+                $out[$fid] = $share;
+                $assigned += $share;
+            }
+            // Distribute remainder to highest-weighted fronter (ties: first-in-list)
+            $rem = $available - $assigned;
+            if ($rem > 0) {
+                arsort($weights, SORT_NUMERIC);
+                $top = array_key_first($weights);
+                $out[$top] += $rem;
+            }
+            return $out;
+        }
+
+        if ($this->distributeStrategy === 'fill_target') {
+            $out = array_fill_keys($ids, 0);
+            $remaining = $available;
+            // First pass: bring each fronter up to target
+            foreach ($ids as $fid) {
+                if ($remaining <= 0) break;
+                $target = (int) ($this->distributeTargets[$fid] ?? 0);
+                $current = (int) ($currentOpenCounts[$fid] ?? 0);
+                $need = max(0, $target - $current);
+                $give = min($need, $remaining);
+                $out[$fid] = $give;
+                $remaining -= $give;
+            }
+            // Second pass: round-robin leftovers
+            while ($remaining > 0) {
+                $progressed = false;
+                foreach ($ids as $fid) {
+                    if ($remaining <= 0) break;
+                    $out[$fid]++;
+                    $remaining--;
+                    $progressed = true;
+                }
+                if (!$progressed) break;
+            }
+            return $out;
+        }
+
+        return array_fill_keys($ids, 0);
+    }
+
+    public function executeDistribution(): void
+    {
+        if (!$this->ensureBulkAdmin()) return;
+        if ($this->bulkCapExceeded()) { $this->bulkAction = null; return; }
+        if (count($this->distributeFronterIds) < 2) {
+            session()->flash('leads_flash', 'Select at least 2 fronters.');
+            return;
+        }
+
+        try {
+            $result = DB::transaction(function () {
+                // Pull (and lock) the target IDs in deterministic order. The
+                // lock prevents another admin's distribution from grabbing the
+                // same rows mid-transaction.
+                $query = clone $this->bulkTargetQuery();
+                if ($this->distributeSkipAssigned) {
+                    $query->whereNull('assigned_to');
+                }
+                $orderedIds = $query
+                    ->orderBy('created_at', 'asc')
+                    ->orderBy('id', 'asc')
+                    ->lockForUpdate()
+                    ->pluck('id')
+                    ->all();
+
+                $available = count($orderedIds);
+                if ($available === 0) {
+                    return ['distributed' => 0, 'shares' => [], 'skipped' => 0];
+                }
+
+                // Open-lead counts for fill_target preview parity (re-queried
+                // here to avoid race with the preview computed at modal time).
+                $ids = array_map('intval', $this->distributeFronterIds);
+                $openCounts = Lead::query()
+                    ->whereIn('assigned_to', $ids)
+                    ->whereNull('disposition')
+                    ->select('assigned_to', DB::raw('COUNT(*) as cnt'))
+                    ->groupBy('assigned_to')
+                    ->pluck('cnt', 'assigned_to')
+                    ->all();
+
+                $shares = $this->distributionShares($available, $openCounts);
+
+                $cursor = 0;
+                $perFronter = [];
+                foreach ($shares as $fid => $count) {
+                    if ($count <= 0) { $perFronter[$fid] = 0; continue; }
+                    $slice = array_slice($orderedIds, $cursor, $count);
+                    if (!empty($slice)) {
+                        Lead::whereIn('id', $slice)->update(['assigned_to' => $fid]);
+                        // Set original_fronter when null
+                        Lead::whereIn('id', $slice)->whereNull('original_fronter')->update(['original_fronter' => $fid]);
+                    }
+                    $perFronter[$fid] = count($slice);
+                    $cursor += count($slice);
+                }
+
+                return [
+                    'distributed' => array_sum($perFronter),
+                    'shares' => $perFronter,
+                    'skipped' => 0,
+                ];
+            });
+
+            // Audit log: one entry per distribution
+            $userNames = User::whereIn('id', array_keys($result['shares']))->pluck('name', 'id');
+            $sharesNamed = [];
+            foreach ($result['shares'] as $fid => $cnt) {
+                $sharesNamed[] = ['user_id' => (int) $fid, 'name' => $userNames[$fid] ?? 'Unknown', 'count' => $cnt];
+            }
+            \App\Models\AuditLog::record('leads.round_robin_distribute', null, null, [
+                'strategy' => $this->distributeStrategy,
+                'skip_assigned' => $this->distributeSkipAssigned,
+                'distributed_count' => $result['distributed'],
+                'shares' => $sharesNamed,
+                'mode' => $this->bulkSelectAllMatching ? 'filter' : 'explicit',
+                'filter' => $this->bulkSelectAllMatching ? $this->bulkFilterSnapshot() : null,
+                'lead_ids' => $this->bulkSelectAllMatching ? null : $this->selectedLeads,
+                'weights' => $this->distributeStrategy === 'weighted' ? $this->distributeWeights : null,
+                'targets' => $this->distributeStrategy === 'fill_target' ? $this->distributeTargets : null,
+            ]);
+
+            $summary = collect($sharesNamed)->map(fn($s) => $s['name'] . ': ' . $s['count'])->implode(', ');
+            session()->flash('leads_flash', "Distributed {$result['distributed']} leads — {$summary}");
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Round-robin distribute failed', ['error' => $e->getMessage()]);
+            session()->flash('leads_flash', 'Distribution failed: ' . $e->getMessage());
+        }
+
+        $this->clearSelectedLeads();
     }
 
     public function assignSelectedToFronter(): void

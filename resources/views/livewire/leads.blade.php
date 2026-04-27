@@ -290,6 +290,7 @@
         <div class="sticky top-0 z-30 mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-crm-border bg-white shadow-sm px-3 py-2">
             <span class="text-xs font-semibold text-crm-t2">Bulk action:</span>
             <button wire:click="openBulkAction('assign')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">Assign to Rep</button>
+            <button wire:click="openDistribute" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition">Distribute to Fronters</button>
             <button wire:click="openBulkAction('disposition')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition">Change Disposition</button>
             <button wire:click="bulkExportCsv" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-crm-card border border-crm-border text-crm-t1 hover:bg-crm-hover transition">Export CSV</button>
             @if(auth()->user()?->hasRole('master_admin'))
@@ -1002,8 +1003,145 @@
     </div>
     @endif
 
+    {{-- ═══ Round-Robin Distribute Modal (admin/master_admin) ═══ --}}
+    @if($isAdmin && $bulkAction === 'distribute')
+        @php
+            $distributeAvailable = $bulkSelectAllMatching ? min((int) $leads->total(), (int) config('leads.bulk_action_cap', 10000)) : count($selectedLeads);
+            $eligibleFronters = \App\Models\User::whereIn('role', ['fronter', 'fronter_panama'])->orderBy('name')->get(['id','name','role']);
+            $openCounts = $this->frontersOpenLeadCounts($eligibleFronters->pluck('id')->all());
+            $alreadyAssignedCount = $distributeSkipAssigned ? $this->bulkAlreadyAssignedCount() : 0;
+            $distributePool = max(0, $distributeAvailable - $alreadyAssignedCount);
+            $shares = (count($distributeFronterIds) >= 2) ? $this->distributionShares($distributePool, $openCounts) : [];
+        @endphp
+        <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center backdrop-blur-sm p-4" wire:click.self="cancelBulkAction">
+            <div class="bg-white rounded-lg p-5 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-base font-bold">Distribute leads to fronters · Step {{ $distributeStep }} of 3</h3>
+                    <button wire:click="cancelBulkAction" class="text-crm-t3 hover:text-crm-t1 text-lg">&times;</button>
+                </div>
+
+                {{-- Step 1: pick fronters --}}
+                @if($distributeStep === 1)
+                    <p class="text-xs text-crm-t3 mb-3">Pool: {{ number_format($distributeAvailable) }} leads {{ $distributeSkipAssigned ? '(of which ' . number_format($alreadyAssignedCount) . ' already assigned will be skipped)' : '' }}</p>
+                    <div class="border border-crm-border rounded-lg max-h-80 overflow-y-auto divide-y divide-crm-border">
+                        @forelse($eligibleFronters as $f)
+                            @php $oc = (int) ($openCounts[$f->id] ?? 0); @endphp
+                            <label for="dfid-{{ $f->id }}" class="flex items-center gap-3 px-3 py-2 hover:bg-crm-hover cursor-pointer">
+                                <input id="dfid-{{ $f->id }}" name="distributeFronterIds[]" type="checkbox" wire:model.live="distributeFronterIds" value="{{ $f->id }}" class="h-4 w-4 rounded border-crm-border">
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-sm font-semibold truncate">{{ $f->name }}</div>
+                                    <div class="text-[10px] text-crm-t3">
+                                        <span class="px-1.5 py-0.5 rounded bg-crm-surface border border-crm-border mr-1">{{ str_replace('_',' ',$f->role) }}</span>
+                                        {{ $oc }} open leads
+                                    </div>
+                                </div>
+                            </label>
+                        @empty
+                            <div class="px-3 py-4 text-xs text-crm-t3 text-center">No fronter or fronter_panama users found.</div>
+                        @endforelse
+                    </div>
+                    <p class="mt-2 text-[11px] text-crm-t3">Pick 2 or more. {{ count($distributeFronterIds) }} selected.</p>
+                @endif
+
+                {{-- Step 2: strategy --}}
+                @if($distributeStep === 2)
+                    <div class="space-y-3 mb-4">
+                        <label for="strat-even" class="flex items-start gap-2 p-3 rounded-lg border border-crm-border hover:bg-crm-hover cursor-pointer">
+                            <input id="strat-even" name="distributeStrategy" type="radio" wire:model.live="distributeStrategy" value="even" class="mt-1">
+                            <div>
+                                <div class="text-sm font-semibold">Even split</div>
+                                <div class="text-[11px] text-crm-t3">Pool divided equally; remainder goes to top of list.</div>
+                            </div>
+                        </label>
+                        <label for="strat-weighted" class="flex items-start gap-2 p-3 rounded-lg border border-crm-border hover:bg-crm-hover cursor-pointer">
+                            <input id="strat-weighted" name="distributeStrategy" type="radio" wire:model.live="distributeStrategy" value="weighted" class="mt-1">
+                            <div>
+                                <div class="text-sm font-semibold">Weighted split</div>
+                                <div class="text-[11px] text-crm-t3">Each fronter gets a 1–10 weight; share is proportional.</div>
+                            </div>
+                        </label>
+                        <label for="strat-fill" class="flex items-start gap-2 p-3 rounded-lg border border-crm-border hover:bg-crm-hover cursor-pointer">
+                            <input id="strat-fill" name="distributeStrategy" type="radio" wire:model.live="distributeStrategy" value="fill_target" class="mt-1">
+                            <div>
+                                <div class="text-sm font-semibold">Fill to target</div>
+                                <div class="text-[11px] text-crm-t3">Bring each fronter up to N total open leads. Round-robins leftovers.</div>
+                            </div>
+                        </label>
+                    </div>
+
+                    @if($distributeStrategy === 'weighted')
+                        <div class="border border-crm-border rounded-lg p-3 mb-3">
+                            <div class="text-[10px] font-semibold text-crm-t3 uppercase tracking-wider mb-2">Weights (1–10)</div>
+                            @foreach($eligibleFronters->whereIn('id', $distributeFronterIds) as $f)
+                                <div class="flex items-center gap-2 mb-1.5">
+                                    <span class="flex-1 text-xs">{{ $f->name }}</span>
+                                    <input id="wt-{{ $f->id }}" name="distributeWeights[{{ $f->id }}]" type="number" min="1" max="10" wire:model.live="distributeWeights.{{ $f->id }}" class="w-16 px-2 py-1 text-xs border border-crm-border rounded">
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    @if($distributeStrategy === 'fill_target')
+                        <div class="border border-crm-border rounded-lg p-3 mb-3">
+                            <div class="text-[10px] font-semibold text-crm-t3 uppercase tracking-wider mb-2">Target open leads per fronter</div>
+                            @foreach($eligibleFronters->whereIn('id', $distributeFronterIds) as $f)
+                                @php $oc = (int) ($openCounts[$f->id] ?? 0); @endphp
+                                <div class="flex items-center gap-2 mb-1.5">
+                                    <span class="flex-1 text-xs">{{ $f->name }} <span class="text-crm-t3">({{ $oc }} now)</span></span>
+                                    <input id="tg-{{ $f->id }}" name="distributeTargets[{{ $f->id }}]" type="number" min="0" wire:model.live.debounce.200ms="distributeTargets.{{ $f->id }}" class="w-20 px-2 py-1 text-xs border border-crm-border rounded">
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    {{-- Live preview --}}
+                    <div class="rounded-lg bg-blue-50 border border-blue-200 p-3 text-xs">
+                        <div class="font-semibold text-blue-900 mb-1">Preview ({{ array_sum($shares) }} of {{ $distributePool }} pool):</div>
+                        @foreach($shares as $fid => $cnt)
+                            @php $name = optional($eligibleFronters->firstWhere('id', $fid))->name ?? "User #$fid"; @endphp
+                            <div class="flex justify-between"><span class="text-blue-900">{{ $name }}</span><span class="font-mono">+{{ $cnt }}</span></div>
+                        @endforeach
+                    </div>
+                @endif
+
+                {{-- Step 3: confirm --}}
+                @if($distributeStep === 3)
+                    <label for="skipAssigned" class="flex items-center gap-2 mb-3 cursor-pointer">
+                        <input id="skipAssigned" name="distributeSkipAssigned" type="checkbox" wire:model.live="distributeSkipAssigned" class="h-4 w-4 rounded border-crm-border">
+                        <span class="text-xs">Skip leads that are already assigned ({{ number_format($alreadyAssignedCount) }} would be skipped)</span>
+                    </label>
+                    <div class="rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-xs space-y-1.5">
+                        <div><strong>Strategy:</strong> {{ ucwords(str_replace('_',' ',$distributeStrategy)) }}</div>
+                        <div><strong>Total to distribute:</strong> {{ array_sum($shares) }}</div>
+                        <div class="border-t border-emerald-200 pt-1.5">
+                            @foreach($shares as $fid => $cnt)
+                                @php $name = optional($eligibleFronters->firstWhere('id', $fid))->name ?? "User #$fid"; @endphp
+                                <div class="flex justify-between"><span>{{ $name }}</span><span class="font-mono font-semibold">{{ $cnt }} leads</span></div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
+                {{-- Footer --}}
+                <div class="mt-5 flex items-center justify-between gap-2">
+                    @if($distributeStep > 1)
+                        <button wire:click="distributeBack" class="px-4 py-2 text-sm font-semibold text-crm-t2 bg-white border border-crm-border rounded-lg hover:bg-crm-hover">Back</button>
+                    @else
+                        <button wire:click="cancelBulkAction" class="px-4 py-2 text-sm font-semibold text-crm-t2 bg-white border border-crm-border rounded-lg hover:bg-crm-hover">Cancel</button>
+                    @endif
+
+                    @if($distributeStep < 3)
+                        <button wire:click="distributeNext" @disabled(count($distributeFronterIds) < 2) class="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed">Next →</button>
+                    @else
+                        <button wire:click="executeDistribution" @disabled(array_sum($shares) === 0) class="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed">Distribute {{ array_sum($shares) }} leads</button>
+                    @endif
+                </div>
+            </div>
+        </div>
+    @endif
+
     {{-- ═══ Bulk Action Confirmation Modals (admin/master_admin) ═══ --}}
-    @if($isAdmin && $bulkAction)
+    @if($isAdmin && $bulkAction && $bulkAction !== 'distribute')
         @php
             $bulkCount = $bulkSelectAllMatching ? min((int) $leads->total(), (int) config('leads.bulk_action_cap', 10000)) : count($selectedLeads);
             $contextBits = [];
