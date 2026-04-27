@@ -225,9 +225,11 @@ class LeadImportWizard extends Component
         @ini_set('memory_limit', '512M');
         @set_time_limit(180);
 
+        $stampedFilename = Leads::stampImportFilename($this->originalFilename);
+
         $batch = LeadImportBatch::create([
             'user_id' => auth()->id(),
-            'original_filename' => $this->originalFilename,
+            'original_filename' => $stampedFilename,
             'file_type' => 'csv',
             'total_rows' => 0,
             'status' => 'pending',
@@ -295,6 +297,7 @@ class LeadImportWizard extends Component
                 'chunks' => $chunkCount,
                 'strategy' => $this->duplicateStrategy,
                 'skipped_empty' => $invalidLocal,
+                'source_file_name' => $stampedFilename,
             ];
             Log::info('AI lead import queued', ['user' => auth()->id(), 'batch' => $batch->id, 'rows' => $total]);
 

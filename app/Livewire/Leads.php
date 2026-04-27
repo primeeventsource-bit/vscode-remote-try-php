@@ -36,6 +36,8 @@ class Leads extends Component
     public string $search = '';
     public string $filter = 'all';
     public string $resortFilter = 'all';
+    #[\Livewire\Attributes\Url(as: 'src_file', except: 'all')]
+    public string $sourceFileFilter = 'all'; // 'all' or exact source_file_name; admin/master_admin only
     public string $fronterFilter = 'all';
     public string $ageFilter = 'all';
     public string $duplicateFilter = 'all';
@@ -80,6 +82,19 @@ class Leads extends Component
     public function updatedSearch()    { $this->resetPage(); }
     public function updatedFilter()    { $this->resetPage(); }
     public function updatedResortFilter() { $this->resetPage(); }
+    public function updatedSourceFileFilter() {
+        $this->resetPage();
+        // Clear bulk selection so admins don't accidentally act on rows hidden
+        // by the new filter. Matches the spec's "filter change clears selection".
+        $this->selectedLeads = [];
+    }
+    public function clearSourceFileFilter(): void
+    {
+        $this->sourceFileFilter = 'all';
+        $this->resetPage();
+        $this->selectedLeads = [];
+        session()->flash('leads_flash', 'Showing all leads');
+    }
     public function updatedFronterFilter() { $this->resetPage(); }
     public function updatedAgeFilter() { $this->resetPage(); }
     public function updatedDuplicateFilter() { $this->resetPage(); }
@@ -382,6 +397,8 @@ class Leads extends Component
             return;
         }
 
+        $sourceLabel = self::stampImportFilename($sourceLabel);
+
         try {
             $batch = LeadImportBatch::create([
                 'user_id' => auth()->id(),
@@ -654,6 +671,25 @@ class Leads extends Component
         return $row;
     }
 
+    /**
+     * Stamp an upload filename with " (YYYY-MM-DD HH:mm)" so every batch is
+     * uniquely identifiable. If a batch with the exact stamped name already
+     * exists (concurrent same-minute import), append :ss seconds.
+     * Sanitizes path separators, trims, caps at 200 chars before stamping.
+     */
+    public static function stampImportFilename(string $raw): string
+    {
+        $clean = trim(str_replace(['\\', '/'], '', $raw));
+        if ($clean === '') $clean = 'pasted_csv';
+        if (mb_strlen($clean) > 200) $clean = mb_substr($clean, 0, 200);
+
+        $stamped = $clean . ' (' . now()->format('Y-m-d H:i') . ')';
+        if (LeadImportBatch::where('original_filename', $stamped)->exists()) {
+            $stamped = $clean . ' (' . now()->format('Y-m-d H:i:s') . ')';
+        }
+        return $stamped;
+    }
+
     public function clearImportState(): void
     {
         $this->csvText = '';
@@ -868,6 +904,13 @@ class Leads extends Component
             $query->where('resort', $this->resortFilter);
         }
 
+        // Source-file filter — admin/master_admin only. Silently ignored for other
+        // roles even if URL param is forged; their visibility is already constrained
+        // by the assigned_to gate above.
+        if ($this->sourceFileFilter !== 'all' && $isAdmin) {
+            $query->where('source_file_name', $this->sourceFileFilter);
+        }
+
         // Role filter — restrict to users in a specific role
         if ($this->roleFilter !== 'all') {
             $roleUserIds = User::where('role', $this->roleFilter)->pluck('id');
@@ -940,6 +983,28 @@ class Leads extends Component
         $leads = $this->baseLeadsQuery()->paginate($this->perPage);
 
         $resorts = Lead::distinct()->pluck('resort')->filter()->sort();
+
+        // Source-file dropdown — admin/master_admin only. Excludes files with
+        // zero current leads via HAVING. Ordered by most-recent import first.
+        $sourceFiles = collect();
+        if ($isAdmin) {
+            try {
+                $sourceFiles = Lead::query()
+                    ->select('source_file_name')
+                    ->selectRaw('COUNT(*) as lead_count')
+                    ->selectRaw('MAX(COALESCE(imported_at, created_at)) as last_imported')
+                    ->whereNotNull('source_file_name')
+                    ->where('source_file_name', '!=', '')
+                    ->groupBy('source_file_name')
+                    ->having('lead_count', '>', 0)
+                    ->orderByDesc('last_imported')
+                    ->limit(500)
+                    ->get();
+            } catch (\Throwable $e) {
+                // Migration may not have run yet on this env — fail open with empty list
+                $sourceFiles = collect();
+            }
+        }
         $allActiveUsers = User::orderBy('name')->get();
         $closers = $allActiveUsers; // Show all users in transfer-to-closer dropdown
         $fronters = $allActiveUsers; // Show all users in fronter filter + bulk assign
@@ -1013,7 +1078,8 @@ class Leads extends Component
         return view('livewire.leads', compact(
             'leads', 'resorts', 'closers', 'fronters', 'users', 'active',
             'isAdmin', 'fronterStats', 'totalLeads', 'duplicateCounts',
-            'activeDuplicates', 'recentImports', 'roles', 'roleUsers'
+            'activeDuplicates', 'recentImports', 'roles', 'roleUsers',
+            'sourceFiles'
         ));
     }
 }

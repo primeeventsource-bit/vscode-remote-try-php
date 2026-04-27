@@ -29,6 +29,7 @@ class Lead extends Model
         'disposition',
         'transferred_to',
         'source',
+        'source_file_name',
         'callback_date',
         'imported_at',
         'import_batch_id',

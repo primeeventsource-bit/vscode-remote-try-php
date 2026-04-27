@@ -43,6 +43,7 @@ class ProcessLeadImportChunk implements ShouldQueue
         $failedCount = 0;
         $now = now()->toDateTimeString();
         $strategy = $batch->duplicate_strategy;
+        $sourceFileName = $batch->original_filename;
 
         foreach ($this->rows as $index => $row) {
             $rowNum = $this->startRowNumber + $index;
@@ -120,6 +121,7 @@ class ProcessLeadImportChunk implements ShouldQueue
                     'email' => trim($row['email'] ?? '') ?: null,
                     'description' => trim($row['description'] ?? '') ?: null,
                     'source' => 'csv',
+                    'source_file_name' => $sourceFileName,
                     'imported_at' => $now,
                     'import_batch_id' => $this->batchId,
                     'created_at' => $now,

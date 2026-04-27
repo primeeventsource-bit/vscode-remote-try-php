@@ -136,6 +136,22 @@
             @endforeach
         </select>
 
+        {{-- Source-file filter — admin/master_admin only --}}
+        @if($isAdmin && isset($sourceFiles) && $sourceFiles->isNotEmpty())
+            <select id="fld-sourceFileFilter" wire:model.live="sourceFileFilter"
+                title="Filter leads by the CSV file they were imported from"
+                class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none max-w-[280px]">
+                <option value="all">All Files ({{ $sourceFiles->sum('lead_count') }})</option>
+                @foreach($sourceFiles as $sf)
+                    @php
+                        $label = $sf->source_file_name . ' — ' . number_format($sf->lead_count) . ' leads';
+                        $display = mb_strlen($label) > 50 ? mb_substr($label, 0, 47) . '…' : $label;
+                    @endphp
+                    <option value="{{ $sf->source_file_name }}" title="{{ $label }}">{{ $display }}</option>
+                @endforeach
+            </select>
+        @endif
+
         {{-- Role filter — pick a role, then see users in that role --}}
         <select id="fld-roleFilter" wire:model.live="roleFilter" class="px-3 py-2 text-sm bg-white border border-crm-border rounded-lg focus:outline-none">
             <option value="all">All Roles</option>
@@ -245,6 +261,20 @@
             </table>
         </div>
     </div>
+    @endif
+
+    {{-- Source-file flash + active chip (admin only) --}}
+    @if($isAdmin && session('leads_flash'))
+        <div class="mb-3 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-700">
+            {{ session('leads_flash') }}
+        </div>
+    @endif
+    @if($isAdmin && $sourceFileFilter !== 'all')
+        <div class="mb-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-xs">
+            <span class="text-blue-700">Filtering by file:</span>
+            <span class="font-semibold text-blue-900 max-w-[320px] truncate" title="{{ $sourceFileFilter }}">{{ $sourceFileFilter }}</span>
+            <button wire:click="clearSourceFileFilter" title="Clear file filter" class="text-blue-700 hover:text-blue-900 font-bold">×</button>
+        </div>
     @endif
 
     {{-- Leads Table --}}
