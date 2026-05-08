@@ -54,6 +54,15 @@ class DatabaseSeeder extends Seeder
         ];
 
         // ─── Users ───────────────────────────────────────────────────
+        // Demo users have plaintext-in-code passwords that hash on insert.
+        // Refuse to create them outside dev/test so a stray `db:seed` in
+        // production cannot install known credentials. Production admins
+        // should be created via `php artisan tinker` or a dedicated command.
+        if (! app()->environment('local', 'testing', 'development')) {
+            $this->command->warn('Skipping demo user seeding in '.app()->environment().' environment.');
+            return;
+        }
+
         $users = [
             ['name' => 'Prime Event Source','email' => 'primeeventsource@gmail.com', 'role' => 'master_admin', 'avatar' => 'PE', 'color' => '#7c3aed', 'username' => 'primeadmin', 'password' => 'prime2026', 'permissions' => $allPerms],
             ['name' => 'David Chen',       'email' => 'david@tl.com',  'role' => 'master_admin',  'avatar' => 'DC', 'color' => '#dc2626', 'username' => 'dchen',       'password' => '12345678', 'permissions' => $allPerms],

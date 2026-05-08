@@ -135,22 +135,12 @@ Route::middleware('auth')->group(function () {
             $sec = env('TWILIO_API_KEY_SECRET') ?: config('twilio.api_key_secret') ?: config('services.twilio.api_key_secret');
 
             if (!$sid || !$key || !$sec) {
-                return response()->json([
-                    'error' => 'Twilio credentials not configured',
-                    'debug' => [
-                        'env_file_exists' => file_exists(base_path('.env')),
-                        'sid_set' => !empty($sid),
-                        'key_set' => !empty($key),
-                        'sec_set' => !empty($sec),
-                        'env_sid' => env('TWILIO_ACCOUNT_SID') ? 'yes' : 'no',
-                        'cfg_sid' => config('twilio.account_sid') ? 'yes' : 'no',
-                    ],
-                    'missing' => array_filter([
-                        !$sid ? 'TWILIO_ACCOUNT_SID' : null,
-                        !$key ? 'TWILIO_API_KEY_SID' : null,
-                        !$sec ? 'TWILIO_API_KEY_SECRET' : null,
-                    ]),
-            ], 503);
+                \Illuminate\Support\Facades\Log::error('Twilio credentials not configured for meeting token endpoint', [
+                    'sid_set' => !empty($sid),
+                    'key_set' => !empty($key),
+                    'sec_set' => !empty($sec),
+                ]);
+                return response()->json(['error' => 'Service configuration error'], 503);
         }
 
         $token = \App\Services\Twilio\TwilioVideoTokenService::generateToken($identity, $meeting->provider_room_name);
@@ -169,7 +159,7 @@ Route::middleware('auth')->group(function () {
             \Illuminate\Support\Facades\Log::error('Meeting token endpoint crashed', [
                 'uuid' => $uuid, 'error' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine(),
             ]);
-            return response()->json(['error' => $e->getMessage(), 'file' => basename($e->getFile()), 'line' => $e->getLine()], 500);
+            return response()->json(['error' => 'Internal server error'], 500);
         }
     });
 

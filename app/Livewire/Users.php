@@ -16,6 +16,13 @@ class Users extends Component
     public array $newUser = ['name' => '', 'email' => '', 'username' => '', 'password' => '', 'role' => 'fronter', 'avatar' => '', 'color' => '#3b82f6'];
     public array $editData = ['name' => '', 'email' => '', 'username' => '', 'password' => '', 'avatar' => '', 'color' => '#3b82f6'];
 
+    public function mount(): void
+    {
+        // Defence in depth — saveUser/saveEdit/updateRole/deleteUser each re-check,
+        // but rendering the form to a non-admin lets them poke at Livewire properties.
+        abort_unless(auth()->user()?->hasRole('master_admin', 'admin'), 403);
+    }
+
     public function saveUser()
     {
         $user = auth()->user();

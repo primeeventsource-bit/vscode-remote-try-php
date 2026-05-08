@@ -55,8 +55,10 @@ Route::middleware(['auth.token'])->group(function () {
 
     // Deals
     Route::get('/deals', [DealController::class, 'index']);
-    Route::post('/deals', [DealController::class, 'store']);
-    Route::put('/deals/{id}', [DealController::class, 'update']);
+    Route::post('/deals', [DealController::class, 'store'])
+        ->middleware('role:master_admin,admin,admin_limited,closer,closer_panama');
+    Route::put('/deals/{id}', [DealController::class, 'update'])
+        ->middleware('role:master_admin,admin,admin_limited,closer,closer_panama');
     Route::put('/deals/{id}/charge', [DealController::class, 'toggleCharged'])
         ->middleware('role:master_admin,admin');
     Route::put('/deals/{id}/chargeback', [DealController::class, 'toggleChargeback'])

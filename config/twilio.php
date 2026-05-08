@@ -1,11 +1,14 @@
 <?php
 
 return [
-    // Hardcoded defaults for Azure where .env is unreliable
-    // env() is tried first; if null, falls back to hardcoded value
-    'account_sid'          => env('TWILIO_ACCOUNT_SID', 'AC144cda6c0249d7b13930171e0036e2d9'),
-    'auth_token'           => env('TWILIO_AUTH_TOKEN', '1553c2b05398b68e8a9aba7653f5e8d9'),
-    // Must be a STANDARD type API key — Main keys do not work for Video tokens
+    // No defaults — production must supply credentials via env. The "Azure
+    // where .env is unreliable" workaround that previously hardcoded these
+    // values is removed: it leaked production credentials into git history.
+    // The corresponding Twilio Account SID, Auth Token, and any keys that
+    // ever lived here MUST be rotated.
+    // Must be a STANDARD type API key — Main keys do not work for Video tokens.
+    'account_sid'          => env('TWILIO_ACCOUNT_SID'),
+    'auth_token'           => env('TWILIO_AUTH_TOKEN'),
     'api_key_sid'          => env('TWILIO_API_KEY_SID'),
     'api_key_secret'       => env('TWILIO_API_KEY_SECRET'),
     'messaging_service_sid' => env('TWILIO_MESSAGING_SERVICE_SID'),

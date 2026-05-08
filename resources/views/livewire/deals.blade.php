@@ -368,18 +368,18 @@
                 <div class="mb-4 border-t border-crm-border pt-4">
                     <div class="text-[10px] text-crm-t3 uppercase tracking-wider mb-2 font-semibold">Card Information</div>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {{-- Card numbers are NEVER rendered in full — only masked last-4 via accessor. --}}
+                        {{-- CVV columns were dropped (migration 2026_04_20_000002) and must never appear. --}}
                         @foreach([
                             'Name on Card' => $active->name_on_card,
                             'Card Type' => $active->card_type,
                             'Bank' => $active->bank,
-                            'Card Number' => $active->card_number,
+                            'Card Number' => $active->masked_card,
                             'Exp Date' => $active->exp_date,
-                            'CV2' => $active->cv2,
                             'Billing Address' => $active->billing_address,
                             'Bank 2' => $active->bank2,
-                            'Card Number 2' => $active->card_number2,
+                            'Card Number 2' => $active->masked_card2,
                             'Exp Date 2' => $active->exp_date2,
-                            'CV2 2' => $active->cv2_2,
                         ] as $lbl => $val)
                             <div>
                                 <div class="text-[10px] text-crm-t3 uppercase tracking-wider">{{ $lbl }}</div>
