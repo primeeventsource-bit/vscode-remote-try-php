@@ -495,26 +495,9 @@ class Leads extends Component
         $this->importLeads();
     }
 
-    /**
-     * Maps each Lead column to a list of accepted CSV header synonyms (normalized).
-     * Header normalization: lowercased, non-alphanumeric stripped.
-     * e.g. "Phone Number1" → "phonenumber1", "County/State" → "countystate".
-     */
-    private const CSV_FIELD_SYNONYMS = [
-        'resort'          => ['resort', 'resortname', 'property', 'club'],
-        'owner_name'      => ['ownername', 'owner', 'name', 'fullname', 'primaryowner', 'owner1', 'ownerone'],
-        'owner_name_2'    => ['ownername2', 'owner2', 'ownertwo', 'secondaryowner', 'coowner', 'spouse', 'jointowner'],
-        'phone1'          => ['phone1', 'phonenumber1', 'phone', 'phonenumber', 'primaryphone', 'mobile', 'cell'],
-        'phone2'          => ['phone2', 'phonenumber2', 'secondaryphone', 'altphone', 'altphonenumber'],
-        'city'            => ['city', 'town'],
-        'st'              => ['st', 'state'],
-        'zip'             => ['zip', 'zipcode', 'postal', 'postalcode'],
-        'resort_location' => ['resortlocation', 'location', 'resortcity', 'resortcitystate'],
-        'email'           => ['email', 'emailaddress', 'mail'],
-        'description'     => ['description', 'notes', 'note', 'comments', 'comment', 'memo', 'remarks'],
-        // Combined fields handled in mapCsvRow():
-        'countystate'     => ['countystate', 'county_state', 'countyandstate'],
-    ];
+    // CSV header resolution moved to App\Support\Leads\CsvHeaderResolver (2026-05).
+    // The const FIELD_SYNONYMS and the buildHeaderMap() function live there now,
+    // unit-tested in tests/Unit/Support/Leads/CsvHeaderResolverTest.php.
 
     private function streamCsvRows(string $path): \Generator
     {
@@ -558,7 +541,7 @@ class Leads extends Component
 
             // Decide whether the first row is a header by trying to map it.
             // If any cell normalizes to a known synonym, treat it as a header.
-            $headerMap = $this->buildHeaderMap($first);
+            $headerMap = \App\Support\Leads\CsvHeaderResolver::buildHeaderMap($first);
             $hasHeader = !empty($headerMap);
 
             if (!$hasHeader) {
@@ -581,34 +564,7 @@ class Leads extends Component
         }
     }
 
-    /**
-     * Build a map of [columnIndex => leadField] from the header row.
-     * Returns empty array if no header cells matched any known synonym.
-     */
-    private function buildHeaderMap(array $headerCells): array
-    {
-        // Flatten synonyms into [synonym => leadField]
-        $synonymToField = [];
-        foreach (self::CSV_FIELD_SYNONYMS as $field => $synonyms) {
-            foreach ($synonyms as $syn) {
-                $synonymToField[$syn] = $field;
-            }
-        }
-
-        $map = [];
-        foreach ($headerCells as $idx => $cell) {
-            $normalized = strtolower(preg_replace('/[^a-z0-9]/i', '', (string) $cell));
-            if ($normalized === '') continue;
-            if (isset($synonymToField[$normalized])) {
-                $field = $synonymToField[$normalized];
-                // First match wins — keeps phone1 from being overwritten by a later "phone" header
-                if (!in_array($field, $map, true)) {
-                    $map[$idx] = $field;
-                }
-            }
-        }
-        return $map;
-    }
+    // buildHeaderMap() moved to App\Support\Leads\CsvHeaderResolver (2026-05).
 
     private function mapCsvRowByHeader(array $v, array $headerMap): ?array
     {
