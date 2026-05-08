@@ -256,4 +256,54 @@ class PayrollBatchBuilderTest extends TestCase
             'deal_financial_id' => $financial->id,
         ]);
     }
+
+    // ─── Auto-lock-on-pay (markPaid invariant) ──────────────────────
+
+    public function test_marking_paid_locks_previously_unlocked_deal_financials(): void
+    {
+        // Operator goes draft → approved → paid, skipping lockBatch().
+        // The DealFinancial should still end up locked.
+        $monday = Carbon::parse('2026-04-13');
+        $deal = $this->makeEligibleDeal($monday->copy()->addDays(2));
+        $batch = $this->buildBatchForWeek($monday);
+
+        $financial = DealFinancial::where('deal_id', $deal->id)->firstOrFail();
+        $this->assertFalse((bool) $financial->is_locked,
+            'Pre-condition: financial should start unlocked.');
+
+        PayrollBatchBuilder::approveBatch($batch);
+        PayrollBatchBuilder::markPaid($batch->fresh());
+
+        $financial->refresh();
+        $this->assertTrue((bool) $financial->is_locked,
+            'markPaid must auto-lock the financial snapshot to enforce the "paid → immutable" invariant.');
+        $this->assertNotNull($financial->locked_at,
+            'Auto-lock must stamp locked_at.');
+    }
+
+    public function test_marking_paid_does_not_overwrite_existing_locked_at_timestamp(): void
+    {
+        // If lockBatch() already locked it (the normal flow), markPaid must
+        // not stamp a fresh locked_at — that would lose audit fidelity.
+        $monday = Carbon::parse('2026-04-13');
+        $deal = $this->makeEligibleDeal($monday->copy()->addDays(2));
+        $batch = $this->buildBatchForWeek($monday);
+
+        $financial = DealFinancial::where('deal_id', $deal->id)->firstOrFail();
+        $earlierLockedAt = Carbon::parse('2026-04-10 09:00:00');
+        $financial->forceFill([
+            'is_locked' => true,
+            'locked_at' => $earlierLockedAt,
+        ])->save();
+
+        PayrollBatchBuilder::markPaid($batch);
+
+        $financial->refresh();
+        $this->assertTrue((bool) $financial->is_locked);
+        $this->assertSame(
+            $earlierLockedAt->format('Y-m-d H:i:s'),
+            $financial->locked_at?->format('Y-m-d H:i:s'),
+            'Already-locked financials must keep their original locked_at — markPaid is idempotent.'
+        );
+    }
 }

@@ -242,6 +242,14 @@ class PayrollBatchBuilder
 
     /**
      * Mark batch as paid.
+     *
+     * Auto-locks every DealFinancial in the batch that isn't already locked.
+     * The intended workflow is draft → approved → locked → paid, where
+     * lockBatch() is the explicit lock step. But nothing forces an operator
+     * through that step — calling markPaid() on an `approved` batch is allowed
+     * — so this method enforces the invariant "a paid batch's financial
+     * snapshots are locked" defensively. Already-locked snapshots are left
+     * untouched (idempotent; preserves the original locked_at timestamp).
      */
     public static function markPaid(PayrollBatchV2 $batch): void
     {
@@ -254,14 +262,36 @@ class PayrollBatchBuilder
 
             $batch->items()->update(['payout_status' => 'paid']);
 
+            $autoLockedIds = [];
+
             foreach ($batch->batchDeals as $bd) {
                 Deal::where('id', $bd->deal_id)->update([
                     'payroll_status' => 'paid',
                     'commission_status' => 'paid',
                 ]);
+
+                // Idempotent auto-lock: only updates rows that aren't already locked.
+                $affected = DealFinancial::where('id', $bd->deal_financial_id)
+                    ->where('is_locked', false)
+                    ->update([
+                        'is_locked' => true,
+                        'locked_at' => now(),
+                    ]);
+                if ($affected > 0) {
+                    $autoLockedIds[] = $bd->deal_financial_id;
+                }
             }
 
-            FinanceAudit::record('PayrollBatch', $batch->id, 'batch_paid', null, $batch->toArray());
+            FinanceAudit::record(
+                'PayrollBatch',
+                $batch->id,
+                'batch_paid',
+                null,
+                $batch->toArray(),
+                $autoLockedIds === []
+                    ? null
+                    : 'Auto-locked '.count($autoLockedIds).' previously-unlocked DealFinancial(s) on pay.',
+            );
         });
     }
 }
