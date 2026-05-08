@@ -4,43 +4,64 @@ namespace App\Services;
 
 use App\Models\Deal;
 use App\Models\DealCloser;
+use App\Models\PayrollSettingModel;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
 
+/**
+ * Legacy per-deal sales-commission engine.
+ *
+ * Sister engine: App\Services\Payroll\DealPayrollCalculator. The two are NOT
+ * redundant — they solve different problems and both are intentionally kept:
+ *
+ *   - This engine (CommissionCalculator):
+ *       * Computes per-deal CLOSER + FRONTER commission with SNR / VD
+ *         deductions, multi-closer split, Panama 25% cap, MAX_CLOSERS hard cap.
+ *       * Writes back to Deal columns (closer_comm_amount, fronter_comm_amount,
+ *         snr_deduction, vd_deduction, ...) and saves the model.
+ *       * Used by Livewire\Deals (deal save/edit), Livewire\Payroll (v1
+ *         dashboard), and PipelineStateService (state transitions).
+ *
+ *   - DealPayrollCalculator (newer):
+ *       * Computes finance-grade company-net using gross / collected /
+ *         refunded / processing-fee / reserve-fee / marketing-cost /
+ *         manual-adjustment.
+ *       * Pure function — returns an array, no DB writes.
+ *       * Used by DealPayrollSyncService → writes `deal_financials`.
+ *       * Has no notion of SNR / VD / Panama / multi-closer.
+ *
+ * As of 2026-05 the two engines share a SINGLE rate source — the
+ * `payroll_settings` key/value table accessed through PayrollSettingModel.
+ * Before this fix, this class read from the (renamed-away) wide-column
+ * payroll_settings table and silently fell back to its constants while
+ * DealPayrollCalculator read the new key/value table — meaning UI rate
+ * changes affected one engine but not the other.
+ *
+ * SNR / VD / Panama / multi-closer constants stay below — they are legacy-
+ * engine-only concerns with no UI-configurable equivalent.
+ */
 class CommissionCalculator
 {
-    // Fallback constants if DB lookup fails
-    public const SNR_PCT = 3;
-    public const VD_PCT = 5;
-    public const DEFAULT_CLOSER_PCT = 40;
-    public const PANAMA_CLOSER_PCT = 25;
-    public const MULTI_CLOSER_PCT = 10;
-    public const FRONTER_PCT = 10;
-    public const MAX_CLOSERS = 4;
+    // Fallback constants — used when no PayrollSettingModel row is set.
+    public const SNR_PCT = 3;                  // legacy-only, no UI knob
+    public const VD_PCT = 5;                   // legacy-only, no UI knob
+    public const DEFAULT_CLOSER_PCT = 40;      // fallback for closer_default_percent
+    public const PANAMA_CLOSER_PCT = 25;       // legacy-only, no UI knob
+    public const MULTI_CLOSER_PCT = 10;        // legacy-only, no UI knob
+    public const FRONTER_PCT = 10;             // fallback for fronter_default_percent
+    public const MAX_CLOSERS = 4;              // legacy-only
 
     /**
-     * Load rates from payroll_settings table, fall back to constants.
+     * Load commission rates. Closer / fronter percentages come from the
+     * unified PayrollSettingModel store (same source as DealPayrollCalculator).
+     * SNR / VD remain class constants — they have no PayrollSettingModel key.
      */
     private static function loadRates(): array
     {
-        try {
-            $row = DB::table('payroll_settings')->first();
-            if ($row) {
-                return [
-                    'snr_pct' => (float) ($row->snr_pct ?? self::SNR_PCT),
-                    'vd_pct' => (float) ($row->vd_pct ?? self::VD_PCT),
-                    'closer_pct' => (float) ($row->closer_pct ?? self::DEFAULT_CLOSER_PCT),
-                    'fronter_pct' => (float) ($row->fronter_pct ?? self::FRONTER_PCT),
-                    'admin_snr_pct' => (float) ($row->admin_snr_pct ?? self::SNR_PCT),
-                ];
-            }
-        } catch (\Throwable $e) {}
-
         return [
-            'snr_pct' => self::SNR_PCT,
-            'vd_pct' => self::VD_PCT,
-            'closer_pct' => self::DEFAULT_CLOSER_PCT,
-            'fronter_pct' => self::FRONTER_PCT,
+            'snr_pct'       => self::SNR_PCT,
+            'vd_pct'        => self::VD_PCT,
+            'closer_pct'    => (float) PayrollSettingModel::get('closer_default_percent', self::DEFAULT_CLOSER_PCT),
+            'fronter_pct'   => (float) PayrollSettingModel::get('fronter_default_percent', self::FRONTER_PCT),
             'admin_snr_pct' => self::SNR_PCT,
         ];
     }

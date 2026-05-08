@@ -46,6 +46,16 @@ class PayrollBatchBuilder
 
     /**
      * Attach eligible deals to the batch.
+     *
+     * The exclusion list spans every batch state that represents an active
+     * "this deal is being paid" claim — draft, approved, locked, paid. The
+     * unique([payroll_batch_id, deal_id]) constraint on payroll_batch_deals
+     * prevents the same deal from being attached to the SAME batch twice;
+     * the broader whereDoesntHave below prevents the same deal from being
+     * attached to a SECOND batch while the first is still active. Without
+     * this broader filter, running buildWeeklyBatch() while a previous
+     * draft/approved batch over the same deals exists would silently
+     * duplicate them and risk paying the deal twice.
      */
     public static function attachEligibleDeals(PayrollBatchV2 $batch): void
     {
@@ -53,8 +63,14 @@ class PayrollBatchBuilder
             ->whereIn('payroll_status', ['calculated', 'approved'])
             ->where('commission_status', '!=', 'reversed')
             ->whereHas('dealFinancial', fn($q) => $q->where('is_reversed', false))
-            ->whereDoesntHave('payrollBatchDeals', function ($q) {
-                $q->whereHas('batch', fn($bq) => $bq->whereIn('batch_status', ['paid', 'locked']));
+            ->whereDoesntHave('payrollBatchDeals', function ($q) use ($batch) {
+                // Exclude this deal from any other active batch (draft/approved/
+                // locked/paid). `cancelled` would be excluded from this list when
+                // / if a cancellation state is added — keep this filter explicit.
+                $q->where('payroll_batch_id', '!=', $batch->id)
+                  ->whereHas('batch', fn($bq) => $bq->whereIn('batch_status', [
+                      'draft', 'approved', 'locked', 'paid',
+                  ]));
             })
             ->get();
 

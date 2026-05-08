@@ -6,6 +6,21 @@ use App\Models\Deal;
 use App\Models\PayrollSettingModel;
 
 /**
+ * Finance-grade per-deal payroll snapshot calculator.
+ *
+ * Sister engine: App\Services\CommissionCalculator. The two are NOT redundant
+ * and both are intentionally kept — see CommissionCalculator's class-level
+ * docblock for the full split. In short:
+ *
+ *   - This engine: gross / collected / refunded / processing / reserve /
+ *     marketing / manual-adjustment / company-net. Pure function returning an
+ *     array. Persisted via DealPayrollSyncService → `deal_financials`.
+ *   - CommissionCalculator: per-deal closer + fronter commission with SNR/VD
+ *     deductions, multi-closer split, and Panama 25% cap. Writes Deal columns.
+ *
+ * Both engines now read commission percentages from the same source —
+ * PayrollSettingModel — so UI rate changes propagate to both.
+ *
  * Pure calculation engine. No database writes. No side effects.
  *
  * Formulas:
