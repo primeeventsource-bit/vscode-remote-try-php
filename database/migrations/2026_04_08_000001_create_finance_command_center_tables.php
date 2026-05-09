@@ -127,7 +127,9 @@ return new class extends Migration
                 $table->decimal('ending_balance', 14, 2)->nullable();
                 $table->json('raw_summary_json')->nullable();
                 $table->timestamps();
-                $table->index(['merchant_account_id', 'statement_start_date']);
+                // Auto-generated name "merchant_statement_summaries_merchant_account_id_statement_start_date_index"
+                // exceeds MySQL's 64-char identifier limit; pin a short explicit name.
+                $table->index(['merchant_account_id', 'statement_start_date'], 'mss_acct_start_date_idx');
             });
         }
 
