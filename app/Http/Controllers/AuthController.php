@@ -29,7 +29,7 @@ class AuthController extends Controller
             'user_id'    => $user->id,
             'token'      => hash('sha256', $token),
             'created_at' => now(),
-            'expires_at' => now()->addHours(12),
+            'expires_at' => now()->addDays(30),
         ]);
 
         $user->update(['status' => 'active']);
