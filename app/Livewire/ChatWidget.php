@@ -99,7 +99,13 @@ class ChatWidget extends Component
 
         try {
             $adminId = (int) $this->dealFormAdmin;
-            $deal = Deal::create([
+
+            // Build create payload, then run through the same sanitizer the
+            // main Deals component uses. MySQL strict mode rejects '' for
+            // FK / numeric / date columns; the form sends '' for any blank
+            // input, so coerce them to null. Mirrors Deals::sanitizeDealData.
+            $createData = [
+                'lead_id' => $lead->id,
                 'timestamp' => now()->format('n/j/Y'),
                 'fronter' => $lead->original_fronter ?? $lead->assigned_to,
                 'closer' => $user->id,
@@ -120,9 +126,10 @@ class ChatWidget extends Component
                 'name_on_card' => $this->dealForm['name_on_card'],
                 'card_type' => $this->dealForm['card_type'],
                 'bank' => $this->dealForm['bank'],
+                // card_number encrypted by SafeEncrypted cast on the model.
+                // cv2/CVV intentionally omitted — never stored (PCI).
                 'card_number' => $this->dealForm['card_number'],
                 'exp_date' => $this->dealForm['exp_date'],
-                'cv2' => $this->dealForm['cv2'],
                 'billing_address' => $this->dealForm['billing_address'],
                 'verification_num' => $this->dealForm['verification_num'],
                 'notes' => $this->dealForm['notes'],
@@ -131,7 +138,15 @@ class ChatWidget extends Component
                 'status' => 'in_verification',
                 'charged' => 'no',
                 'charged_back' => 'no',
-            ]);
+            ];
+
+            foreach (['fronter', 'closer', 'assigned_admin', 'fee', 'closing_date'] as $col) {
+                if (array_key_exists($col, $createData) && $createData[$col] === '') {
+                    $createData[$col] = null;
+                }
+            }
+
+            $deal = Deal::create($createData);
 
             $lead->update(['disposition' => 'Converted to Deal']);
 
@@ -182,9 +197,9 @@ class ChatWidget extends Component
 
         $chats = $this->loadThreadsForUser($user);
 
-        if ($this->selectedChat) {
-            $this->markChatAsSeen();
-        }
+        // markChatAsSeen is already called from selectChat() and from the
+        // refreshUnreadCounts poll target — calling it again on every render
+        // (including after every keystroke via wire:model) was wasted writes.
 
         $messages = $this->loadMessages(100);
         $activeChat = $this->selectedChat ? Chat::find($this->selectedChat) : null;
