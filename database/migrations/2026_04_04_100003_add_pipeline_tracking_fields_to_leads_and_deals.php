@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -68,18 +69,23 @@ return new class extends Migration
         \DB::statement("UPDATE deals SET verification_status = 'pending' WHERE status = 'in_verification' AND verification_status IS NULL");
         \DB::statement("UPDATE deals SET charged_at = charged_date WHERE charged = 'yes' AND charged_at IS NULL AND charged_date IS NOT NULL");
 
-        // Backfill lead pipeline fields from existing disposition data
-        \DB::statement("
-            UPDATE leads SET
-                current_stage = 'transferred_to_closer',
-                transferred_by_user_id = COALESCE(original_fronter, assigned_to),
-                transferred_to_user_id = CAST(transferred_to AS UNSIGNED),
-                transferred_at = updated_at
-            WHERE disposition = 'Transferred to Closer'
-                AND transferred_to IS NOT NULL
-                AND transferred_to REGEXP '^[0-9]+$'
-                AND current_stage IS NULL
-        ");
+        // Backfill lead pipeline fields from existing disposition data.
+        // Uses MySQL-only REGEXP and CAST(... AS UNSIGNED). Wrapped in a driver
+        // guard so the migration runs cleanly on sqlite (dev/test). On a fresh
+        // DB this is a no-op anyway — there are no rows to update.
+        if (DB::getDriverName() === 'mysql') {
+            \DB::statement("
+                UPDATE leads SET
+                    current_stage = 'transferred_to_closer',
+                    transferred_by_user_id = COALESCE(original_fronter, assigned_to),
+                    transferred_to_user_id = CAST(transferred_to AS UNSIGNED),
+                    transferred_at = updated_at
+                WHERE disposition = 'Transferred to Closer'
+                    AND transferred_to IS NOT NULL
+                    AND transferred_to REGEXP '^[0-9]+$'
+                    AND current_stage IS NULL
+            ");
+        }
 
         \DB::statement("
             UPDATE leads SET
