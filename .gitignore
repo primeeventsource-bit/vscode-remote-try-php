@@ -21,3 +21,6 @@ composer-setup.php
 .claude/
 prime-crm/
 desktop-app/
+
+# Data migration bundles produced by data:export
+storage/app/exports/
