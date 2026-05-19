@@ -1,4 +1,4 @@
-const CACHE_NAME = 'crmprime-v2';
+const CACHE_NAME = 'crmprime-v3';
 const SHELL_ASSETS = [
     '/build/app.css',
     '/favicon.svg',
