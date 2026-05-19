@@ -28,8 +28,11 @@ echo "=== Probe ===\n";
 $probe = DB::connection('psd')->getPdo()->query('SELECT VERSION()')->fetchColumn();
 echo "psd connected: $probe\n";
 
-echo "\n=== Migrate ===\n";
-Artisan::call('migrate', ['--database' => 'psd', '--force' => true]);
+echo "\n=== Migrate fresh ===\n";
+// migrate:fresh drops every table on the connection then re-runs migrations.
+// Safe here because primesales_dev cluster has only stale partial tables from
+// earlier failed deploys, no real data.
+Artisan::call('migrate:fresh', ['--database' => 'psd', '--force' => true]);
 echo Artisan::output();
 
 echo "\n=== Schema check ===\n";
