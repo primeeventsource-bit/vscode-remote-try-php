@@ -132,14 +132,6 @@
                         ['route' => 'tracker',      'icon' => '📅', 'label' => 'Tracker',         'perm' => null, 'training' => 'nav-tracker'],
                         ['route' => 'transfers',    'icon' => '♻️',  'label' => 'Transfers',       'perm' => null, 'training' => 'nav-transfers'],
                     ]],
-                    ['title' => 'FINANCE', 'items' => [
-                        ['route' => 'finance',             'icon' => '💳', 'label' => 'Finance Center',    'perm' => null, 'role' => 'master_admin', 'training' => 'nav-finance',             'href' => '/finance'],
-                        ['route' => 'finance.accounts',    'icon' => '🏦', 'label' => 'Merchant Accounts', 'perm' => null, 'role' => 'master_admin', 'training' => 'nav-finance-accounts',    'href' => '/finance/accounts'],
-                        ['route' => 'finance.statements',  'icon' => '📑', 'label' => 'Statements',        'perm' => null, 'role' => 'master_admin', 'training' => 'nav-finance-statements',  'href' => '/finance/statements'],
-                        ['route' => 'finance.transactions','icon' => '💰', 'label' => 'Transactions',      'perm' => null, 'role' => 'master_admin', 'training' => 'nav-finance-transactions','href' => '/finance/transactions'],
-                        ['route' => 'finance.chargebacks', 'icon' => '🔴', 'label' => 'Chargebacks',       'perm' => null, 'role' => 'master_admin', 'training' => 'nav-finance-chargebacks', 'href' => '/finance/chargebacks'],
-                        ['route' => 'finance.entries',     'icon' => '📒', 'label' => 'Financial Entries',  'perm' => null, 'role' => 'master_admin', 'training' => 'nav-finance-entries',     'href' => '/finance/entries'],
-                    ]],
                     ['title' => 'SYSTEM', 'items' => [
                         ['route' => 'users',          'icon' => '👥', 'label' => 'Users',           'perm' => 'view_users', 'training' => 'nav-users'],
                         ['route' => 'settings',       'icon' => '⚙️',  'label' => 'Settings',        'perm' => null, 'training' => 'nav-settings'],
