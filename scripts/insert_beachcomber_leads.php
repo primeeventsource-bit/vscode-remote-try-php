@@ -10,13 +10,27 @@
  * (deletes prior batch first).
  */
 
+// Connection details read from environment to avoid committing creds.
+// Set these before invoking via tinker, e.g.:
+//   PSD_DB_HOST=db-... PSD_DB_USERNAME=... PSD_DB_PASSWORD=... \
+//     cloud env:vars <env-id> --action=set --key=PSD_DB_HOST --value=...
+// Or stash them in PrimeSales-Dev's env vars permanently.
+$psdHost = env('PSD_DB_HOST');
+$psdUser = env('PSD_DB_USERNAME');
+$psdPass = env('PSD_DB_PASSWORD');
+$psdDb   = env('PSD_DB_DATABASE', 'main');
+
+if (!$psdHost || !$psdUser || !$psdPass) {
+    throw new RuntimeException('Missing PSD_DB_HOST / PSD_DB_USERNAME / PSD_DB_PASSWORD env vars.');
+}
+
 config()->set('database.connections.psd', [
     'driver'    => 'mysql',
-    'host'      => 'db-a1cf5b10-406d-48ec-9b1c-72af03b0c756.us-east-2.db.laravel.cloud',
-    'port'      => 3306,
-    'database'  => 'main',
-    'username'  => 'g7rdlgswz3rsoock',
-    'password'  => 'yhlb5OgEnVpv241RWRG2',
+    'host'      => $psdHost,
+    'port'      => (int) env('PSD_DB_PORT', 3306),
+    'database'  => $psdDb,
+    'username'  => $psdUser,
+    'password'  => $psdPass,
     'charset'   => 'utf8mb4',
     'collation' => 'utf8mb4_unicode_ci',
     'prefix'    => '',

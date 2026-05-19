@@ -108,7 +108,7 @@ return new class extends Migration
 
             ['category' => 'interest', 'objection_text' => "I'm not interested", 'keywords' => 'not interested,no thanks,pass,decline',
              'rebuttal_level_1' => "I understand. Before I go — are you currently using your timeshare, or is it sitting unused while you pay maintenance fees?",
-             'rebuttal_level_2' => "Fair enough. But just curious — are you happy paying $X per year for something you don't use? Because that's exactly what we help people stop doing.",
+             'rebuttal_level_2' => "Fair enough. But just curious — are you happy paying \$X per year for something you don't use? Because that's exactly what we help people stop doing.",
              'rebuttal_level_3' => "I hear you. But here's a question: if I could show you how to legally stop paying fees on a timeshare you don't use, for a one-time cost less than one year of fees — would that be worth 5 minutes?"],
 
             ['category' => 'competitor', 'objection_text' => "I've already tried another company", 'keywords' => 'tried,another company,before,didn\'t work,already',
