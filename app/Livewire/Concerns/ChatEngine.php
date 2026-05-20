@@ -95,6 +95,10 @@ trait ChatEngine
         $this->selectedChat = (int) $id;
         $this->messageInput = '';
         $this->showNewChatForm = false;
+        // Stale edit state from the previous chat must not survive a switch,
+        // or the edit form re-renders attached to a message in a different thread.
+        $this->editingMessageId = null;
+        $this->editingMessageText = '';
         $this->markChatAsSeen();
     }
 
@@ -270,11 +274,27 @@ trait ChatEngine
     // EDIT MESSAGE
     // ═══════════════════════════════════════════════════════
 
+    /**
+     * canEdit / canModerate on the Message check ownership + 24h window +
+     * admin role, but they say nothing about whether the caller is even in
+     * the chat. Without this gate, an admin in chat A can moderate a message
+     * in chat B just by knowing its id. Membership is the floor; ownership
+     * and the moderator role build on top of it.
+     */
+    protected function isMemberOfMessageChat(Message $msg, ?User $user): bool
+    {
+        if (!$user) return false;
+        $chat = Chat::find($msg->chat_id);
+        if (!$chat) return false;
+        return in_array((int) $user->id, array_map('intval', $chat->getMemberIds()), true);
+    }
+
     public function startEditMessage(int $id): void
     {
         $msg = Message::find($id);
         $user = auth()->user();
-        if (!$msg || (!$msg->canEdit($user) && !$msg->canModerate($user))) return;
+        if (!$msg || !$this->isMemberOfMessageChat($msg, $user)) return;
+        if (!$msg->canEdit($user) && !$msg->canModerate($user)) return;
 
         $this->editingMessageId = $id;
         $this->editingMessageText = (string) $msg->text;
@@ -292,7 +312,8 @@ trait ChatEngine
 
         $msg = Message::find($this->editingMessageId);
         $user = auth()->user();
-        if (!$msg || (!$msg->canEdit($user) && !$msg->canModerate($user))) {
+        if (!$msg || !$this->isMemberOfMessageChat($msg, $user) ||
+            (!$msg->canEdit($user) && !$msg->canModerate($user))) {
             $this->cancelEditMessage();
             return;
         }
@@ -322,7 +343,8 @@ trait ChatEngine
     {
         $msg = Message::find($id);
         $user = auth()->user();
-        if (!$msg || (!$msg->canEdit($user) && !$msg->canModerate($user))) return;
+        if (!$msg || !$this->isMemberOfMessageChat($msg, $user)) return;
+        if (!$msg->canEdit($user) && !$msg->canModerate($user)) return;
 
         if (empty($msg->original_text)) {
             $msg->original_text = $msg->text;

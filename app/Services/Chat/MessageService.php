@@ -29,13 +29,16 @@ class MessageService
         if (!$text || !$chatId) return null;
 
         try {
+            // seen_at / delivered_at MUST NOT be set on send — those columns
+            // mean "the recipient has seen/received this." Setting them here
+            // would make every message appear instantly seen and zero out
+            // unread counts in the seen_at-based fallback. They are populated
+            // by ChatService::markAsRead when the recipient opens the thread.
             $msg = Message::create([
                 'chat_id' => $chatId,
                 'message_type' => 'text',
                 'sender_id' => $senderId,
                 'text' => $text,
-                'seen_at' => now(),
-                'delivered_at' => now(),
             ]);
 
             Chat::where('id', $chatId)->update(['updated_at' => now()]);
@@ -66,8 +69,6 @@ class MessageService
                 'gif_provider' => $gif['provider'] ?? 'giphy',
                 'gif_external_id' => $gif['id'] ?? null,
                 'gif_title' => $gif['title'] ?? 'GIF',
-                'seen_at' => now(),
-                'delivered_at' => now(),
             ]);
 
             Chat::where('id', $chatId)->update(['updated_at' => now()]);
@@ -101,8 +102,6 @@ class MessageService
                 'text' => $file->getClientOriginalName(),
                 'file_url' => Storage::disk($disk)->url($path),
                 'file_name' => $file->getClientOriginalName(),
-                'seen_at' => now(),
-                'delivered_at' => now(),
             ]);
 
             // Create attachment record
