@@ -110,7 +110,6 @@
                     ]],
                     ['title' => 'PERFORMANCE', 'items' => [
                         ['route' => 'stats',              'icon' => '📊', 'label' => 'Statistics',           'perm' => 'view_stats', 'training' => 'nav-stats'],
-                        ['route' => 'sales-intelligence', 'icon' => '🧠', 'label' => 'Sales Intelligence',  'perm' => null, 'training' => 'nav-sales-intelligence'],
                         ['route' => 'tasks',              'icon' => '☑',  'label' => 'Task List',            'perm' => null, 'training' => 'nav-tasks'],
                         ['route' => 'payroll',            'icon' => '💵', 'label' => 'Payroll (Legacy)',     'perm' => 'view_payroll', 'training' => 'nav-payroll'],
                         ['route' => 'payroll-v2',         'icon' => '💎', 'label' => 'Payroll Engine',       'perm' => 'view_payroll', 'training' => 'nav-payroll-v2'],
